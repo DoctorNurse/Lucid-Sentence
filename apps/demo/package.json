@@ -25,7 +25,9 @@
     "@tauri-apps/plugin-updater": "2.13.2",
     "@tesseract.js-data/eng": "1.0.0",
     "@wllama/wllama-compat": "3.8.1",
+    "fflate": "0.8.2",
     "lucide": "1.53.0",
+    "pdf-lib": "1.17.1",
     "perfect-freehand": "^1.2.3",
     "tesseract.js": "7.0.0"
   },
