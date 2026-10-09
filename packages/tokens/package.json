@@ -1,0 +1,24 @@
+{
+  "name": "@lucid-sentence/tokens",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lucid Sentence design tokens (light, dark, high-contrast), adapted from Chapternal's token system, plus bundled OFL fonts.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./fonts/*": "./fonts/*"
+  },
+  "files": [
+    "dist",
+    "fonts"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  }
+}

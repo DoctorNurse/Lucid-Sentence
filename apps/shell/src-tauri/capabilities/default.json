@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The main window: core events plus opening a few fixed links in the system browser.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://chapternal.com" },
+        { "url": "https://chapternal.com/*" },
+        { "url": "https://github.com/DoctorNurse/Lucid-Sentence/*" }
+      ]
+    }
+  ]
+}

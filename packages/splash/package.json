@@ -1,0 +1,25 @@
+{
+  "name": "@lucid-sentence/splash",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lucid Sentence splash/loading screen with an optional single promo card for other Lucid Systems apps.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@lucid-sentence/tokens": "workspace:*"
+  }
+}

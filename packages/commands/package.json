@@ -1,0 +1,22 @@
+{
+  "name": "@lucid-sentence/commands",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The single command registry for Lucid Sentence: every ribbon tab, group, and command with desktop, tablet, and phone placements.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  }
+}

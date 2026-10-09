@@ -1,0 +1,99 @@
+Lucid Sentence
+Copyright (C) 2026 Lucid Systems and the Lucid Sentence contributors
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License version 3 (AGPL-3.0-only).
+See the LICENSE file for the full text. It is distributed WITHOUT ANY WARRANTY.
+
+-------------------------------------------------------------------------------
+ONLYOFFICE attribution (placeholder: completed when upstream code is vendored)
+-------------------------------------------------------------------------------
+
+Lucid Sentence is planned to be based on ONLYOFFICE software developed by
+Ascensio System SIA, modified by Lucid Systems and the Lucid Sentence
+contributors. No ONLYOFFICE source code is included in this repository yet.
+
+When ONLYOFFICE code (version 9.4 or later; sdkjs, web-apps, core/x2t,
+desktop-sdk, desktop-apps) is added, this file and the in-app Legal Notices
+screen must, per the additional terms in ONLYOFFICE's LICENSE:
+
+  1. Retain all copyright, license, warranty, and attribution/origin notices.
+  2. State prominently that the modified version is "based on the original
+     ONLYOFFICE software developed by Ascensio System SIA", with modification
+     dates (see the modification log, to be added at legal/MODIFICATIONS.md).
+  3. Provide a visible UI feature showing Appropriate Legal Notices that
+     identifies ONLYOFFICE as the original developer, says this version may be
+     modified, and links to the license.
+  4. Grant no trademark rights. ONLYOFFICE is a trademark of Ascensio System
+     SIA; the name is used here only nominatively.
+  5. Honor CC BY-SA 4.0 for any ONLYOFFICE illustrations, icon sets, or
+     documentation that are kept (the plan is to replace them with original art).
+
+Upstream versions, commit hashes, and the date the license text was re-checked
+will be recorded here at fork time.
+
+-------------------------------------------------------------------------------
+Lucid Sentence name and logos
+-------------------------------------------------------------------------------
+
+The Lucid Sentence name, the "S" tile app icon, and the other brand images in
+assets/brand/ are (c) 2026 Lucid Systems. The AGPL-3.0 license covers the
+software; it grants no trademark rights. The logos and name are not licensed
+for use as a mark: forks and redistributions of modified versions must use
+their own name and icon. Accurate nominative references (e.g. "based on Lucid
+Sentence") are fine. See assets/brand/README.md.
+
+-------------------------------------------------------------------------------
+Splash promos
+-------------------------------------------------------------------------------
+
+Official builds show at most one promo card per launch on the splash screen.
+These promos are only for other apps from Lucid Systems LLC (currently
+Chapternal). They make no tracking or network calls; the card is a plain link.
+Promo images in assets/promos/ belong to those apps and are not licensed under
+the AGPL or for use as marks. Forks and redistributions can turn promos off at
+build time or at runtime (see packages/splash/README.md).
+
+-------------------------------------------------------------------------------
+Bundled fonts (SIL Open Font License 1.1)
+-------------------------------------------------------------------------------
+
+packages/tokens/fonts/ contains Latin subsets (WOFF2) of these fonts. They are
+licensed under the SIL Open Font License, Version 1.1, not the AGPL. Each
+license text is next to its font file.
+
+  Fraunces        Copyright 2018 The Fraunces Project Authors
+  Instrument Sans Copyright 2022 The Instrument Sans Project Authors
+  JetBrains Mono  Copyright 2020 The JetBrains Mono Project Authors
+
+The UI design is adapted from Chapternal (Lucid Systems LLC); see docs/DESIGN.md.
+
+-------------------------------------------------------------------------------
+Other notices
+-------------------------------------------------------------------------------
+
+Lucid Sentence is not affiliated with or endorsed by Microsoft Corporation.
+Microsoft and Word are trademarks of the Microsoft group of companies and are
+used here only to describe file compatibility. No Microsoft icons, artwork, or
+fonts are included.
+
+-------------------------------------------------------------------------------
+Bundled third-party code
+-------------------------------------------------------------------------------
+
+  Lucide icons (lucide 1.53.0)   ISC License, Copyright (c) Lucide Icons and
+                                 Contributors. Some Lucide icons are derived
+                                 from Feather: MIT License, Copyright (c)
+                                 2013-present Cole Bemis.
+  perfect-freehand 1.2.3         MIT License, Copyright (c) 2021 Stephen Ruiz Ltd.
+  @tauri-apps/api, @tauri-apps/plugin-opener
+                                 Apache-2.0 OR MIT, Copyright (c) the Tauri
+                                 Programme within The Commons Conservancy.
+
+The installable preview (apps/shell) is built with Tauri 2 and its Rust crates
+(mostly MIT and/or Apache-2.0). A complete list of the licenses of crates
+compiled into the installers will be generated for the first stable release.
+
+Full license texts: legal/THIRD_PARTY_LICENSES.txt. Build-only tools that are
+not shipped (for example @resvg/resvg-js, MPL-2.0, which renders the icon set
+in scripts/icons.js) keep their own licenses in node_modules.

@@ -1,0 +1,38 @@
+{
+  "name": "lucid-sentence",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Lucid Sentence: a free, open-source .docx word processor with Word's ribbon layout and a fresher look.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @lucid-sentence/demo dev",
+    "build": "tsc -b && pnpm --filter @lucid-sentence/demo build",
+    "typecheck": "tsc -b && tsc -p tsconfig.tests.json && pnpm --filter @lucid-sentence/demo typecheck",
+    "lint": "tsc -b && eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "tsc -b --clean && rm -rf apps/demo/dist",
+    "icons": "node scripts/icons.js",
+    "check:words": "bash scripts/check-banned-words.sh",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "happy-dom": "^20.14.6",
+    "prettier": "^3.9.9",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  }
+}

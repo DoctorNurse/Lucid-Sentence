@@ -1,0 +1,27 @@
+{
+  "name": "@lucid-sentence/ribbon-ui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Framework-light web component that renders the Lucid Sentence ribbon (desktop, tablet, phone) from the command registry.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@lucid-sentence/commands": "workspace:*",
+    "@lucid-sentence/tokens": "workspace:*",
+    "lucide": "^1.53.0"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/tokens"
+    },
+    {
+      "path": "packages/commands"
+    },
+    {
+      "path": "packages/ribbon-ui"
+    },
+    {
+      "path": "packages/splash"
+    }
+  ]
+}
