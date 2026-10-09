@@ -252,7 +252,7 @@ jobs:
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/shell/src-tauri -> target
@@ -265,8 +265,11 @@ jobs:
           cp -R apps/mobile/android-res/mipmap-* "$RES/"
           # Audio notes: the microphone permission the WebView asks for at runtime.
           node scripts/android-permissions.mjs apps/shell/src-tauri/gen/android/app/src/main/AndroidManifest.xml
-      - name: Build the APK
-        run: pnpm --filter @lucid-sentence/shell exec tauri android build --apk
+      # One APK per CPU type instead of a universal one (which carries the native
+      # library four times). Lucid-Sentence-Android.apk is the arm64 build, so the
+      # usual download link and in-app updates from earlier versions keep working.
+      - name: Build the APKs (arm64, armv7, x86_64)
+        run: pnpm --filter @lucid-sentence/shell exec tauri android build --apk --split-per-abi --target aarch64 armv7 x86_64
       - name: Sign the APK
         env:
           ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
@@ -275,7 +278,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           TOOLS="$ANDROID_HOME/build-tools/$BUILD_TOOLS"
-          UNSIGNED="$(find apps/shell/src-tauri/gen/android/app/build/outputs/apk -name '*-unsigned.apk' | head -n 1)"
+          APKS=apps/shell/src-tauri/gen/android/app/build/outputs/apk
           KS="$RUNNER_TEMP/release.keystore"
           if [ "$HAS_ANDROID_KEYSTORE" = "true" ]; then
             echo "$ANDROID_KEYSTORE" | base64 --decode > "$KS"
@@ -290,11 +293,20 @@ jobs:
               -keyalg RSA -keysize 3072 -validity 3650 -dname "CN=Lucid Sentence preview" > /dev/null
           fi
           mkdir -p "$RUNNER_TEMP/out"
-          "$TOOLS/zipalign" -p -f 4 "$UNSIGNED" "$RUNNER_TEMP/aligned.apk"
-          "$TOOLS/apksigner" sign --ks "$KS" --ks-pass "pass:$STOREPASS" --key-pass "pass:$KEYPASS" --ks-key-alias "$ALIAS" \
-            --out "$RUNNER_TEMP/out/Lucid-Sentence-Android.apk" "$RUNNER_TEMP/aligned.apk"
-          "$TOOLS/apksigner" verify --print-certs "$RUNNER_TEMP/out/Lucid-Sentence-Android.apk"
-          rm -f "$KS"
+          # Tauri's ABI flavor -> release file name (arm64 keeps the plain name).
+          for pair in arm64:Lucid-Sentence-Android arm:Lucid-Sentence-Android-armv7 x86_64:Lucid-Sentence-Android-x86_64; do
+            ABI="${pair%%:*}"; NAME="${pair#*:}"
+            UNSIGNED="$(find "$APKS/$ABI" -name '*-unsigned.apk' | head -n 1)"
+            if [ -z "$UNSIGNED" ]; then
+              echo "::error::No unsigned $ABI APK under $APKS"; find "$APKS" -name '*.apk'; exit 1
+            fi
+            "$TOOLS/zipalign" -p -f 4 "$UNSIGNED" "$RUNNER_TEMP/aligned.apk"
+            "$TOOLS/apksigner" sign --ks "$KS" --ks-pass "pass:$STOREPASS" --key-pass "pass:$KEYPASS" --ks-key-alias "$ALIAS" \
+              --out "$RUNNER_TEMP/out/$NAME.apk" "$RUNNER_TEMP/aligned.apk"
+            "$TOOLS/apksigner" verify --print-certs "$RUNNER_TEMP/out/$NAME.apk"
+            echo "::notice::$NAME.apk ($ABI): $(du -h "$RUNNER_TEMP/out/$NAME.apk" | cut -f1)"
+          done
+          rm -f "$KS" "$RUNNER_TEMP/aligned.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: installers-Android
@@ -345,7 +357,7 @@ jobs:
 
           - **macOS** (`Lucid-Sentence-macOS.dmg`, Apple silicon and Intel): drag the app to Applications, then right-click it and choose **Open**, then **Open** again. On macOS 15 and later, if that doesn't offer Open: try once, then go to **System Settings → Privacy & Security** and click **Open Anyway**.
           - **Windows** (`Lucid-Sentence-Windows-Setup.exe` or `.msi`): if SmartScreen says "Windows protected your PC", click **More info**, then **Run anyway**.
-          - **Android** (`Lucid-Sentence-Android.apk`): when asked, allow your browser or Files app to **install unknown apps**, then tap **Install**.
+          - **Android** (`Lucid-Sentence-Android.apk`, for nearly all phones and tablets): when asked, allow your browser or Files app to **install unknown apps**, then tap **Install**. Older 32-bit phones use `Lucid-Sentence-Android-armv7.apk`; emulators and Chromebooks with Intel or AMD chips use `Lucid-Sentence-Android-x86_64.apk`.
           - **Linux**: make `Lucid-Sentence-Linux.AppImage` executable and run it, or install the `.deb`.
           - **iPhone and iPad**: open the web app in Safari and choose **Add to Home Screen** (see the README).
 

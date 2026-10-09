@@ -61,8 +61,10 @@ async function wireDesktop(
     };
     if (/Android/i.test(navigator.userAgent)) {
       void import('@tauri-apps/api/app')
-        .then(({ getVersion }) => getVersion())
-        .then((v) => checkAndroidUpdate(v, openUrl, toast))
+        .then(async ({ getVersion }) => {
+          const arch = await invoke<string>('app_arch').catch(() => undefined);
+          await checkAndroidUpdate(await getVersion(), arch, openUrl, toast);
+        })
         .catch(quiet);
     } else {
       checkDesktopUpdate().catch(quiet);

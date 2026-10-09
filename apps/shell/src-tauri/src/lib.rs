@@ -51,6 +51,13 @@ fn take_opened_files(app: tauri::AppHandle, state: tauri::State<'_, OpenedFiles>
         .collect()
 }
 
+/// The CPU architecture this build is for ("aarch64", "arm", "x86_64", "x86"). The
+/// Android app uses it to download the update APK built for this device.
+#[tauri::command]
+fn app_arch() -> &'static str {
+    std::env::consts::ARCH
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default()
@@ -64,7 +71,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init());
     let app = builder
         .manage(OpenedFiles(Mutex::new(paths_from_args())))
-        .invoke_handler(tauri::generate_handler![take_opened_files])
+        .invoke_handler(tauri::generate_handler![take_opened_files, app_arch])
         .build(tauri::generate_context!())
         .expect("failed to start Lucid Sentence");
 

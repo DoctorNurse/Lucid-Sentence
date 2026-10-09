@@ -9,6 +9,8 @@
  *   Releases API for the newest release (pre-releases included) and, if it is newer,
  *   offers to download its APK; Android's installer takes it from there. APKs are
  *   signed with the same release key, so the update installs over the current app.
+ *   Releases have one APK per CPU type; Lucid-Sentence-Android.apk is the arm64 one
+ *   (nearly every phone and tablet), so the app asks for the one matching its build.
  * - Web app / iPhone and iPad home-screen app: the service worker fetches the new
  *   version in the background and the page offers "Reload for new version".
  */
@@ -16,6 +18,16 @@ import { updatePrompt } from './editor/ui.js';
 
 const REPO = 'DoctorNurse/Lucid-Sentence';
 const APK = 'Lucid-Sentence-Android.apk';
+/** Other CPU types' APKs, by Rust's std::env::consts::ARCH (the shell's app_arch). */
+const APK_BY_ARCH: Record<string, string> = {
+  arm: 'Lucid-Sentence-Android-armv7.apk',
+  x86_64: 'Lucid-Sentence-Android-x86_64.apk',
+};
+
+/** The release asset to update from on this CPU type (arm64 and unknown: the default APK). */
+export function apkName(arch: string | undefined): string {
+  return (arch && APK_BY_ARCH[arch]) || APK;
+}
 
 interface Version {
   core: number[];
@@ -65,11 +77,13 @@ export interface ReleaseInfo {
 export function newerApk(
   releases: readonly ReleaseInfo[],
   current: string,
+  name = APK,
 ): { version: string; url: string } | null {
   let best: { version: string; url: string } | null = null;
   for (const r of releases) {
     if (r.draft || !parse(r.tag_name)) continue;
-    const apk = r.assets.find((a) => a.name === APK);
+    // Releases before per-CPU APKs only have the default (universal) one.
+    const apk = r.assets.find((a) => a.name === name) ?? r.assets.find((a) => a.name === APK);
     if (!apk || !apk.browser_download_url.startsWith(`https://github.com/${REPO}/`)) continue;
     const version = r.tag_name.replace(/^v/, '');
     if (compareVersions(version, current) <= 0) continue;
@@ -103,6 +117,7 @@ export async function checkDesktopUpdate(): Promise<void> {
 /** Android app: compare with the newest GitHub release and offer its APK. */
 export async function checkAndroidUpdate(
   current: string,
+  arch: string | undefined,
   openUrl: (url: string) => Promise<void>,
   toast: (message: string, ms?: number) => void,
 ): Promise<void> {
@@ -119,7 +134,7 @@ export async function checkAndroidUpdate(
       cache: 'no-store',
     });
     if (!res.ok) return;
-    const found = newerApk((await res.json()) as ReleaseInfo[], current);
+    const found = newerApk((await res.json()) as ReleaseInfo[], current, apkName(arch));
     if (!found) return;
     updatePrompt(
       `Update available: Lucid Sentence ${found.version}.`,

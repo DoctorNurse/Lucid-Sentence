@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareVersions, newerApk, type ReleaseInfo } from '../src/updates.js';
+import { apkName, compareVersions, newerApk, type ReleaseInfo } from '../src/updates.js';
 
 describe('update version order', () => {
   it('orders semantic versions, pre-releases before releases', () => {
@@ -34,6 +34,23 @@ describe('Android update check', () => {
     );
     expect(found?.version).toBe('0.1.1-preview');
     expect(found?.url).toContain('/v0.1.1-preview/Lucid-Sentence-Android.apk');
+  });
+
+  it('takes the APK for this CPU type, and the default one where a release has no such APK', () => {
+    expect(apkName('aarch64')).toBe('Lucid-Sentence-Android.apk');
+    expect(apkName(undefined)).toBe('Lucid-Sentence-Android.apk');
+    expect(apkName('arm')).toBe('Lucid-Sentence-Android-armv7.apk');
+    const split = rel('v0.1.4-preview');
+    split.assets.push({
+      name: 'Lucid-Sentence-Android-armv7.apk',
+      browser_download_url:
+        'https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.4-preview/Lucid-Sentence-Android-armv7.apk',
+    });
+    expect(newerApk([split], '0.1.3-preview', apkName('arm'))?.url).toMatch(/-armv7\.apk$/);
+    expect(newerApk([split], '0.1.3-preview', apkName('aarch64'))?.url).toMatch(/Android\.apk$/);
+    expect(newerApk([rel('v0.1.4-preview')], '0.1.3-preview', apkName('x86_64'))?.url).toMatch(
+      /Android\.apk$/,
+    );
   });
 
   it('ignores drafts, older or equal versions, and foreign download hosts', () => {
