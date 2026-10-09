@@ -1,7 +1,8 @@
 name: Deploy web app to GitHub Pages
 
-# Publishes the web app (apps/demo) from main. Requires Settings → Pages →
-# Source: "GitHub Actions" (a one-time repository setting).
+# Publishes the web app (apps/demo) from main, plus the desktop update feed
+# (updates/latest.json, copied from the newest release). The Release workflow runs
+# this after publishing. Requires Settings → Pages → Source: "GitHub Actions".
 
 on:
   push:
@@ -30,6 +31,19 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - name: Add the desktop update feed (latest.json from the newest release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Pre-releases included: releases/latest skips them, so the apps read this copy.
+          TAG="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=30" --jq '[.[] | select((.draft | not) and any(.assets[]; .name == "latest.json"))] | first | .tag_name // empty')"
+          if [ -n "$TAG" ]; then
+            mkdir -p apps/demo/dist/updates
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern latest.json --dir apps/demo/dist/updates
+            echo "Update feed: $TAG"; cat apps/demo/dist/updates/latest.json
+          else
+            echo "::notice::No release has a latest.json yet."
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

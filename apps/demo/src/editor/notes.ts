@@ -65,6 +65,8 @@ const TOOLS: { id: InkTool; label: string; node: typeof PenLine }[] = [
 /** Floating, draggable pen toolbar (Draw tab and Notes mode). */
 export class PenToolbar {
   favorites: Favorite[];
+  /** Phone: docked as a strip above the bottom bar (no dragging). */
+  docked = false;
   #pos: { x: number; y: number } | null = null;
 
   constructor(
@@ -78,7 +80,7 @@ export class PenToolbar {
       this.favorites = [];
     }
     root.addEventListener('pointerdown', (e) => {
-      if ((e.target as Element).closest('.pentool__grip')) this.#startDrag(e);
+      if (!this.docked && (e.target as Element).closest('.pentool__grip')) this.#startDrag(e);
     });
   }
 
@@ -216,7 +218,7 @@ export class PenToolbar {
       favs,
       close,
     );
-    if (this.#pos) {
+    if (this.#pos && !this.docked) {
       this.root.style.left = `${this.#pos.x}px`;
       this.root.style.top = `${this.#pos.y}px`;
       this.root.style.transform = 'none';

@@ -1,6 +1,6 @@
 [package]
 name = "lucid-sentence"
-version = "0.1.0-preview"
+version = "0.1.1-preview"
 description = "Lucid Sentence installable preview"
 authors = ["Lucid Systems and the Lucid Sentence contributors"]
 license = "AGPL-3.0-only"
@@ -20,6 +20,14 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
+# Needed by `tauri::generate_context!` once tauri.conf.json has a `plugins` section.
+serde_json = "1"
+
+# Desktop auto-update (signed latest.json; see apps/shell/README.md). Tauri's updater
+# doesn't run on Android or iOS: Android checks GitHub Releases from the web app instead.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 [profile.release]
 codegen-units = 1

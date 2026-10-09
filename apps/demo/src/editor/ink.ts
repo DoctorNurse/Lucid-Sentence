@@ -5,7 +5,10 @@
  * - Pen, pencil (tilt widens the line), highlighter, stroke and point erasers, lasso select.
  * - Palm rejection: touch is ignored while a pen is in contact or hovering, and
  *   unless "Draw with Touch" is on.
- * - Pen hover preview (pointer events from a pen with buttons = 0).
+ * - Pen hover preview (pen pointer moves with no contact; tracked by pointer id, because
+ *   some Android WebViews report buttons = 0 or pressure = 0 during contact).
+ * - Android: a pen's touch events are cancelled while it draws, so the WebView never turns
+ *   the stroke into a scroll (which would fire pointercancel and cut the line short).
  * - Stylus barrel/eraser buttons (buttons bitmask 2 or 32) erase while held.
  * - Every change is an undoable operation (see history.ts).
  * - Strokes carry a recording timestamp when audio is recording (Notes mode).
@@ -106,6 +109,8 @@ export class InkLayer {
   #nextId = 1;
   #live: { stroke: Stroke; path: SVGPathElement; pointerType: string } | null = null;
   #penSeenAt = -Infinity;
+  /** Pointers in contact with the ink layer (pen hover = a pen move not in this set). */
+  #contacts = new Set<number>();
   #erasing: {
     tool: 'eraser' | 'point-eraser';
     before: Stroke[];
@@ -147,6 +152,24 @@ export class InkLayer {
     svg.addEventListener('pointerleave', (e) => {
       if (e.pointerType === 'pen') this.#hover(null);
     });
+    // Pen side button / long press would open a context menu over the page.
+    svg.addEventListener('contextmenu', (e) => {
+      if (this.active) e.preventDefault();
+    });
+    // Android WebView: a stylus also sends touch events. If they aren't cancelled, the
+    // WebView pans the page and cancels the pen's pointer stream after a few points.
+    // (Cancelling them also stops the keyboard's handwriting mode taking over the pen.)
+    const guard = (e: TouchEvent): void => {
+      const stylus = [...e.changedTouches].some(
+        (t) => (t as Touch & { touchType?: string }).touchType === 'stylus',
+      );
+      const penBusy = this.#live?.pointerType === 'pen' || this.#penContact;
+      if ((stylus && (this.active || this.autoSwitch)) || penBusy) {
+        if (e.cancelable) e.preventDefault();
+      }
+    };
+    page.addEventListener('touchstart', guard, { passive: false });
+    page.addEventListener('touchmove', guard, { passive: false });
     // Auto-switch: a pen touching the page enters draw mode (setting).
     page.addEventListener(
       'pointerdown',
@@ -185,6 +208,8 @@ export class InkLayer {
     this.svg.classList.toggle('ink--active', on);
     this.svg.dataset['tool'] = this.tool;
     if (!on) {
+      this.#contacts.clear();
+      this.#penContact = false;
       this.select([]);
       this.#hover(null);
     }
@@ -217,9 +242,16 @@ export class InkLayer {
     return performance.now() - this.#penSeenAt > 700;
   }
 
+  /** A pen is in contact with the ink layer. */
+  #penContact = false;
+
   #down(e: PointerEvent): void {
     if (!this.active) return;
-    if (e.pointerType === 'pen') this.#penSeenAt = performance.now();
+    this.#contacts.add(e.pointerId);
+    if (e.pointerType === 'pen') {
+      this.#penSeenAt = performance.now();
+      this.#penContact = true;
+    }
     if (!this.accepts(e.pointerType)) {
       this.rejected++;
       if (e.pointerType === 'touch' && !this.drawWithTouch)
@@ -276,7 +308,7 @@ export class InkLayer {
     }
     if (e.pointerType === 'pen') this.#penSeenAt = performance.now();
     const [x, y] = this.#pt(e);
-    if (e.pointerType === 'pen' && e.buttons === 0 && !this.#live) {
+    if (e.pointerType === 'pen' && !this.#contacts.has(e.pointerId)) {
       this.#hover([x, y]);
       return;
     }
@@ -314,6 +346,8 @@ export class InkLayer {
 
   #up(e: PointerEvent): void {
     this.#pan = null;
+    this.#contacts.delete(e.pointerId);
+    if (e.pointerType === 'pen') this.#penContact = false;
     if (e.pointerType === 'pen') this.#penSeenAt = performance.now();
     if (this.#erasing) {
       const er = this.#erasing;

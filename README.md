@@ -12,12 +12,12 @@ A free, open-source word processor for **.docx** with Word’s familiar ribbon a
 
 > **Preview: .docx saving arrives with the engine.** This preview runs the full editor UI on a sample page so you can try the ribbon, pen, and Notes mode. It doesn't open or save your own `.docx` files yet. It works offline and collects nothing.
 
-[![Download for macOS](https://img.shields.io/badge/macOS-Download_.dmg-0a6a7c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.0-preview/Lucid-Sentence-macOS.dmg)
-[![Download for Windows](https://img.shields.io/badge/Windows-Download_installer-0a6a7c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.0-preview/Lucid-Sentence-Windows-Setup.exe)
-[![Download for Android](https://img.shields.io/badge/Android-Download_.apk-0a6a7c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.0-preview/Lucid-Sentence-Android.apk)
-[![Download for Linux](https://img.shields.io/badge/Linux-Download_AppImage-0a6a7c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.0-preview/Lucid-Sentence-Linux.AppImage)
+[![Download for macOS](https://img.shields.io/badge/macOS-Download_.dmg-0a6a7c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.1-preview/Lucid-Sentence-macOS.dmg)
+[![Download for Windows](https://img.shields.io/badge/Windows-Download_installer-0a6a7c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.1-preview/Lucid-Sentence-Windows-Setup.exe)
+[![Download for Android](https://img.shields.io/badge/Android-Download_.apk-0a6a7c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.1-preview/Lucid-Sentence-Android.apk)
+[![Download for Linux](https://img.shields.io/badge/Linux-Download_AppImage-0a6a7c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.1-preview/Lucid-Sentence-Linux.AppImage)
 
-These are **unsigned testing builds** (version 0.1.0-preview). All files, including the Windows `.msi`, the Linux `.deb`, and checksums, are on the [Releases](https://github.com/DoctorNurse/Lucid-Sentence/releases) page.
+These are **unsigned testing builds** (version 0.1.1-preview). All files, including the Windows `.msi`, the Linux `.deb`, and checksums, are on the [Releases](https://github.com/DoctorNurse/Lucid-Sentence/releases) page.
 
 <details>
 <summary><b>Mac</b> (Apple silicon and Intel)</summary>
@@ -49,6 +49,8 @@ If macOS says it can't check the app for malicious software (this preview isn't 
 2. Open the downloaded file. If Android asks, allow your browser or Files app to **install unknown apps**.
 3. Tap **Install**, then **Open**.
 
+If you installed **0.1.0-preview**, uninstall it first: it was signed with a temporary key, so Android won't install a newer version over it. From 0.1.1-preview on, updates install over the app you have.
+
 </details>
 
 <details>
@@ -68,6 +70,17 @@ There's no App Store build yet. Instead, install the web app:
 1. Download **Lucid-Sentence-Linux.AppImage** (or the `.deb` for Debian and Ubuntu).
 2. Make it executable: right-click → Properties → Permissions → "Allow executing", or run `chmod +x Lucid-Sentence-Linux.AppImage`.
 3. Double-click it. For the `.deb`: `sudo apt install ./Lucid-Sentence-Linux.deb`.
+
+</details>
+
+<details>
+<summary><b>Updates</b></summary>
+
+- **Mac, Windows, Linux** (0.1.1-preview and later): the app checks for an update a few seconds after it opens, downloads it in the background, and shows **Restart to update**. Updates are signed, and the app checks the signature before installing. 0.1.0-preview can't update itself: install the new version by hand once.
+- **Android**: the app checks GitHub Releases when it opens and offers **Download update**. Open the downloaded file and tap **Update**.
+- **iPhone, iPad, and the web app**: when a new version has downloaded, the app shows **Reload for new version**.
+
+Checks are skipped when you're offline.
 
 </details>
 

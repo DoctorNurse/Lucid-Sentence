@@ -42,8 +42,13 @@ fn take_opened_files(state: tauri::State<'_, OpenedFiles>) -> Vec<String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let app = tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
+    let builder = tauri::Builder::default().plugin(tauri_plugin_opener::init());
+    // Desktop: signed auto-updates (the web app asks; see apps/demo/src/updates.ts).
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
+    let app = builder
         .manage(OpenedFiles(Mutex::new(names_from_args())))
         .invoke_handler(tauri::generate_handler![take_opened_files])
         .build(tauri::generate_context!())

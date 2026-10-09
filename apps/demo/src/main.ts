@@ -166,8 +166,10 @@ function setDraw(on: boolean, tool?: InkTool): void {
   ink.setActive(on);
   document.body.classList.toggle('drawing', on);
   pen.show(on && (settings.floatingToolbar || document.body.classList.contains('notes')));
-  // Until the user drags it, the pen toolbar floats just below the ribbon.
-  if (on && pen.root.style.transform !== 'none') {
+  placePenToolbar();
+  // Until the user drags it, the pen toolbar floats just below the ribbon (not on phones,
+  // where it docks as a strip above the bottom bar).
+  if (on && !pen.docked && pen.root.style.transform !== 'none') {
     pen.root.style.top = `${Math.round($('.workspace').getBoundingClientRect().top) + 14}px`;
   }
   $('#mode').textContent = on
@@ -180,6 +182,54 @@ function setDraw(on: boolean, tool?: InkTool): void {
     ribbon.activeTab = 'draw';
   refresh();
 }
+
+/**
+ * Phones: the pen toolbar docks in the layout as a one-line, horizontally scrolling strip
+ * just above the bottom ribbon bar, so it never covers the page. Wider screens: it floats.
+ */
+function placePenToolbar(): void {
+  const dock = ribbon.layout === 'phone';
+  if (dock === pen.docked && pen.root.isConnected) return;
+  pen.docked = dock;
+  pen.root.classList.toggle('pentool--docked', dock);
+  if (dock) {
+    pen.root.style.removeProperty('top');
+    pen.root.style.removeProperty('left');
+    pen.root.style.removeProperty('transform');
+    stage.insertBefore(pen.root, ribbon);
+  } else {
+    document.body.insertBefore(pen.root, $('#toast'));
+  }
+}
+
+// ── Back gesture (Android) and browser Back: close the sheet, picker, or popover first.
+let backArmed = false;
+function overlayOpen(): boolean {
+  return popoverOpen() || ribbon.sheetOpen;
+}
+function syncBack(): void {
+  const open = overlayOpen();
+  if (open && !backArmed) {
+    backArmed = true;
+    window.history.pushState({ lsOverlay: true }, '');
+  } else if (!open && backArmed) {
+    backArmed = false;
+    if ((window.history.state as { lsOverlay?: boolean } | null)?.lsOverlay) window.history.back();
+  }
+}
+window.addEventListener('popstate', () => {
+  if (!backArmed) return;
+  backArmed = false;
+  if (popoverOpen()) closePopover();
+  else ribbon.closeSheet();
+  syncBack();
+});
+window.addEventListener('ls-popover-change', () => {
+  queueMicrotask(syncBack);
+});
+ribbon.addEventListener('ls-sheet-change', () => {
+  queueMicrotask(syncBack);
+});
 
 // ── Page geometry, rulers, pagination, zoom
 function setPage(p: Partial<PageSetup>): void {
@@ -958,6 +1008,7 @@ const applyLayout = (): void => {
   ribbon.setAttribute('layout', layoutSel.value);
   stage.dataset['layout'] = layoutSel.value;
   document.body.dataset['layout'] = ribbon.layout;
+  placePenToolbar();
 };
 layoutSel.addEventListener('change', applyLayout);
 applyLayout();
@@ -966,6 +1017,7 @@ applyLayout();
 if (IS_MAC) document.body.classList.add('mac');
 new ResizeObserver(() => {
   document.body.dataset['layout'] = ribbon.layout;
+  placePenToolbar();
   if (view.zoomFit || canvas.clientWidth < geometry(pageSetup).width + 300) setZoom('fit');
 }).observe(canvas);
 layout();
@@ -981,5 +1033,5 @@ void document.fonts.ready.then(() => {
 
 // Test hooks (used by Playwright e2e tests; harmless in production builds).
 Object.assign(window, {
-  __ls: { app, ink, audio, timeline, history, ribbon, palette, run, setNotes },
+  __ls: { app, ink, audio, timeline, history, ribbon, palette, run, setNotes, toast },
 });
