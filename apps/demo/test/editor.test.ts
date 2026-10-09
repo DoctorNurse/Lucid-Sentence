@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { WIRED, handlers } from '../src/editor/commands.js';
 import { inside, segDist } from '../src/editor/ink.js';
 import { rank } from '../src/editor/palette.js';
-import { openedFilesMessage } from '../src/native.js';
+import { ENGINE_WIRED, appLevel, engineHandlers } from '../src/engine/commands.js';
+import { nameFromPath } from '../src/engine/files.js';
 import { formatTime, markPosition, marksFor, seekTime, type Mark } from '../src/editor/timeline.js';
 
 describe('audio timeline helpers', () => {
@@ -91,11 +92,38 @@ describe('command dispatcher', () => {
   });
 });
 
-describe('installable preview', () => {
-  it('explains that opened .docx files arrive with the engine, without claiming saving works', () => {
-    const msg = openedFilesMessage(['Report.docx', 'Plan.docx']);
-    expect(msg).toContain('“Report.docx”, “Plan.docx”');
-    expect(msg).toMatch(/arrive with the document engine/);
-    expect(msg).not.toMatch(/saved|opened successfully/i);
+describe('document engine', () => {
+  it('maps only registry commands, and covers the M1 spike slice', () => {
+    const ids = new Set(allCommands().map((r) => r.command.id));
+    for (const id of ENGINE_WIRED) expect(ids.has(id), id).toBe(true);
+    for (const id of [
+      'home.font.bold',
+      'home.font.italic',
+      'home.font.underline',
+      'home.font.font',
+      'home.font.size',
+      'home.styles.gallery',
+      'home.paragraph.bullets',
+      'home.paragraph.numbering',
+      'file.rail.save',
+      'file.rail.save-as',
+    ]) {
+      expect(typeof engineHandlers[id], id).toBe('function');
+    }
+  });
+  it('keeps the File backstage and Help working while a .docx is open', () => {
+    expect(appLevel('file.rail.open')).toBe(true);
+    expect(appLevel('help.help.help')).toBe(true);
+    expect(appLevel('home.font.bold')).toBe(false);
+  });
+  it('names files from paths and Android content URIs', () => {
+    expect(nameFromPath('/home/me/Report.docx')).toBe('Report.docx');
+    expect(nameFromPath('C:\\Users\\me\\Plan.docx')).toBe('Plan.docx');
+    expect(
+      nameFromPath(
+        'content://com.android.externalstorage.documents/document/primary%3ADocuments%2FMinutes.docx',
+      ),
+    ).toBe('Minutes.docx');
+    expect(nameFromPath('content://media/external/file/42')).toBe('42.docx');
   });
 });

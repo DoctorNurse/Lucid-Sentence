@@ -49,6 +49,8 @@ If macOS says it can't check the app for malicious software (this preview isn't 
 2. Open the downloaded file. If Android asks, allow your browser or Files app to **install unknown apps**.
 3. Tap **Install**, then **Open**.
 
+This APK is for 64-bit ARM, which nearly every Android phone and tablet uses. Each release also has **Lucid-Sentence-Android-armv7.apk** for older 32-bit phones and **Lucid-Sentence-Android-x86_64.apk** for emulators and Intel or AMD Chromebooks. The app updates from the one that matches it.
+
 If you installed **0.1.0-preview**, uninstall it first: it was signed with a temporary key, so Android won't install a newer version over it. From 0.1.1-preview on, updates install over the app you have.
 
 </details>

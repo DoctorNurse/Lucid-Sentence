@@ -1,0 +1,5 @@
+{
+  "sdk": {
+    "common": ["lucid/bridge.js"]
+  }
+}

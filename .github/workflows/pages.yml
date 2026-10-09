@@ -30,6 +30,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/engine
       - run: pnpm build
       - name: Add the desktop update feed (latest.json from the newest release)
         env:

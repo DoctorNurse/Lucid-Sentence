@@ -1,0 +1,158 @@
+[
+  {
+    "file": "000",
+    "source": "ASC.ttf",
+    "sha256": "35ff902a3b9c9254ce3c57d610dad9e57008b8a3351691c463bee775644c1e18",
+    "bytes": 6868
+  },
+  {
+    "file": "001",
+    "source": "crosextra/Carlito-Bold.ttf",
+    "sha256": "0f62ab34ad5d079a0a28fac01bcf7c7a724a4db4d6cb99cab9cabff382fbb80f",
+    "bytes": 690516
+  },
+  {
+    "file": "002",
+    "source": "crosextra/Carlito-BoldItalic.ttf",
+    "sha256": "380764b6898d7b73ceae6384b2958b196d2a0428962ef3adf138d27947228666",
+    "bytes": 816716
+  },
+  {
+    "file": "003",
+    "source": "crosextra/Carlito-Italic.ttf",
+    "sha256": "718a0663864d37a4868220a19b9668a5fe10a46197f6df367b4c2c30c04c026c",
+    "bytes": 623416
+  },
+  {
+    "file": "004",
+    "source": "crosextra/Carlito-Regular.ttf",
+    "sha256": "b4ff23ba370cc95a3c349336b73f9c28514a1371210f89832efc85c4b1ea7131",
+    "bytes": 635996
+  },
+  {
+    "file": "005",
+    "source": "dejavu/DejaVuSans-Bold.ttf",
+    "sha256": "aa2ebed70cf6a389400a49feeb976c785de411f387d0cff998472590760cc2b6",
+    "bytes": 705684
+  },
+  {
+    "file": "006",
+    "source": "dejavu/DejaVuSans.ttf",
+    "sha256": "437a5ecec2ec177cba9284cbffc56055311347f3e9fe4f2b4b40323d0290a6db",
+    "bytes": 757076
+  },
+  {
+    "file": "007",
+    "source": "archive:liberation/LiberationMono-Bold.ttf",
+    "sha256": "bd62a0672d0b9b6710b01df434c80ad54fa5f0835207eb7b17b7a761463067bb",
+    "bytes": 307996
+  },
+  {
+    "file": "008",
+    "source": "archive:liberation/LiberationMono-BoldItalic.ttf",
+    "sha256": "79451f3c09fe25116098853b7a2ca6e2436220ccc11af022979adbcf195be130",
+    "bytes": 284068
+  },
+  {
+    "file": "009",
+    "source": "archive:liberation/LiberationMono-Italic.ttf",
+    "sha256": "605c01c711b44480a7508d349dfbf3264e81fa43d69e61cfa7d10b86e764c4d1",
+    "bytes": 281536
+  },
+  {
+    "file": "010",
+    "source": "archive:liberation/LiberationMono-Regular.ttf",
+    "sha256": "f2b83c763e8afd21709333370bed4774337fae82267937e2b5aea7e2fbd922c1",
+    "bytes": 319508
+  },
+  {
+    "file": "011",
+    "source": "archive:liberation/LiberationSans-Bold.ttf",
+    "sha256": "788abee4c806d660e8aee46689dd8540cd4bb98da03dcc9d171ce3efd99a9173",
+    "bytes": 414456
+  },
+  {
+    "file": "012",
+    "source": "archive:liberation/LiberationSans-BoldItalic.ttf",
+    "sha256": "698da70fc191cc5f33ad4d6d3fe830fe4624b898ea2e3169955928b7c491f1ee",
+    "bytes": 408996
+  },
+  {
+    "file": "013",
+    "source": "archive:liberation/LiberationSans-Italic.ttf",
+    "sha256": "e5bae5c4cde31f22142753855f4f8fb86da6ff39955ed3c0a11248b0d16948b0",
+    "bytes": 415816
+  },
+  {
+    "file": "014",
+    "source": "archive:liberation/LiberationSans-Regular.ttf",
+    "sha256": "76d04c18ea243f426b7de1f3ad208e927008f961dc5945e5aad352d0dfde8ee8",
+    "bytes": 410712
+  },
+  {
+    "file": "015",
+    "source": "archive:liberation/LiberationSerif-Bold.ttf",
+    "sha256": "d754ba427cfe0bca54ae052384baa8f842da5bd6550ad4da024ac441e7a7d5ce",
+    "bytes": 370096
+  },
+  {
+    "file": "016",
+    "source": "archive:liberation/LiberationSerif-BoldItalic.ttf",
+    "sha256": "f17db8af71e24d2066b587546021d4f0b296be389512b658dec3c09affeb11a7",
+    "bytes": 376772
+  },
+  {
+    "file": "017",
+    "source": "archive:liberation/LiberationSerif-Italic.ttf",
+    "sha256": "0e3dea9f8d613e006ccfa62201f33e265d19167bd0907725c3e145368b04fc2e",
+    "bytes": 375632
+  },
+  {
+    "file": "018",
+    "source": "archive:liberation/LiberationSerif-Regular.ttf",
+    "sha256": "058ea80864aef09a23f45cbec2bb5400bc3dfbdea01c3f10538a21fcb497fb74",
+    "bytes": 393576
+  },
+  {
+    "file": "019",
+    "source": "opensans/OpenSans-Bold.ttf",
+    "sha256": "5894a3649b213cf5b2d673b6e7a871815fd1d120fa68a463592f27db14eae323",
+    "bytes": 224592
+  },
+  {
+    "file": "020",
+    "source": "opensans/OpenSans-Regular.ttf",
+    "sha256": "e64e508b2aa2880f907e470c4550980ec4c0694d103a43f36150ac3f93189bee",
+    "bytes": 217360
+  },
+  {
+    "file": "021",
+    "source": "caladea/caladea-bold.ttf",
+    "sha256": "74eda4fc5ffba0d8dc4aa76d41499f5ab76168d9ed6141c6417064c6244db9b6",
+    "bytes": 58892
+  },
+  {
+    "file": "022",
+    "source": "caladea/caladea-bolditalic.ttf",
+    "sha256": "f47a35ad6cd0efa9914d93f9d03c93e30c55da43674bccfabac73b3c0d522c01",
+    "bytes": 61828
+  },
+  {
+    "file": "023",
+    "source": "caladea/caladea-italic.ttf",
+    "sha256": "9c968bf60ba1e851cdfea77c71e3540c57792f77482dd241acc29d1425569c4e",
+    "bytes": 61860
+  },
+  {
+    "file": "024",
+    "source": "caladea/caladea-regular.ttf",
+    "sha256": "d2f6cad33f191e65b68bd74e6d4f7708080a41b32db635866109df3090265d91",
+    "bytes": 58964
+  },
+  {
+    "file": "025",
+    "source": "openoffice/opens___.ttf",
+    "sha256": "49a64f3bcf20a7909ba2751349231d6652ded9cd2840e961b5164d09de3ffa63",
+    "bytes": 207400
+  }
+]
