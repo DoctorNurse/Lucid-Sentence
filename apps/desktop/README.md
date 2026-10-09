@@ -1,0 +1,46 @@
+# Lucid Sentence — Desktop (Windows, macOS)
+
+**Status: placeholder.** No shell code yet. This directory will hold the desktop
+app for milestone M0/M1.
+
+## Plan (docs/PLAN.md §3.1)
+
+The v1 desktop app is a **fork of ONLYOFFICE DesktopEditors**, version 9.4 or later:
+
+- **`desktop-apps`**: the native shell (Qt on Windows/Linux, native code on macOS).
+- **`desktop-sdk`**: embeds Chromium (CEF) and injects the native bridge
+  (`AscDesktopEditor`) that the editors use for local files, x2t conversion,
+  font enumeration, and printing.
+- Built with ONLYOFFICE **`build_tools`**.
+
+Why: offline editing, local x2t, printing, and fonts already work, and the bridge
+is what `web-apps` desktop mode expects. It is the fastest route to a fully
+working offline editor.
+
+### Fork work (M0)
+
+1. Strip the spreadsheet, presentation, and PDF editors and the start page, so
+   only the document editor remains.
+2. Rebrand to Lucid Sentence (no ONLYOFFICE logo or name in our branding).
+3. Load the Sentence UI layer (`packages/ribbon-ui` + `packages/commands`) on top
+   of the `web-apps` desktop controllers in place of the stock toolbar.
+4. Backstage (File) Open/Save As limited to `.docx`, `.dotx`, `.docm`; PDF is
+   export only. Opening a `.doc` shows a clear "not supported" message.
+5. Add the **Legal Notices** screen required by ONLYOFFICE's 9.4 terms
+   (see [`/NOTICE`](../../NOTICE) and [`/engine`](../../engine/README.md)).
+6. Signed installers for Windows and macOS (notarized on macOS).
+
+### Alternatives being prototyped in M0
+
+- **Tauri 2** shell (system WebView) — could become one shell for all four
+  platforms if the shared bridge layer works well.
+- Electron + sdkjs + x2t — kept as a fallback; requires re-implementing the
+  native bridge.
+
+All Sentence-specific UI stays in the shared UI layer, so switching shells later
+is optional, not a rewrite.
+
+### Licensing
+
+The fork is AGPL-3.0-only and every shipped binary must come with its
+Corresponding Source, including build scripts.

@@ -1,0 +1,46 @@
+# Lucid Sentence — Mobile (Android, iOS/iPadOS)
+
+**Status: placeholder.** No shell code yet. This directory will hold the mobile
+app; it is the largest engineering risk in the plan and is gated in M0.
+
+## Plan (docs/PLAN.md §3.2–§3.4)
+
+ONLYOFFICE's own mobile apps and native editor glue are commercially licensed and
+not public, so Lucid Sentence builds its own open-source mobile shell:
+
+| Layer         | Choice                                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------- |
+| Shell         | **Capacitor** (Tauri 2 mobile is the alternative if M0 points to one shell for all platforms)                 |
+| UI            | The **same** Sentence UI as desktop (`packages/ribbon-ui`), in its tablet and phone layouts                   |
+| Engine        | ONLYOFFICE **sdkjs** (AGPL-3.0), desktop-style controllers and dialogs with a responsive touch layout         |
+| Editor server | A local "editor server" shim: open/save, autosave, fonts; **no network**                                      |
+| Conversion    | **x2t compiled to WebAssembly** first; **native x2t via a Capacitor plugin** if WASM memory/speed falls short |
+| Files         | Android Storage Access Framework; iOS document picker / Files app; share sheet for export                     |
+
+Prior art for running sdkjs + web-apps + x2t fully on the client:
+CryptPad's `onlyoffice-x2t-wasm`, `ranuts/document`, `wasm-onlyoffice-sdk`.
+
+### Full ribbon on phone and tablet (v1 hard requirement)
+
+Phone and tablet expose **every** tab, group, and command that desktop has, in
+the same order. Touch changes layout only:
+
+- **Tablet** (≥ ~700 pt): near-desktop single-row ribbon that collapses
+  progressively into group overflow menus; 44 pt touch targets.
+- **Phone**: tab picker + quick strip + bottom sheet listing every group of the
+  current tab; any command in ≤ 3 taps; "Find a command" search; dialogs become
+  full-screen sheets with the same fields as desktop.
+
+The command registry enforces this: CI fails if any command lacks a tablet or
+phone placement.
+
+### M0 go/no-go
+
+See [`/eval`](../../eval/README.md). If the gate fails after one fix iteration,
+the whole product switches to Collabora / LibreOfficeKit (no mixed engines).
+
+### Distribution
+
+Counsel review of AGPL vs. App Store terms is required before iOS store
+distribution. Alternative channels: F-Droid and direct APK on Android;
+TestFlight/sideload on iOS (open question for R H).
