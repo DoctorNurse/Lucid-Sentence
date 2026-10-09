@@ -30,6 +30,14 @@ import { FindPanel } from './editor/find.js';
 import { History } from './editor/history.js';
 import { InkLayer, type InkTool } from './editor/ink.js';
 import {
+  buildInkDocxParts,
+  inkDocxEnabled,
+  inkMLToStrokes,
+  strokesToInkML,
+} from './editor/ink/inkml.js';
+import { decodeInk, encodeInk } from './editor/ink/model.js';
+import { connectPencil, pencilCommand } from './editor/ink/pencil.js';
+import {
   PAPERS,
   PAPER_COLORS,
   PenToolbar,
@@ -132,6 +140,9 @@ const audio = new AudioNotes(() => {
 const ink = new InkLayer(document.querySelector<SVGSVGElement>('#ink')!, pageEl, canvas, {
   onOp: (op) => {
     history.ink(op);
+  },
+  onRetract: (op) => {
+    history.retract(op);
   },
   onPenWhileIdle: () => {
     setDraw(true);
@@ -299,9 +310,7 @@ function layout(): void {
       ),
     ),
   );
-  ink.svg.setAttribute('viewBox', `0 0 ${g.width} ${pages * H}`);
-  ink.svg.setAttribute('width', String(g.width));
-  ink.svg.setAttribute('height', String(pages * H));
+  ink.setSize(g.width, pages * H);
   updateStatus();
   comments.render();
   strip.update();
@@ -325,6 +334,7 @@ function setZoom(z: number | 'fit' | 'page'): void {
   scale = Math.max(0.25, Math.min(4, scale));
   view.zoom = Math.round(scale * 100);
   sheet.style.setProperty('zoom', String(scale));
+  ink.refreshView();
   $('#zoom').textContent = `${view.zoom}%`;
   ($('#zoom-range') as HTMLInputElement).value = String(view.zoom);
 }
@@ -427,7 +437,7 @@ function refresh(): void {
   on('view.page-movement.vertical', true);
   on('review.comments.show-comments', comments.visible);
   on('review.speech.read-aloud', view.readAloud);
-  on('review.ink.hide-ink', ink.svg.classList.contains('ink--hidden'));
+  on('review.ink.hide-ink', ink.hidden);
   on('draw.drawing-tools.select', !view.draw);
   on('draw.drawing-tools.lasso', view.draw && ink.tool === 'lasso');
   on('draw.drawing-tools.draw-with-touch', settings.drawWithTouch);
@@ -684,7 +694,7 @@ function save(): void {
       DRAFT,
       JSON.stringify({
         html: doc.innerHTML,
-        strokes: ink.strokes,
+        ink: encodeInk(ink.strokes),
         name: $('#doc-name').textContent,
         at: Date.now(),
       }),
@@ -701,9 +711,10 @@ if (params.get('draft') !== 'off') {
   try {
     const raw = localStorage.getItem(DRAFT);
     if (raw) {
-      const d = JSON.parse(raw) as { html: string; strokes: typeof ink.strokes; name: string };
+      const d = JSON.parse(raw) as { html: string; ink?: unknown; strokes?: unknown; name: string };
       doc.innerHTML = sanitize(d.html);
-      ink.strokes = d.strokes;
+      // v1 drafts carry `ink`; older drafts carry a plain `strokes` array (model v0).
+      ink.strokes = decodeInk(d.ink ?? d.strokes ?? []);
       ink.render();
       $('#doc-name').textContent = d.name;
     }
@@ -1054,7 +1065,32 @@ void document.fonts.ready.then(() => {
   layout();
 });
 
+// Apple Pencil double-tap / squeeze (native iPad app only; see editor/ink/pencil.ts).
+let toolBeforeEraser: InkTool = 'pen';
+connectPencil((e) => {
+  const cmd = pencilCommand(e);
+  if (!cmd) return;
+  if (!view.draw) setDraw(true);
+  if (cmd === 'toggle-eraser' || cmd === 'previous-tool') {
+    const erasing = ink.tool === 'eraser' || ink.tool === 'point-eraser';
+    if (!erasing) toolBeforeEraser = ink.tool;
+    setDraw(true, erasing ? toolBeforeEraser : 'eraser');
+  } else {
+    pen.show(true);
+  }
+  refresh();
+});
+
+// .docx ink (InkML) behind the `inkdocx` flag until the engine's docx writer lands (M1).
+const inkDocx = inkDocxEnabled()
+  ? {
+      inkml: () => strokesToInkML(ink.strokes),
+      parts: () => buildInkDocxParts(ink.strokes),
+      read: (xml: string) => inkMLToStrokes(xml).strokes,
+    }
+  : undefined;
+
 // Test hooks (used by Playwright e2e tests; harmless in production builds).
 Object.assign(window, {
-  __ls: { app, ink, audio, timeline, history, ribbon, palette, run, setNotes, toast },
+  __ls: { app, ink, audio, timeline, history, ribbon, palette, run, setNotes, toast, inkDocx },
 });

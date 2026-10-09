@@ -607,12 +607,50 @@ select {
   color: rgb(127 127 127 / 70%);
 }
 
-/* Ink layer (Draw tab and Notes mode) */
+/* Ink (Draw tab and Notes mode). Layers, bottom to top: highlighters (under the text,
+   one layer per color, faded once so overlapping strokes don't stack), the text (.doc,
+   z-index 1), pen and pencil ink, the stroke being drawn, then the SVG overlay that takes
+   pointer input and shows hover, lasso and selection. */
+.ink-hl,
+.ink-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+.ink-hl {
+  z-index: 0;
+}
+.ink-canvas {
+  z-index: 2;
+}
+.ink-hl__color {
+  position: absolute;
+  inset: 0;
+  opacity: 0.38;
+  mix-blend-mode: multiply;
+}
+.paper-night .ink-hl__color {
+  mix-blend-mode: screen;
+}
+.ink-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.ink-tile {
+  position: absolute;
+  left: 0;
+  display: block;
+}
+.ink-seekable {
+  cursor: pointer;
+}
 .ink {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 2;
+  z-index: 3;
   overflow: visible;
   pointer-events: none;
 }

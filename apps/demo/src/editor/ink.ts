@@ -1,42 +1,65 @@
 /**
  * Ink layer for the Draw tab and Notes mode (Pointer Events: pen, touch, mouse).
  *
- * - Pressure-sensitive, smoothed strokes (perfect-freehand, MIT), rendered as SVG.
- * - Pen, pencil (tilt widens the line), highlighter, stroke and point erasers, lasso select.
- * - Touch: fingers draw when "Draw with Touch" is on (the default on phones, where many
- *   styluses are capacitive and report pointerType 'touch'). Two fingers scroll and pinch-zoom.
- * - Palm rejection: once a real pen (pointerType 'pen') is detected, a phone's default
- *   switches to pen only; touch is also ignored while a pen is in contact or hovering.
- * - Pen hover preview (pen pointer moves with no contact; tracked by pointer id, because
- *   some Android WebViews report buttons = 0 or pressure = 0 during contact).
- * - Android: a pen's touch events are cancelled while it draws, so the WebView never turns
- *   the stroke into a scroll (which would fire pointercancel and cut the line short).
- * - Stylus barrel/eraser buttons (buttons bitmask 2 or 32) erase while held.
- * - Every change is an undoable operation (see history.ts).
- * - Strokes carry a recording timestamp when audio is recording (Notes mode).
+ * Input (ink/input.ts): pressure, tiltX/tiltY and altitude/azimuth (normalized both
+ * ways), coalesced samples, predicted samples (drawn, never stored), hover, and pen
+ * buttons tracked for the whole hover → contact → lift cycle (barrel `buttons & 2`,
+ * eraser end `buttons & 32`).
+ *
+ * Palm rejection (ink/palm.ts): pen-only once a pen is seen (phones), touches ignored
+ * near pen activity, palm-sized contacts ignored, a finger stroke retracted when a
+ * second finger follows quickly, and `pointercancel` discards the live stroke.
+ *
+ * Rendering (ink/render.ts): tiled canvas layers. Highlighters sit **under** the text,
+ * one layer per color, drawn opaque and faded once per layer so overlapping strokes of
+ * one color never stack. Pens and pencils sit above the text. The stroke being drawn is
+ * outlined incrementally on its own low-latency layer. A vector copy of every stroke is
+ * kept in the overlay SVG's <defs> (`#ink-strokes`) for the magnifier and tests.
+ *
+ * Every change is an undoable operation (history.ts). Strokes carry a recording
+ * timestamp when audio is recording (Notes mode).
+ *
+ * Several behaviors (highlighter layering, hold-to-straighten, button tool switching,
+ * retracting a pinch's first stroke) are inspired by Saber
+ * (https://github.com/saber-notes/saber, GPL-3.0). No Saber code is used.
  */
 import { getStroke } from 'perfect-freehand';
+import {
+  decimate,
+  drawSize,
+  heldAtEnd,
+  inside,
+  isStraight,
+  outline,
+  pathFromOutline,
+  segDist,
+  straighten,
+  strokeOptions,
+  thinPoints,
+} from './ink/geometry.js';
+import { PenButtons, readSample, type PointerLike } from './ink/input.js';
+import {
+  bboxOf,
+  TOOL_OPACITY,
+  type InkOp,
+  type InkTool,
+  type Point,
+  type Stroke,
+  type StrokeTool,
+} from './ink/model.js';
+import { PalmGuard, type TouchLike } from './ink/palm.js';
+import {
+  LiveOutline,
+  pad,
+  strokePath,
+  strokePathLo,
+  TiledLayer,
+  union,
+  type Rect,
+} from './ink/render.js';
 
-export type InkTool = 'pen' | 'pencil' | 'highlighter' | 'eraser' | 'point-eraser' | 'lasso';
-export type Point = [x: number, y: number, pressure: number];
-
-export interface Stroke {
-  id: number;
-  tool: 'pen' | 'pencil' | 'highlighter';
-  color: string;
-  size: number;
-  points: Point[];
-  /** Milliseconds into the active audio recording when the stroke began. */
-  t?: number;
-  /** Recording the timestamp belongs to. */
-  rec?: string;
-}
-
-export type InkOp =
-  | { kind: 'add'; strokes: Stroke[] }
-  | { kind: 'remove'; strokes: Stroke[] }
-  | { kind: 'replace'; before: Stroke[]; after: Stroke[] }
-  | { kind: 'move'; ids: number[]; dx: number; dy: number };
+export { inside, segDist } from './ink/geometry.js';
+export type { InkOp, InkTool, Point, Stroke } from './ink/model.js';
 
 export interface InkOptions {
   /** A real pen was detected for the first time while touch drawing was the default. */
@@ -46,6 +69,8 @@ export interface InkOptions {
   setZoom?: (percent: number) => void;
   /** Called for each completed operation (for the shared undo timeline). */
   onOp: (op: InkOp) => void;
+  /** An operation already reported was withdrawn (a pinch's accidental first stroke). */
+  onRetract?: (op: InkOp) => void;
   /** A pen touched the page while draw mode was off. Return true to start drawing. */
   onPenWhileIdle: () => boolean;
   onStatus?: (msg: string) => void;
@@ -56,45 +81,16 @@ export interface InkOptions {
 }
 
 const SVG = 'http://www.w3.org/2000/svg';
-const ERASER_BUTTONS = 2 | 32;
 
-function pathFromOutline(pts: number[][]): string {
-  if (pts.length < 2) return '';
-  const f = (n: number): string => n.toFixed(2);
-  const parts = [`M${f(pts[0]![0]!)},${f(pts[0]![1]!)} Q`];
-  for (let i = 0; i < pts.length; i++) {
-    const [x0, y0] = pts[i]!;
-    const [x1, y1] = pts[(i + 1) % pts.length]!;
-    parts.push(`${f(x0!)},${f(y0!)} ${f((x0! + x1!) / 2)},${f((y0! + y1!) / 2)}`);
-  }
-  return `${parts.join(' ')} Z`;
-}
-
-/** Distance from (px, py) to the segment (ax, ay)–(bx, by). */
-export function segDist(
-  px: number,
-  py: number,
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number,
-): number {
-  const dx = bx - ax;
-  const dy = by - ay;
-  const len = dx * dx + dy * dy;
-  const t = len === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len));
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
-}
-
-/** Point-in-polygon (even-odd). */
-export function inside(x: number, y: number, poly: [number, number][]): boolean {
-  let c = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, yi] = poly[i]!;
-    const [xj, yj] = poly[j]!;
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
-  }
-  return c;
+interface Live {
+  stroke: Stroke;
+  pointerType: string;
+  outline: LiveOutline;
+  /** event.timeStamp of the first sample. */
+  t0: number;
+  /** performance.now() at the start (for retraction). */
+  startedAt: number;
+  lastP: number;
 }
 
 export class InkLayer {
@@ -112,17 +108,22 @@ export class InkLayer {
    * turns it off so the pen gets palm rejection.
    */
   touchAuto = false;
-  /** A pointer with pointerType 'pen' has been seen this session. */
-  penDetected = false;
+  /** Highlighter strokes that look like lines become straight lines. */
+  autoStraightenHighlighter = true;
+  /** Resting the pen for 400 ms before lifting straightens a line-like stroke. */
+  holdToStraighten = true;
+  /** Mirror the live stroke into the vector copy (the magnifier strip shows it). */
+  mirrorLive = false;
   /** Pointer type of the last accepted stroke (status and tests). */
   lastPointerType = '';
-  /** Count of touches rejected as palms (tests and diagnostics). */
-  rejected = 0;
+  /** Strokes discarded because the system cancelled the pointer (diagnostics). */
+  cancelled = 0;
   selected = new Set<number>();
+  readonly palm = new PalmGuard();
+  readonly buttons = new PenButtons();
 
   #nextId = 1;
-  #live: { stroke: Stroke; path: SVGPathElement; pointerType: string } | null = null;
-  #penSeenAt = -Infinity;
+  #live: Live | null = null;
   /** Pointers in contact with the ink layer (pen hover = a pen move not in this set). */
   #contacts = new Set<number>();
   #erasing: {
@@ -130,18 +131,37 @@ export class InkLayer {
     before: Stroke[];
     hits: number;
     last?: [number, number];
+    /** Stroke kept from the same contact (barrel pressed mid-stroke): never erased by it. */
+    keep?: number;
   } | null = null;
   #lasso: { pts: [number, number][]; path: SVGPathElement } | null = null;
-  #drag: { x: number; y: number; dx: number; dy: number } | null = null;
+  #drag: { x: number; y: number; dx: number; dy: number; box: Rect | null } | null = null;
   #pan: { y: number; x: number } | null = null;
   /** Touch pointers down on the ink layer while drawing (for two-finger gestures). */
   #touches = new Map<number, [number, number]>();
   #pinch: { dist: number; mid: [number, number]; zoom: number } | null = null;
   /** After a two-finger gesture, remaining fingers don't draw until all are lifted. */
   #gestureLock = false;
+  /** The last committed finger stroke (retracted if a second finger follows quickly). */
+  #lastTouchAdd: { op: InkOp; startedAt: number } | null = null;
+  /** Page rect and scale cached for the current gesture. */
+  #frame: { left: number; top: number; scale: number } | null = null;
+  #future = new Set<number>();
+  #replaying: { upTo: number } | null = null;
+  #hidden = false;
+  #w = 0;
+  #h = 0;
+  #viewQueued = false;
+
   readonly #hoverDot: SVGCircleElement;
   readonly #group: SVGGElement;
   readonly #overlay: SVGGElement;
+  readonly #livePath: SVGPathElement;
+  readonly hlRoot: HTMLDivElement;
+  readonly inkRoot: HTMLDivElement;
+  readonly #ink: TiledLayer;
+  readonly #hl = new Map<string, { root: HTMLDivElement; layer: TiledLayer }>();
+  readonly #liveLayer: TiledLayer;
 
   constructor(
     readonly svg: SVGSVGElement,
@@ -149,13 +169,31 @@ export class InkLayer {
     readonly scroller: HTMLElement,
     readonly opts: InkOptions,
   ) {
+    const defs = document.createElementNS(SVG, 'defs');
     this.#group = document.createElementNS(SVG, 'g');
+    this.#group.id = 'ink-strokes';
+    this.#livePath = document.createElementNS(SVG, 'path');
+    defs.append(this.#group);
     this.#overlay = document.createElementNS(SVG, 'g');
     this.#hoverDot = document.createElementNS(SVG, 'circle');
     this.#hoverDot.setAttribute('class', 'ink-hover');
     this.#hoverDot.setAttribute('r', '0');
     this.#overlay.append(this.#hoverDot);
-    svg.append(this.#group, this.#overlay);
+    svg.append(defs, this.#overlay);
+
+    // Layers: highlighters under the text, pens above it, the live stroke on top.
+    this.hlRoot = document.createElement('div');
+    this.hlRoot.className = 'ink-hl';
+    this.inkRoot = document.createElement('div');
+    this.inkRoot.className = 'ink-canvas';
+    this.#ink = new TiledLayer('ink-layer--ink', (ctx, r) => {
+      this.#paintStrokes(ctx, r, (s) => s.tool !== 'highlighter');
+    });
+    this.inkRoot.append(this.#ink.el);
+    this.#liveLayer = new TiledLayer('ink-layer--live', () => undefined, true);
+    page.prepend(this.hlRoot);
+    svg.before(this.inkRoot);
+
     svg.addEventListener('pointerdown', (e) => {
       this.#down(e);
     });
@@ -163,13 +201,16 @@ export class InkLayer {
       this.#move(e);
     });
     svg.addEventListener('pointerup', (e) => {
-      this.#up(e);
+      this.#up(e, false);
     });
     svg.addEventListener('pointercancel', (e) => {
-      this.#up(e);
+      this.#up(e, true);
     });
     svg.addEventListener('pointerleave', (e) => {
-      if (e.pointerType === 'pen') this.#hover(null);
+      if (e.pointerType === 'pen' && !this.#contacts.has(e.pointerId)) {
+        this.palm.pen(performance.now(), 'leave');
+        this.#hover(null);
+      }
     });
     // Pen side button / long press would open a context menu over the page.
     svg.addEventListener('contextmenu', (e) => {
@@ -182,7 +223,7 @@ export class InkLayer {
       const stylus = [...e.changedTouches].some(
         (t) => (t as Touch & { touchType?: string }).touchType === 'stylus',
       );
-      const penBusy = this.#live?.pointerType === 'pen' || this.#penContact;
+      const penBusy = this.#live?.pointerType === 'pen' || this.palm.penContact;
       if ((stylus && (this.active || this.autoSwitch)) || penBusy) {
         if (e.cancelable) e.preventDefault();
       }
@@ -204,8 +245,12 @@ export class InkLayer {
     );
     page.addEventListener('pointermove', (e) => {
       if (e.pointerType === 'pen') {
-        this.#penSeenAt = performance.now();
+        this.palm.pen(performance.now(), this.#contacts.has(e.pointerId) ? 'contact' : 'hover');
         this.#detectPen();
+      } else if (!this.active && this.opts.onStrokeTap && e.pointerType === 'mouse') {
+        // Not drawing: a pointer cursor over strokes that seek the recording.
+        const s = this.hitTest(...this.#pt(e));
+        page.classList.toggle('ink-seekable', s?.t !== undefined);
       }
     });
     // Tap a timestamped stroke (not drawing) to seek the recording.
@@ -224,54 +269,24 @@ export class InkLayer {
         this.select([]);
       }
     });
-  }
-
-  #detectPen(): void {
-    if (this.penDetected) return;
-    this.penDetected = true;
-    if (this.touchAuto && this.drawWithTouch) {
-      this.drawWithTouch = false;
-      this.touchAuto = false;
-      this.opts.onPenDetected?.();
-    }
-  }
-
-  /** Abandon whatever a finger started: a second finger means scroll or zoom. */
-  #abortTouch(): void {
-    if (this.#live?.pointerType === 'touch') {
-      this.#live.path.remove();
-      this.#live = null;
-    }
-    if (this.#erasing) {
-      const er = this.#erasing;
-      this.#erasing = null;
-      if (er.hits > 0) {
-        this.opts.onOp({
-          kind: 'replace',
-          before: er.before,
-          after: this.strokes.map((s) => ({ ...s })),
-        });
-      }
-    }
-    if (this.#lasso) {
-      this.#lasso.path.remove();
-      this.#lasso = null;
-    }
-    if (this.#drag) {
-      this.#group.querySelectorAll('path.is-selected').forEach((p) => {
-        p.removeAttribute('transform');
-      });
-      this.#drag = null;
-    }
-    this.#pan = null;
-  }
-
-  #pinchState(): { dist: number; mid: [number, number] } {
-    const [a, b] = [...this.#touches.values()];
-    return {
-      dist: Math.hypot(a![0] - b![0], a![1] - b![1]),
-      mid: [(a![0] + b![0]) / 2, (a![1] + b![1]) / 2],
+    const queue = (): void => {
+      this.refreshView();
     };
+    scroller.addEventListener('scroll', queue, { passive: true });
+    window.addEventListener('resize', queue);
+  }
+
+  // -------------------------------------------------------------------------
+  // Public state
+
+  /** A pointer with pointerType 'pen' has been seen this session. */
+  get penDetected(): boolean {
+    return this.palm.penDetected;
+  }
+
+  /** Count of touches rejected as palms (tests and diagnostics). */
+  get rejected(): number {
+    return this.palm.rejected;
   }
 
   /** Whether a two-finger gesture is in progress (tests and diagnostics). */
@@ -279,58 +294,138 @@ export class InkLayer {
     return this.#pinch !== null;
   }
 
+  /** The tool in effect right now (a held pen button means the eraser). */
+  get effectiveTool(): InkTool {
+    return this.buttons.held || this.buttons.latched ? 'eraser' : this.tool;
+  }
+
+  get hidden(): boolean {
+    return this.#hidden;
+  }
+
+  /** The SVG group holding the vector copy of every stroke (for magnified views). */
+  get group(): SVGGElement {
+    return this.#group;
+  }
+
+  /** Highlighter colors that currently have a layer (tests). */
+  get highlighterLayers(): string[] {
+    return [...this.#hl.keys()];
+  }
+
+  setHidden(on: boolean): void {
+    this.#hidden = on;
+    this.svg.classList.toggle('ink--hidden', on);
+    this.hlRoot.hidden = on;
+    this.inkRoot.hidden = on;
+  }
+
+  /** Size of the drawable area in page px (the page column, all pages). */
+  setSize(w: number, h: number): void {
+    this.#w = w;
+    this.#h = h;
+    this.svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    this.svg.setAttribute('width', String(w));
+    this.svg.setAttribute('height', String(h));
+    for (const r of [this.hlRoot, this.inkRoot]) {
+      r.style.width = `${w}px`;
+      r.style.height = `${h}px`;
+    }
+    this.#ink.resize(w, h);
+    this.#liveLayer.resize(w, h);
+    for (const { layer } of this.#hl.values()) layer.resize(w, h);
+    this.#syncView();
+  }
+
+  /** Re-read the visible range and zoom (after scrolling or zooming). */
+  refreshView(): void {
+    if (this.#viewQueued) return;
+    this.#viewQueued = true;
+    requestAnimationFrame(() => {
+      this.#viewQueued = false;
+      this.#syncView();
+    });
+  }
+
+  #syncView(): void {
+    if (this.#w === 0) return;
+    const pr = this.page.getBoundingClientRect();
+    const sr = this.scroller.getBoundingClientRect();
+    const zoom = pr.width / (this.page.offsetWidth || 1) || 1;
+    const top = (sr.top - pr.top) / zoom;
+    const bottom = (sr.bottom - pr.top) / zoom;
+    const scale = zoom * (window.devicePixelRatio || 1);
+    for (const l of this.#layers()) l.setView(top, bottom, scale);
+  }
+
+  #layers(): TiledLayer[] {
+    return [this.#ink, this.#liveLayer, ...[...this.#hl.values()].map((h) => h.layer)];
+  }
+
+  #penHandled = false;
+
+  /** The first pen this session: a device-default "fingers draw" turns off (palm layer 1). */
+  #detectPen(): void {
+    this.palm.penDetected = true;
+    if (this.#penHandled) return;
+    this.#penHandled = true;
+    if (this.touchAuto && this.drawWithTouch) {
+      this.drawWithTouch = false;
+      this.touchAuto = false;
+      this.opts.onPenDetected?.();
+    }
+  }
+
   setActive(on: boolean): void {
     this.active = on;
     this.svg.classList.toggle('ink--active', on);
-    this.svg.dataset['tool'] = this.tool;
+    this.svg.dataset['tool'] = this.effectiveTool;
     if (!on) {
       this.#contacts.clear();
       this.#touches.clear();
       this.#pinch = null;
       this.#gestureLock = false;
-      this.#penContact = false;
+      this.palm.penContact = false;
+      this.buttons.reset();
       this.select([]);
       this.#hover(null);
     }
+    this.refreshView();
   }
 
   setTool(tool: InkTool): void {
     this.tool = tool;
-    this.svg.dataset['tool'] = tool;
+    this.svg.dataset['tool'] = this.effectiveTool;
     if (tool !== 'lasso') this.select([]);
   }
 
   #pt(e: { clientX: number; clientY: number }): [number, number] {
-    const r = this.page.getBoundingClientRect();
-    const scale = r.width / this.page.offsetWidth || 1;
-    return [(e.clientX - r.left) / scale, (e.clientY - r.top) / scale];
+    const f = this.#frame ?? this.#measure();
+    return [(e.clientX - f.left) / f.scale, (e.clientY - f.top) / f.scale];
   }
 
-  /** Pens report pressure; mouse and touch use a constant and simulated pressure. */
-  #pressure(e: PointerEvent): number {
-    if (e.pointerType === 'pen') return Math.max(0.05, e.pressure || 0.5);
-    return 0.5;
+  #measure(): { left: number; top: number; scale: number } {
+    const r = this.page.getBoundingClientRect();
+    return { left: r.left, top: r.top, scale: r.width / this.page.offsetWidth || 1 };
   }
 
   /** Palm rejection and the Draw with Touch setting. */
-  accepts(pointerType: string): boolean {
-    if (pointerType !== 'touch') return true;
-    if (!this.drawWithTouch) return false;
-    // A pen in contact, hovering, or used in the last 700 ms: treat touches as a resting palm.
-    if (this.#live?.pointerType === 'pen') return false;
-    return performance.now() - this.#penSeenAt > 700;
+  accepts(pointerType: string, e?: TouchLike): boolean {
+    if (pointerType === 'touch' && this.#live?.pointerType === 'pen') return false;
+    return this.palm.peek({ pointerType, ...e }, this.drawWithTouch, performance.now()) === null;
   }
 
-  /** A pen is in contact with the ink layer. */
-  #penContact = false;
+  // -------------------------------------------------------------------------
+  // Pointer handling
 
   #down(e: PointerEvent): void {
     if (!this.active) return;
+    this.#frame = this.#measure();
     this.#contacts.add(e.pointerId);
     if (e.pointerType === 'pen') {
-      this.#penSeenAt = performance.now();
-      this.#penContact = true;
+      this.palm.pen(performance.now(), 'contact');
       this.#detectPen();
+      if (this.buttons.update(e, 'down')) this.#toolChanged();
     }
     if (e.pointerType === 'touch') {
       this.#touches.set(e.pointerId, [e.clientX, e.clientY]);
@@ -338,14 +433,18 @@ export class InkLayer {
         // Two fingers: scroll and zoom, never ink.
         e.preventDefault();
         this.#abortTouch();
+        this.#retractTouchStroke();
         this.#gestureLock = true;
         this.#pinch = { ...this.#pinchState(), zoom: this.opts.getZoom?.() ?? 100 };
         return;
       }
       if (this.#gestureLock) return;
     }
-    if (!this.accepts(e.pointerType)) {
-      this.rejected++;
+    const rejection =
+      e.pointerType === 'touch' && this.#live?.pointerType === 'pen'
+        ? 'pen-active'
+        : this.palm.check(e, this.drawWithTouch, performance.now());
+    if (rejection) {
       if (e.pointerType === 'touch' && !this.drawWithTouch)
         this.#pan = { x: e.clientX, y: e.clientY };
       return;
@@ -359,16 +458,14 @@ export class InkLayer {
     }
     this.lastPointerType = e.pointerType;
     const [x, y] = this.#pt(e);
-    const barrel = e.pointerType === 'pen' && (e.buttons & ERASER_BUTTONS) !== 0;
-    const tool = barrel ? 'eraser' : this.tool;
+    const tool = this.effectiveTool;
     if (tool === 'eraser' || tool === 'point-eraser') {
-      this.#erasing = { tool, before: this.strokes.map((s) => ({ ...s })), hits: 0 };
-      this.#erase(x, y);
+      this.#startErase(tool, x, y);
       return;
     }
     if (tool === 'lasso') {
       if (this.selected.size > 0 && this.#inSelection(x, y)) {
-        this.#drag = { x, y, dx: 0, dy: 0 };
+        this.#startDrag(x, y);
         return;
       }
       const path = document.createElementNS(SVG, 'path');
@@ -377,19 +474,127 @@ export class InkLayer {
       this.#lasso = { pts: [[x, y]], path };
       return;
     }
+    this.#begin(tool, e);
+  }
+
+  #begin(tool: StrokeTool, e: PointerEvent): void {
     const clock = this.opts.clock?.() ?? null;
+    const s = readSample(e, (cx, cy) => this.#pt({ clientX: cx, clientY: cy }));
+    const real = !Number.isNaN(s.p);
     const stroke: Stroke = {
       id: this.#nextId++,
       tool,
       color: this.color,
       size: tool === 'highlighter' ? Math.max(this.size * 3, 14) : this.size,
-      points: [[x, y, this.#pressure(e)]],
+      points: [[s.x, s.y, real ? s.p : 0.5, s.tiltX, s.tiltY, 0]],
+      pressure: real,
+      source: e.pointerType === 'pen' || e.pointerType === 'touch' ? e.pointerType : 'mouse',
       ...(clock ? { t: clock.t, rec: clock.rec } : {}),
     };
-    const path = document.createElementNS(SVG, 'path');
-    this.#group.append(path);
-    this.#live = { stroke, path, pointerType: e.pointerType };
-    this.#paint(path, stroke, e);
+    this.#startLive(stroke, e.pointerType, e.timeStamp, real ? s.p : 0.5);
+  }
+
+  #startLive(stroke: Stroke, pointerType: string, t0: number, p: number): void {
+    this.#live = {
+      stroke,
+      pointerType,
+      outline: new LiveOutline(stroke),
+      t0,
+      startedAt: performance.now(),
+      lastP: p,
+    };
+    // The live layer joins the stack the finished stroke will land in.
+    const host = stroke.tool === 'highlighter' ? this.#hlLayer(stroke.color).root : this.inkRoot;
+    host.append(this.#liveLayer.el);
+    this.#liveLayer.el.style.opacity = stroke.tool === 'pencil' ? String(TOOL_OPACITY.pencil) : '';
+    this.#syncView();
+    this.#drawLive([]);
+  }
+
+  /** Append samples from a pointer event (coalesced samples included). */
+  #extend(e: PointerEvent): void {
+    const live = this.#live!;
+    const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [];
+    for (const ce of events.length > 0 ? events : [e]) live.stroke.points.push(this.#point(ce));
+    const predicted =
+      typeof e.getPredictedEvents === 'function'
+        ? e.getPredictedEvents().map((pe) => this.#point(pe, true))
+        : [];
+    this.#drawLive(predicted);
+  }
+
+  #point(e: PointerLike, predicted = false): Point {
+    const live = this.#live!;
+    const s = readSample(e, (cx, cy) => this.#pt({ clientX: cx, clientY: cy }));
+    let p = s.p;
+    if (Number.isNaN(p)) p = live.stroke.pressure ? live.lastP : 0.5;
+    else if (!predicted) {
+      if (!live.stroke.pressure) {
+        // First real pressure: earlier samples were placeholders.
+        live.stroke.pressure = true;
+        for (const q of live.stroke.points) q[2] = p;
+      }
+      live.lastP = p;
+    }
+    return [s.x, s.y, p, s.tiltX, s.tiltY, Math.max(0, Math.round(s.t - live.t0))];
+  }
+
+  #drawLive(predicted: Point[]): void {
+    const live = this.#live;
+    if (!live) return;
+    const { dirty, tail } = live.outline.update(predicted);
+    if (dirty) {
+      const color = live.stroke.color;
+      this.#liveLayer.draw(
+        dirty,
+        (ctx) => {
+          ctx.fillStyle = color;
+          for (const f of live.outline.frozen) ctx.fill(f.path);
+          if (tail) ctx.fill(tail);
+        },
+        true,
+      );
+    }
+    if (this.mirrorLive) {
+      this.#livePath.setAttribute(
+        'd',
+        live.stroke.points.length > 1 ? pathOf(outline(live.stroke, false)) : '',
+      );
+      this.#livePath.setAttribute('fill', live.stroke.color);
+      this.#livePath.setAttribute('class', `ink-stroke ink-stroke--${live.stroke.tool}`);
+      if (!this.#livePath.isConnected) this.#group.append(this.#livePath);
+    }
+  }
+
+  #endLive(commit: boolean, liftT?: number): Stroke | null {
+    const live = this.#live;
+    if (!live) return null;
+    this.#live = null;
+    this.#liveLayer.clear(live.outline.box ? pad(live.outline.box, 4) : null);
+    this.#livePath.remove();
+    if (!commit) return null;
+    const stroke = live.stroke;
+    stroke.points = thinPoints(stroke.points, Math.min(1, stroke.size * 0.1));
+    if (stroke.points.length === 1) {
+      const p0 = stroke.points[0]!;
+      stroke.points.push([p0[0] + 0.1, p0[1] + 0.1, p0[2], p0[3] ?? 0, p0[4] ?? 0, p0[5] ?? 0]);
+    }
+    const lift = liftT ?? stroke.points.at(-1)![5] ?? 0;
+    const straightenable = stroke.tool !== 'pencil' || this.holdToStraighten;
+    if (
+      straightenable &&
+      isStraight(stroke.points, stroke.size) &&
+      ((stroke.tool === 'highlighter' && this.autoStraightenHighlighter) ||
+        (this.holdToStraighten && heldAtEnd(stroke.points, lift)))
+    ) {
+      stroke.points = straighten(stroke.points);
+      stroke.shape = 'line';
+    }
+    const op: InkOp = { kind: 'add', strokes: [stroke] };
+    this.apply(op);
+    this.opts.onOp(op);
+    this.#lastTouchAdd = live.pointerType === 'touch' ? { op, startedAt: live.startedAt } : null;
+    return stroke;
   }
 
   #move(e: PointerEvent): void {
@@ -413,13 +618,29 @@ export class InkLayer {
       this.#pan = { x: e.clientX, y: e.clientY };
       return;
     }
-    if (e.pointerType === 'pen') this.#penSeenAt = performance.now();
     const [x, y] = this.#pt(e);
     if (e.pointerType === 'pen' && !this.#contacts.has(e.pointerId)) {
+      // Hover: the barrel button (or eraser end) switches the tool while held.
+      if (this.buttons.update(e, 'hover')) this.#toolChanged();
       this.#hover([x, y]);
       return;
     }
     if (this.#live && e.pointerType !== this.#live.pointerType) return;
+    if (e.pointerType === 'pen' && this.buttons.update(e, 'move')) {
+      this.#toolChanged();
+      if (this.#live) {
+        // The button went down mid-stroke: keep what was drawn (unless it's a blip),
+        // then erase for the rest of this contact.
+        const s = this.#live.stroke;
+        const keep =
+          s.points.length >= 4 &&
+          Math.hypot(s.points.at(-1)![0] - s.points[0]![0], s.points.at(-1)![1] - s.points[0]![1]) >
+            6;
+        const kept = this.#endLive(keep);
+        this.#startErase('eraser', x, y, kept?.id);
+        return;
+      }
+    }
     const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [];
     const all = events.length > 0 ? events : [e];
     if (this.#erasing) {
@@ -427,12 +648,7 @@ export class InkLayer {
       return;
     }
     if (this.#drag) {
-      this.#drag.dx = x - this.#drag.x;
-      this.#drag.dy = y - this.#drag.y;
-      const t = `translate(${this.#drag.dx} ${this.#drag.dy})`;
-      this.#group.querySelectorAll('path.is-selected').forEach((p) => {
-        p.setAttribute('transform', t);
-      });
+      this.#moveDrag(x, y);
       return;
     }
     if (this.#lasso) {
@@ -444,14 +660,10 @@ export class InkLayer {
       return;
     }
     if (!this.#live) return;
-    for (const ce of all) {
-      const [cx, cy] = this.#pt(ce);
-      this.#live.stroke.points.push([cx, cy, this.#pressure(ce)]);
-    }
-    this.#paint(this.#live.path, this.#live.stroke, e);
+    this.#extend(e);
   }
 
-  #up(e: PointerEvent): void {
+  #up(e: PointerEvent, cancel: boolean): void {
     this.#pan = null;
     this.#contacts.delete(e.pointerId);
     if (e.pointerType === 'touch') {
@@ -460,11 +672,18 @@ export class InkLayer {
       if (this.#touches.size === 0) this.#gestureLock = false;
       if (this.#gestureLock || this.#pinch) return;
     }
-    if (e.pointerType === 'pen') this.#penContact = false;
-    if (e.pointerType === 'pen') this.#penSeenAt = performance.now();
+    if (e.pointerType === 'pen') {
+      this.palm.pen(performance.now(), 'up');
+      if (this.buttons.update(e, 'up')) this.#toolChanged();
+    }
+    if (this.#contacts.size === 0) this.#frame = null;
     if (this.#erasing) {
       const er = this.#erasing;
       this.#erasing = null;
+      if (cancel) {
+        this.#restore(er.before);
+        return;
+      }
       if (er.hits > 0) {
         this.opts.onOp({
           kind: 'replace',
@@ -475,19 +694,14 @@ export class InkLayer {
       return;
     }
     if (this.#drag) {
-      const { dx, dy } = this.#drag;
-      this.#drag = null;
-      if (dx !== 0 || dy !== 0) {
-        const op: InkOp = { kind: 'move', ids: [...this.selected], dx, dy };
-        this.apply(op);
-        this.opts.onOp(op);
-      }
+      this.#endDrag(cancel);
       return;
     }
     if (this.#lasso) {
       const poly = this.#lasso.pts;
       this.#lasso.path.remove();
       this.#lasso = null;
+      if (cancel) return;
       this.select(
         this.strokes
           .filter(
@@ -498,82 +712,199 @@ export class InkLayer {
       return;
     }
     if (!this.#live || e.pointerType !== this.#live.pointerType) return;
-    const { stroke, path } = this.#live;
-    this.#live = null;
-    path.remove();
-    const p0 = stroke.points[0]!;
-    if (stroke.points.length === 1) stroke.points.push([p0[0] + 0.1, p0[1] + 0.1, p0[2]]);
-    const op: InkOp = { kind: 'add', strokes: [stroke] };
-    this.apply(op);
-    this.opts.onOp(op);
-  }
-
-  #paint(path: SVGPathElement, s: Stroke, e?: PointerEvent): void {
-    let size = s.size;
-    if (s.tool === 'pencil' && e?.pointerType === 'pen') {
-      // A tilted pencil draws a broader line (tiltX/tiltY in degrees).
-      const tilt = Math.min(60, Math.hypot(e.tiltX || 0, e.tiltY || 0));
-      size = s.size * (1 + tilt / 60);
+    if (cancel) {
+      // The system took the pointer (palm, or a gesture): the stroke was never meant.
+      this.cancelled++;
+      this.#endLive(false);
+      this.opts.onStatus?.('Stroke discarded (the system cancelled the pointer)');
+      return;
     }
-    const simulate = !(this.#live?.pointerType === 'pen' || s.points.some((p) => p[2] !== 0.5));
-    const outline = getStroke(s.points, {
-      size: s.tool === 'pencil' ? size * 0.8 : size,
-      thinning: s.tool === 'highlighter' ? 0 : s.tool === 'pencil' ? 0.75 : 0.6,
-      smoothing: 0.55,
-      streamline: s.tool === 'highlighter' ? 0.7 : 0.45,
-      simulatePressure: simulate,
-      last: this.#live?.stroke !== s,
-      start: { cap: s.tool !== 'highlighter', taper: 0 },
-      end: { cap: s.tool !== 'highlighter', taper: 0 },
-    });
-    path.setAttribute('d', pathFromOutline(outline));
-    path.setAttribute('fill', s.color);
-    path.setAttribute(
-      'class',
-      `ink-stroke ink-stroke--${s.tool}${this.selected.has(s.id) ? ' is-selected' : ''}${s.t !== undefined ? ' has-time' : ''}`,
-    );
-    path.dataset['id'] = String(s.id);
+    this.#endLive(true, e.timeStamp - this.#live.t0);
   }
 
-  /** Draw from another surface (the magnifier strip) in page coordinates. */
+  #toolChanged(): void {
+    this.svg.dataset['tool'] = this.effectiveTool;
+  }
+
+  /** Abandon whatever a finger started: a second finger means scroll or zoom. */
+  #abortTouch(): void {
+    if (this.#live?.pointerType === 'touch') this.#endLive(false);
+    if (this.#erasing) {
+      const er = this.#erasing;
+      this.#erasing = null;
+      if (er.hits > 0) {
+        this.opts.onOp({
+          kind: 'replace',
+          before: er.before,
+          after: this.strokes.map((s) => ({ ...s })),
+        });
+      }
+    }
+    if (this.#lasso) {
+      this.#lasso.path.remove();
+      this.#lasso = null;
+    }
+    if (this.#drag) this.#endDrag(true);
+    this.#pan = null;
+  }
+
+  /** A second finger followed a finger stroke quickly: that stroke was a pinch starting. */
+  #retractTouchStroke(): void {
+    const last = this.#lastTouchAdd;
+    this.#lastTouchAdd = null;
+    if (!last || !this.palm.shouldRetract(last.startedAt, performance.now())) return;
+    if (last.op.kind !== 'add') return;
+    this.apply(last.op, true);
+    this.opts.onRetract?.(last.op);
+  }
+
+  #pinchState(): { dist: number; mid: [number, number] } {
+    const [a, b] = [...this.#touches.values()];
+    return {
+      dist: Math.hypot(a![0] - b![0], a![1] - b![1]),
+      mid: [(a![0] + b![0]) / 2, (a![1] + b![1]) / 2],
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Drawing from another surface (the magnifier strip), in page coordinates
+
   startStroke(x: number, y: number, pressure: number, pointerType: string): void {
     if (this.tool === 'eraser' || this.tool === 'point-eraser' || this.tool === 'lasso') return;
     const clock = this.opts.clock?.() ?? null;
     const tool = this.tool;
+    const real = pointerType === 'pen' && pressure > 0 && pressure !== 0.5;
     const stroke: Stroke = {
       id: this.#nextId++,
       tool,
       color: this.color,
       size: tool === 'highlighter' ? Math.max(this.size * 3, 14) : this.size,
-      points: [[x, y, pressure]],
+      points: [[x, y, real ? pressure : 0.5, 0, 0, 0]],
+      pressure: real,
+      source: pointerType === 'pen' || pointerType === 'touch' ? pointerType : 'mouse',
       ...(clock ? { t: clock.t, rec: clock.rec } : {}),
     };
-    const path = document.createElementNS(SVG, 'path');
-    this.#group.append(path);
     this.lastPointerType = pointerType;
-    this.#live = { stroke, path, pointerType };
-    this.#paint(path, stroke);
+    this.#startLive(stroke, pointerType, performance.now(), real ? pressure : 0.5);
   }
 
   extendStroke(x: number, y: number, pressure: number): void {
-    if (!this.#live) return;
-    this.#live.stroke.points.push([x, y, pressure]);
-    this.#paint(this.#live.path, this.#live.stroke);
+    const live = this.#live;
+    if (!live) return;
+    const p = live.stroke.pressure && pressure > 0 ? pressure : live.lastP;
+    live.stroke.points.push([x, y, p, 0, 0, Math.round(performance.now() - live.t0)]);
+    this.#drawLive([]);
   }
 
   endStroke(): void {
-    if (!this.#live) return;
-    const { stroke, path } = this.#live;
-    this.#live = null;
-    path.remove();
-    const op: InkOp = { kind: 'add', strokes: [stroke] };
-    this.apply(op);
-    this.opts.onOp(op);
+    this.#endLive(true, performance.now() - (this.#live?.t0 ?? 0));
   }
 
-  /** The SVG group holding rendered strokes (for magnified views). */
-  get group(): SVGGElement {
-    return this.#group;
+  // -------------------------------------------------------------------------
+  // Rendering
+
+  #hlLayer(color: string): { root: HTMLDivElement; layer: TiledLayer } {
+    let h = this.#hl.get(color);
+    if (!h) {
+      const root = document.createElement('div');
+      root.className = 'ink-hl__color';
+      root.dataset['color'] = color;
+      const layer = new TiledLayer('ink-layer--hl', (ctx, r) => {
+        this.#paintStrokes(ctx, r, (s) => s.tool === 'highlighter' && s.color === color);
+      });
+      root.append(layer.el);
+      this.hlRoot.append(root);
+      h = { root, layer };
+      this.#hl.set(color, h);
+      if (this.#w > 0) {
+        layer.resize(this.#w, this.#h);
+        this.#syncView();
+      }
+    }
+    return h;
+  }
+
+  /** Paint strokes matching `which` that intersect `rect`. */
+  #paintStrokes(ctx: CanvasRenderingContext2D, rect: Rect, which: (s: Stroke) => boolean): void {
+    const lo = this.#zoom() < 0.9;
+    const upTo = this.#replaying?.upTo ?? Infinity;
+    for (let i = 0; i < this.strokes.length && i < upTo; i++) {
+      const s = this.strokes[i]!;
+      if (!which(s)) continue;
+      if (this.#drag && this.selected.has(s.id)) continue;
+      const c = strokePath(s, (k) => outline(k));
+      if (!intersectsRect(c.box, rect)) continue;
+      const hl = s.tool === 'highlighter';
+      // Highlighters are opaque here; their layer applies the opacity once.
+      ctx.globalAlpha = (hl ? 1 : TOOL_OPACITY[s.tool]) * (this.#future.has(s.id) ? 0.22 : 1);
+      ctx.fillStyle = s.color;
+      if (this.selected.has(s.id)) {
+        ctx.shadowColor = getAccent();
+        ctx.shadowBlur = 4;
+      }
+      ctx.fill(lo ? strokePathLo(s, lowOutline) : c.path);
+      ctx.shadowBlur = 0;
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  #zoom(): number {
+    return (this.opts.getZoom?.() ?? 100) / 100;
+  }
+
+  /** Repaint the area a set of strokes covers, on the layers they live in. */
+  #invalidate(strokes: readonly Stroke[]): void {
+    let ink: Rect | null = null;
+    const hl = new Map<string, Rect | null>();
+    for (const s of strokes) {
+      const box = strokePath(s, (k) => outline(k)).box;
+      if (s.tool === 'highlighter') {
+        this.#hlLayer(s.color);
+        hl.set(s.color, union(hl.get(s.color) ?? null, box));
+      } else ink = union(ink, box);
+    }
+    if (ink) this.#ink.invalidate(pad(ink, 6));
+    for (const [color, box] of hl) this.#hl.get(color)?.layer.invalidate(box ? pad(box, 2) : null);
+    this.#pruneHighlighters();
+  }
+
+  #pruneHighlighters(): void {
+    const used = new Set(this.strokes.filter((s) => s.tool === 'highlighter').map((s) => s.color));
+    for (const [color, h] of this.#hl) {
+      if (used.has(color) || h.root.contains(this.#liveLayer.el)) continue;
+      h.root.remove();
+      this.#hl.delete(color);
+    }
+  }
+
+  #mirrorAdd(strokes: readonly Stroke[]): void {
+    this.#group.append(...strokes.map((s) => this.#mirrorPath(s)));
+  }
+
+  #mirror(): void {
+    this.#group.replaceChildren(...this.strokes.map((s) => this.#mirrorPath(s)));
+  }
+
+  #mirrorPath(s: Stroke): SVGPathElement {
+    const p = document.createElementNS(SVG, 'path');
+    p.setAttribute('d', strokePath(s, (k) => outline(k)).d);
+    p.setAttribute('fill', s.color);
+    p.setAttribute(
+      'class',
+      `ink-stroke ink-stroke--${s.tool}${this.selected.has(s.id) ? ' is-selected' : ''}${s.t !== undefined ? ' has-time' : ''}${this.#future.has(s.id) ? ' is-future' : ''}`,
+    );
+    p.dataset['id'] = String(s.id);
+    return p;
+  }
+
+  /** Full repaint (after replacing `strokes` wholesale, e.g. loading a draft). */
+  render(): void {
+    this.#nextId = Math.max(this.#nextId, ...this.strokes.map((s) => s.id + 1));
+    for (const s of this.strokes) if (s.tool === 'highlighter') this.#hlLayer(s.color);
+    this.#pruneHighlighters();
+    this.#ink.invalidate();
+    for (const { layer } of this.#hl.values()) layer.invalidate();
+    this.#mirror();
   }
 
   #hover(p: [number, number] | null): void {
@@ -582,7 +913,8 @@ export class InkLayer {
       this.svg.classList.remove('ink--hover');
       return;
     }
-    const eraser = this.tool === 'eraser' || this.tool === 'point-eraser';
+    const tool = this.effectiveTool;
+    const eraser = tool === 'eraser' || tool === 'point-eraser';
     this.svg.classList.add('ink--hover');
     this.#hoverDot.setAttribute('cx', String(p[0]));
     this.#hoverDot.setAttribute('cy', String(p[1]));
@@ -596,9 +928,29 @@ export class InkLayer {
     const near = (s: Stroke): boolean =>
       s.points.some((p, i) => {
         const q = s.points[i + 1] ?? p;
-        return segDist(x, y, p[0], p[1], q[0], q[1]) <= r + s.size / 2;
+        return segDist(x, y, p[0], p[1], q[0], q[1]) <= r + drawSize(s) / 2;
       });
     return [...this.strokes].reverse().find(near);
+  }
+
+  // -------------------------------------------------------------------------
+  // Erasing
+
+  #startErase(tool: 'eraser' | 'point-eraser', x: number, y: number, keep?: number): void {
+    this.#erasing = {
+      tool,
+      before: this.strokes.map((s) => ({ ...s })),
+      hits: 0,
+      ...(keep !== undefined ? { keep } : {}),
+    };
+    this.#erase(x, y);
+  }
+
+  #restore(before: Stroke[]): void {
+    const changed = [...this.strokes, ...before];
+    this.strokes = before;
+    this.#invalidate(changed);
+    this.#mirror();
   }
 
   #erase(x: number, y: number): void {
@@ -621,27 +973,29 @@ export class InkLayer {
     const hit = (p: Point): boolean => Math.hypot(p[0] - x, p[1] - y) <= 12;
     if (er.tool === 'eraser') {
       const touched = (s: Stroke): boolean =>
+        s.id !== er.keep &&
         s.points.some((p, i) => {
           const q = s.points[i + 1] ?? p;
-          return segDist(x, y, p[0], p[1], q[0], q[1]) <= 10 + s.size / 2;
+          return segDist(x, y, p[0], p[1], q[0], q[1]) <= 10 + drawSize(s) / 2;
         });
-      const keep = this.strokes.filter((s) => !touched(s));
-      if (keep.length !== this.strokes.length) {
-        er.hits += this.strokes.length - keep.length;
-        this.strokes = keep;
-        this.render();
+      const gone = this.strokes.filter(touched);
+      if (gone.length > 0) {
+        er.hits += gone.length;
+        this.strokes = this.strokes.filter((s) => !gone.includes(s));
+        this.#invalidate(gone);
+        this.#mirror();
       }
       return;
     }
     // Point eraser: split strokes where the eraser passes.
-    let changed = false;
+    const changed: Stroke[] = [];
     const next: Stroke[] = [];
     for (const s of this.strokes) {
-      if (!s.points.some(hit)) {
+      if (s.id === er.keep || !s.points.some(hit)) {
         next.push(s);
         continue;
       }
-      changed = true;
+      changed.push(s);
       let run: Point[] = [];
       const flush = (): void => {
         if (run.length > 1) next.push({ ...s, id: this.#nextId++, points: run });
@@ -653,12 +1007,16 @@ export class InkLayer {
       }
       flush();
     }
-    if (changed) {
+    if (changed.length > 0) {
       er.hits++;
       this.strokes = next;
-      this.render();
+      this.#invalidate(changed);
+      this.#mirror();
     }
   }
+
+  // -------------------------------------------------------------------------
+  // Lasso selection and moving
 
   #inSelection(x: number, y: number): boolean {
     return this.strokes.some(
@@ -666,9 +1024,71 @@ export class InkLayer {
     );
   }
 
+  #selectedBox(): Rect | null {
+    let b: Rect | null = null;
+    for (const s of this.strokes)
+      if (this.selected.has(s.id)) b = union(b, strokePath(s, (k) => outline(k)).box);
+    return b;
+  }
+
+  #startDrag(x: number, y: number): void {
+    this.#drag = { x, y, dx: 0, dy: 0, box: null };
+    const sel = this.strokes.filter((s) => this.selected.has(s.id));
+    this.#invalidate(sel); // paints them out of the committed layers
+    this.inkRoot.append(this.#liveLayer.el);
+    this.#liveLayer.el.style.opacity = '';
+    this.#moveDrag(x, y);
+  }
+
+  #moveDrag(x: number, y: number): void {
+    const d = this.#drag!;
+    d.dx = x - d.x;
+    d.dy = y - d.y;
+    const box = this.#selectedBox();
+    if (!box) return;
+    const moved: Rect = [box[0] + d.dx, box[1] + d.dy, box[2], box[3]];
+    const dirty = union(d.box, moved)!;
+    d.box = moved;
+    const sel = this.strokes.filter((s) => this.selected.has(s.id));
+    this.#liveLayer.draw(
+      pad(dirty, 8),
+      (ctx) => {
+        ctx.translate(d.dx, d.dy);
+        ctx.shadowColor = getAccent();
+        ctx.shadowBlur = 4;
+        for (const s of sel) {
+          ctx.globalAlpha =
+            s.tool === 'highlighter' ? TOOL_OPACITY.highlighter : TOOL_OPACITY[s.tool];
+          ctx.fillStyle = s.color;
+          ctx.fill(strokePath(s, (k) => outline(k)).path);
+        }
+      },
+      true,
+    );
+  }
+
+  #endDrag(cancel: boolean): void {
+    const d = this.#drag!;
+    this.#drag = null;
+    this.#liveLayer.clear(d.box ? pad(d.box, 10) : null);
+    const sel = this.strokes.filter((s) => this.selected.has(s.id));
+    if (cancel || (d.dx === 0 && d.dy === 0)) {
+      this.#invalidate(sel);
+      return;
+    }
+    const op: InkOp = { kind: 'move', ids: [...this.selected], dx: d.dx, dy: d.dy };
+    this.apply(op);
+    this.opts.onOp(op);
+  }
+
   select(ids: number[]): void {
+    const before = this.strokes.filter((s) => this.selected.has(s.id));
     this.selected = new Set(ids);
-    this.render();
+    const after = this.strokes.filter((s) => this.selected.has(s.id));
+    if (before.length + after.length > 0) {
+      this.#invalidate([...before, ...after]);
+      this.#mirror();
+    }
     if (ids.length > 0) {
       this.opts.onStatus?.(
         `${ids.length} ink stroke${ids.length === 1 ? '' : 's'} selected · drag to move, Delete to remove`,
@@ -692,44 +1112,81 @@ export class InkLayer {
     this.opts.onOp(op);
   }
 
+  // -------------------------------------------------------------------------
+  // Operations
+
   /** Apply an operation, or undo it with `reverse`. */
   apply(op: InkOp, reverse = false): void {
+    const prev = this.strokes;
     if (op.kind === 'add' || op.kind === 'remove') {
       const adding = (op.kind === 'add') !== reverse;
       const ids = new Set(op.strokes.map((s) => s.id));
       const rest = this.strokes.filter((s) => !ids.has(s.id));
       this.strokes = adding ? [...rest, ...op.strokes] : rest;
+      if (adding && op.kind === 'add' && !reverse && op.strokes.every((s) => !prev.includes(s))) {
+        // Fast path: a new stroke is drawn on top, no repaint of what's under it.
+        this.#nextId = Math.max(this.#nextId, ...op.strokes.map((s) => s.id + 1));
+        this.#drawOnTop(op.strokes);
+        this.#mirrorAdd(op.strokes);
+        this.page.dispatchEvent(new Event('ls-ink-change', { bubbles: true }));
+        return;
+      } else this.#invalidate([...op.strokes, ...prev.filter((s) => ids.has(s.id))]);
     } else if (op.kind === 'replace') {
       this.strokes = (reverse ? op.before : op.after).map((s) => ({ ...s }));
+      this.#invalidate([...prev, ...op.before, ...op.after]);
     } else {
       const k = reverse ? -1 : 1;
       const ids = new Set(op.ids);
-      this.strokes = this.strokes.map((s) =>
-        ids.has(s.id)
-          ? { ...s, points: s.points.map(([x, y, p]): Point => [x + k * op.dx, y + k * op.dy, p]) }
-          : s,
-      );
+      const moved: Stroke[] = [];
+      this.strokes = this.strokes.map((s) => {
+        if (!ids.has(s.id)) return s;
+        const m: Stroke = {
+          ...s,
+          points: s.points.map(
+            ([x, y, ...rest]): Point => [x + k * op.dx, y + k * op.dy, ...rest] as Point,
+          ),
+        };
+        moved.push(s, m);
+        return m;
+      });
+      this.#invalidate(moved);
     }
-    this.render();
+    this.#mirror();
     this.page.dispatchEvent(new Event('ls-ink-change', { bubbles: true }));
   }
 
-  render(): void {
-    this.#nextId = Math.max(this.#nextId, ...this.strokes.map((s) => s.id + 1));
-    this.#group.replaceChildren();
-    for (const s of this.strokes) {
-      const p = document.createElementNS(SVG, 'path');
-      this.#paint(p, s);
-      this.#group.append(p);
+  #drawOnTop(strokes: readonly Stroke[]): void {
+    for (const s of strokes) {
+      const c = strokePath(s, (k) => outline(k));
+      if (s.tool === 'highlighter') {
+        // Same color, opaque: drawing on top never darkens what's already there.
+        this.#hlLayer(s.color).layer.draw(c.box, (ctx) => {
+          ctx.fillStyle = s.color;
+          ctx.fill(c.path);
+        });
+      } else {
+        this.#ink.draw(c.box, (ctx) => {
+          ctx.globalAlpha = TOOL_OPACITY[s.tool] * (this.#future.has(s.id) ? 0.22 : 1);
+          ctx.fillStyle = s.color;
+          ctx.fill(c.path);
+        });
+      }
     }
   }
 
-  /** Mark strokes recorded at or before `t` in a recording (playback highlight). */
+  /** Mark strokes recorded after `t` in a recording (dimmed during playback). */
   markPlayback(rec: string | null, t: number): void {
+    const next = new Set(
+      this.strokes
+        .filter((s) => rec !== null && s.rec === rec && s.t !== undefined && s.t > t)
+        .map((s) => s.id),
+    );
+    const changed = this.strokes.filter((s) => next.has(s.id) !== this.#future.has(s.id));
+    this.#future = next;
+    if (changed.length === 0) return;
+    this.#invalidate(changed);
     for (const p of this.#group.querySelectorAll<SVGPathElement>('path')) {
-      const s = this.strokes.find((x) => String(x.id) === p.dataset['id']);
-      const future = rec !== null && s?.rec === rec && s.t !== undefined && s.t > t;
-      p.classList.toggle('is-future', future);
+      p.classList.toggle('is-future', next.has(Number(p.dataset['id'])));
     }
   }
 
@@ -737,29 +1194,94 @@ export class InkLayer {
   replay(): void {
     const all = [...this.strokes];
     if (all.length === 0 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    this.#group.replaceChildren();
+    this.#replaying = { upTo: 0 };
+    this.render();
     let si = 0;
     let pi = 1;
-    let path: SVGPathElement | null = null;
     const step = (): void => {
       const s = all[si];
-      if (!s) {
+      if (!s || !this.#replaying) {
+        this.#replaying = null;
+        this.#liveLayer.clear();
         this.render();
         return;
       }
-      if (!path) {
-        path = document.createElementNS(SVG, 'path');
-        this.#group.append(path);
-      }
       pi = Math.min(s.points.length, pi + 3);
-      this.#paint(path, { ...s, points: s.points.slice(0, pi) });
+      const partial: Stroke = { ...s, points: s.points.slice(0, pi) };
+      const host = s.tool === 'highlighter' ? this.#hlLayer(s.color).root : this.inkRoot;
+      host.append(this.#liveLayer.el);
+      const o = getStroke(partial.points as number[][], strokeOptions(partial, false));
+      const path = new Path2D(pathOf(o));
+      const box = strokePath(s, (k) => outline(k)).box;
+      this.#liveLayer.draw(
+        pad(box, 4),
+        (ctx) => {
+          ctx.globalAlpha = s.tool === 'highlighter' ? 1 : TOOL_OPACITY[s.tool];
+          ctx.fillStyle = s.color;
+          ctx.fill(path);
+        },
+        true,
+      );
       if (pi >= s.points.length) {
+        this.#liveLayer.clear(pad(box, 6));
         si++;
         pi = 1;
-        path = null;
+        this.#replaying.upTo = si;
+        this.#drawOnTop([s]);
       }
       requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
   }
+
+  /** Read a layer pixel at a page point (tests): 'ink', 'live', or a highlighter color. */
+  pixelAt(layer: string, x: number, y: number): [number, number, number, number] | null {
+    if (layer === 'ink') return this.#ink.pixel(x, y);
+    if (layer === 'live') return this.#liveLayer.pixel(x, y);
+    return this.#hl.get(layer)?.layer.pixel(x, y) ?? null;
+  }
+
+  /** Width the renderer uses for a stroke (tests: tilt must survive a re-render). */
+  widthOf(s: Stroke): number {
+    return drawSize(s);
+  }
+
+  /** Tiles holding a bitmap (tests: far-away tiles must be released). */
+  get allocatedTiles(): number {
+    return this.#layers().reduce((n, l) => n + l.liveTiles, 0);
+  }
+
+  /** Outline bounds of a stroke (tests). */
+  boundsOf(s: Stroke): Rect {
+    return strokePath(s, (k) => outline(k)).box;
+  }
+
+  /** Stroke bounds from samples (no rendering). */
+  static sampleBounds(s: Stroke): Rect {
+    return bboxOf(s.points, s.size / 2);
+  }
+}
+
+function pathOf(o: number[][]): string {
+  return o.length > 1 ? pathFromOutline(o) : '';
+}
+
+function lowOutline(s: Stroke): number[][] {
+  const pts = decimate(s.points, 4);
+  const o = strokeOptions(s, true);
+  return getStroke(pts as number[][], { ...o, smoothing: 0, streamline: 0 });
+}
+
+function intersectsRect(a: Rect, b: Rect): boolean {
+  return a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] + b[3] && b[1] < a[1] + a[3];
+}
+
+let accent = '';
+function getAccent(): string {
+  if (!accent) {
+    accent =
+      getComputedStyle(document.documentElement).getPropertyValue('--ls-accent').trim() ||
+      '#2f6fdf';
+  }
+  return accent;
 }
