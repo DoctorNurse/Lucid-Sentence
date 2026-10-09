@@ -2,6 +2,10 @@
 // Same-origin files only; no request ever leaves for another site.
 const CACHE = 'lucid-sentence-__VERSION__';
 const FILES = [/* __FILES__ */];
+// On-device AI runtime files (ai/): kept across app updates in their own cache, which
+// is renamed only when the runtime version changes. Model files live in OPFS, not here.
+const AI_CACHE = 'lucid-sentence-ai-__AI_VERSION__';
+const AI_BASE = new URL('ai/', self.registration.scope).pathname;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)));
@@ -16,7 +20,9 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k !== CACHE && k !== AI_CACHE).map((k) => caches.delete(k))),
+      )
       .then(() => self.clients.claim()),
   );
 });
@@ -36,10 +42,11 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-  // Handwriting recognition files: cached the first time they're used.
-  if (url.pathname.includes('/ocr/')) {
+  // Handwriting recognition and on-device AI runtime files: cached on first use.
+  const ai = url.pathname.startsWith(AI_BASE);
+  if (ai || url.pathname.includes('/ocr/')) {
     event.respondWith(
-      caches.open(CACHE).then((cache) =>
+      caches.open(ai ? AI_CACHE : CACHE).then((cache) =>
         cache.match(request).then(
           (hit) =>
             hit ??

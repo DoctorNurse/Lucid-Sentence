@@ -288,7 +288,12 @@ export class Assistant extends EventTarget {
       limit: 20,
       ...(opts.isWired ? { isWired: opts.isWired } : {}),
     });
-    const alternatives = candidates.slice(0, 5).map((c) => c.command.id);
+    // Alternatives offered under the answer: standard tabs only (contextual tabs need a
+    // picture, table, or header selected first).
+    const alternatives = candidates
+      .filter((c) => c.tab.kind !== 'contextual')
+      .slice(0, 4)
+      .map((c) => c.command.id);
     if (!this.usable || candidates.length === 0) {
       return {
         ...keywordIntent(query, opts.isWired ? { isWired: opts.isWired } : {}),

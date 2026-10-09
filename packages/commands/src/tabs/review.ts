@@ -11,6 +11,17 @@ export const reviewTab = tab('review', 'Review', 'standard', [
     }),
     cmd('word-count', 'Word Count', 'dialog', 'S', 2, 'sub', { shortcut: 'Ctrl+Shift+G' }),
   ]),
+  // On-device AI (plan §9). Optional and off until the user downloads a model; every
+  // result arrives as a suggestion to accept or reject (tracked changes once the engine lands).
+  group('assistant', 'Assistant', 'ui-only', [
+    cmd('rewrite', 'Rewrite', 'menu', 'L', 1, 'strip+sub'),
+    cmd('fix-grammar', 'Fix Grammar', 'button', 'M', 2, 'sheet'),
+    cmd('summarize', 'Summarize', 'button', 'M', 2, 'sheet'),
+    cmd('shorten', 'Shorten', 'button', 'S', 2, 'sheet'),
+    cmd('expand', 'Expand', 'button', 'S', 3, 'sheet'),
+    cmd('tell-lucid', 'Tell Lucid', 'dialog', 'L', 1, 'strip+sub'),
+    cmd('ai-models', 'AI Models', 'dialog', 'S', 3, 'sub'),
+  ]),
   group('speech', 'Speech', 'shell', [
     cmd('read-aloud', 'Read Aloud', 'toggle', 'L', 2, 'sheet', { shortcut: 'Ctrl+Alt+Space' }),
   ]),

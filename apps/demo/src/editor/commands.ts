@@ -22,6 +22,7 @@ import {
   Table,
   Trash,
 } from 'lucide';
+import { assistantHandlers } from '../ai/index.js';
 import type { Comments } from './comments.js';
 import type { FindPanel } from './find.js';
 import type { History } from './history.js';
@@ -1124,6 +1125,8 @@ export const handlers: Record<string, Handler> = {
   },
 
   // ── Review
+  // On-device AI (src/ai): Rewrite, Fix Grammar, Summarize, Shorten, Expand, Tell Lucid.
+  ...assistantHandlers,
   'review.proofing.spelling-grammar': (a) => {
     const on = (a.surface.root.spellcheck = !a.surface.root.spellcheck);
     toast(on ? 'Spelling marks on (browser spell checker)' : 'Spelling marks off');

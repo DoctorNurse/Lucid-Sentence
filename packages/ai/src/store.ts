@@ -305,3 +305,45 @@ export class WebModelStore implements ModelStore {
     return this.bytes.file(model.fileName);
   }
 }
+
+/**
+ * Simulated model storage for e2e tests, screenshots, and demos (`?ai=mock`). Downloads
+ * advance in steps without any network request and can be paused and resumed.
+ */
+export class MockModelStore implements ModelStore {
+  readonly kind = 'memory' as const;
+  readonly #bytes = new Map<string, number>();
+
+  constructor(readonly opts: { steps?: number; stepMs?: number; ready?: readonly string[] } = {}) {
+    for (const id of opts.ready ?? []) this.#bytes.set(id, Number.POSITIVE_INFINITY);
+  }
+
+  status(model: ModelEntry): Promise<ModelStatus> {
+    const b = this.#bytes.get(model.id) ?? 0;
+    if (b >= model.sizeBytes) return Promise.resolve({ state: 'ready', bytes: model.sizeBytes });
+    return Promise.resolve({ state: b > 0 ? 'partial' : 'none', bytes: b });
+  }
+
+  async download(
+    model: ModelEntry,
+    opts: { signal?: AbortSignal; onProgress?: (p: DownloadProgress) => void } = {},
+  ): Promise<'done' | 'paused'> {
+    const steps = this.opts.steps ?? 20;
+    const step = Math.ceil(model.sizeBytes / steps);
+    let done = Math.min(this.#bytes.get(model.id) ?? 0, model.sizeBytes);
+    while (done < model.sizeBytes) {
+      if (opts.signal?.aborted) return 'paused';
+      await new Promise((r) => setTimeout(r, this.opts.stepMs ?? 60));
+      done = Math.min(model.sizeBytes, done + step);
+      this.#bytes.set(model.id, done);
+      opts.onProgress?.({ phase: 'downloading', done, total: model.sizeBytes });
+    }
+    opts.onProgress?.({ phase: 'verifying', done, total: model.sizeBytes });
+    return 'done';
+  }
+
+  remove(model: ModelEntry): Promise<void> {
+    this.#bytes.delete(model.id);
+    return Promise.resolve();
+  }
+}

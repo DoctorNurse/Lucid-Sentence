@@ -420,3 +420,25 @@ describe('Assistant (mock model)', () => {
     }
   });
 });
+
+describe('MockModelStore', () => {
+  it('downloads in steps, pauses, resumes, and deletes', async () => {
+    const { MockModelStore } = await import('../src/store.js');
+    const m = MODELS[1]!;
+    const store = new MockModelStore({ steps: 4, stepMs: 1 });
+    const ac = new AbortController();
+    let calls = 0;
+    const first = await store.download(m, {
+      signal: ac.signal,
+      onProgress: () => {
+        if (++calls === 2) ac.abort();
+      },
+    });
+    expect(first).toBe('paused');
+    expect((await store.status(m)).state).toBe('partial');
+    expect(await store.download(m, {})).toBe('done');
+    expect((await store.status(m)).state).toBe('ready');
+    await store.remove(m);
+    expect((await store.status(m)).state).toBe('none');
+  });
+});
