@@ -1668,9 +1668,11 @@ button.status__item:hover {
   left: 50%;
   bottom: calc(56px + env(safe-area-inset-bottom));
   z-index: 80;
+  width: max-content;
   max-width: min(520px, calc(100vw - 24px));
   padding: 10px 18px;
-  border-radius: var(--ls-radius-pill);
+  /* Not a pill: long messages wrap to several lines on phones. */
+  border-radius: var(--ls-radius-lg);
   background: var(--ls-ink);
   color: var(--ls-canvas);
   box-shadow: var(--ls-shadow-lg);
@@ -1691,9 +1693,38 @@ button.status__item:hover {
   }
 }
 
+/* Update available (installed apps and the home-screen web app) */
+.update-bar {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 85;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 24px));
+  padding: 8px 8px 8px 16px;
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-raised);
+  color: var(--ls-ink);
+  box-shadow:
+    var(--ls-shadow-lg),
+    0 0 0 1px var(--ls-hairline);
+  transform: translateX(-50%);
+  animation: ls-pop-in var(--ls-motion-fast) var(--ls-motion-ease-out);
+}
+.update-bar__actions {
+  display: flex;
+  gap: 6px;
+}
+
 /* File backstage (rendered into <ls-ribbon>'s backstage slot) */
 .stage.backstage .workspace,
 .stage.backstage .notesbar,
+.stage.backstage .pentool,
 .stage.backstage .timeline {
   display: none;
 }
@@ -1880,9 +1911,15 @@ button.status__item:hover {
   box-shadow:
     var(--ls-shadow-lg),
     0 0 0 1px var(--ls-hairline);
+  max-width: calc(100vw - 16px);
+  overflow-x: auto;
+  scrollbar-width: none;
   transform: translateX(-50%);
-  touch-action: none;
+  touch-action: pan-x;
   animation: ls-pop-in var(--ls-motion-fast) var(--ls-motion-ease-out);
+}
+.pentool > * {
+  flex: none;
 }
 .pentool[hidden] {
   display: none;
@@ -1895,6 +1932,7 @@ button.status__item:hover {
   background: radial-gradient(circle, var(--ls-subtle) 1.2px, transparent 1.6px) 0 0 / 6px 6px;
   cursor: grab;
   opacity: 0.7;
+  touch-action: none;
 }
 .pentool__group {
   display: flex;
@@ -1973,6 +2011,44 @@ button.status__item:hover {
 }
 .pentool__width[aria-pressed='true'] span {
   background: var(--ls-on-selected);
+}
+
+/* Phone: the pen toolbar docks in the layout as one scrolling row above the bottom bar.
+   It sits in the flex column (not fixed), so the page area shrinks instead of being covered. */
+.pentool--docked {
+  position: static;
+  order: 2;
+  flex: none;
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  max-width: none;
+  margin: 6px 8px 4px;
+  padding: 4px 6px;
+  gap: 4px;
+  border-radius: var(--ls-radius-lg);
+  transform: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  animation: none;
+}
+.pentool--docked::-webkit-scrollbar {
+  display: none;
+}
+.pentool--docked > *,
+.pentool--docked .pentool__group > * {
+  flex: none;
+}
+.pentool--docked .pentool__grip {
+  display: none;
+}
+.pentool--docked .pentool__btn,
+.pentool--docked .pentool__fav {
+  width: 40px;
+  height: 40px;
 }
 
 /* Magnifier writing strip */
@@ -2330,18 +2406,16 @@ body.ready .stage {
   .notesbar {
     gap: 8px;
   }
-  .pentool {
-    top: auto;
-    bottom: calc(132px + env(safe-area-inset-bottom));
-    max-width: calc(100vw - 16px);
-    overflow-x: auto;
-  }
 }
 .stage[data-layout='phone'] ls-ribbon {
   order: 3;
 }
 [data-layout='phone'] .status {
   display: none;
+}
+/* Phone: toasts sit above the bottom bar (and the docked pen strip). */
+[data-layout='phone'] .toast {
+  bottom: calc(132px + env(safe-area-inset-bottom));
 }
 [data-layout='phone'] .titlebar {
   padding-top: max(10px, env(safe-area-inset-top));

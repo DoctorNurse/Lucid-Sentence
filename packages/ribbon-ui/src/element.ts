@@ -51,7 +51,11 @@ export function displayShortcut(s: string): string {
  * `wired` (Set of ids the host can run; others show "Coming with the engine").
  *
  * Events (bubble, composed): `ls-command` (CommandEventDetail), `ls-command-pending`
- * ({ id }), `ls-tab-change` ({ tab }), `ls-collapse-change` ({ collapsed }).
+ * ({ id }), `ls-tab-change` ({ tab }), `ls-collapse-change` ({ collapsed }),
+ * `ls-sheet-change` ({ open }) when the phone sheet or tab picker opens or closes.
+ *
+ * Phone sheet: the chevron and the handle toggle it; swiping the handle down, tapping
+ * outside the ribbon, Escape, or `closeSheet()` (the host wires the Back gesture) close it.
  *
  * Slots: `backstage` (File page content), `subpage` (phone sub-page content).
  */
@@ -74,6 +78,17 @@ export class LucidRibbonElement extends HTMLElement {
   #resize: ResizeObserver | undefined;
   #media: MediaQueryList | undefined;
   #tipTimer: ReturnType<typeof setTimeout> | undefined;
+  /** A press on a sheet toggle (handled on pointerup so a tap never depends on `click`). */
+  #press: {
+    id: number;
+    x: number;
+    y: number;
+    el: HTMLElement;
+    handle: boolean;
+    dy: number;
+  } | null = null;
+  #pressedAt = -Infinity;
+  #sheetWasOpen = false;
   readonly #tip: HTMLDivElement;
   readonly #root: ShadowRoot;
 
@@ -96,6 +111,16 @@ export class LucidRibbonElement extends HTMLElement {
       const t = e.target as Element;
       if (t.closest('button, summary') && !t.closest('input')) e.preventDefault();
       this.#hideTip();
+      this.#pressStart(e as PointerEvent);
+    });
+    this.#root.addEventListener('pointermove', (e) => {
+      this.#pressMove(e as PointerEvent);
+    });
+    this.#root.addEventListener('pointerup', (e) => {
+      this.#pressEnd(e as PointerEvent, false);
+    });
+    this.#root.addEventListener('pointercancel', (e) => {
+      this.#pressEnd(e as PointerEvent, true);
     });
     this.#root.addEventListener(
       'toggle',
@@ -219,6 +244,83 @@ export class LucidRibbonElement extends HTMLElement {
     );
   }
 
+  /** The phone command sheet or tab picker is open. */
+  get sheetOpen(): boolean {
+    return this.layout === 'phone' && (this.#phone.sheet || this.#phone.picker);
+  }
+
+  /** Collapse the phone command sheet and tab picker (Back gesture, tap outside). */
+  closeSheet(): void {
+    if (!this.#phone.sheet && !this.#phone.picker) return;
+    this.#phone.sheet = false;
+    this.#phone.picker = false;
+    this.#phone.subPage = null;
+    this.render();
+  }
+
+  #toggleSheet(): void {
+    this.#phone.sheet = !this.#phone.sheet;
+    this.#phone.picker = false;
+    this.#phone.subPage = null;
+    this.render();
+  }
+
+  #pressStart(e: PointerEvent): void {
+    if (!e.isPrimary || e.button > 0) return;
+    const t = (e.target as Element).closest<HTMLElement>('button[data-action]');
+    if (!t) return;
+    const handle = t.classList.contains('ls-handle');
+    // Touch and pen taps activate on pointerup (see #pressEnd); mice use click.
+    if (!handle && e.pointerType === 'mouse') return;
+    this.#press = { id: e.pointerId, x: e.clientX, y: e.clientY, el: t, handle, dy: 0 };
+    if (handle) {
+      try {
+        t.setPointerCapture(e.pointerId);
+      } catch {
+        /* synthetic events */
+      }
+    }
+  }
+
+  #pressMove(e: PointerEvent): void {
+    const p = this.#press;
+    if (!p || p.id !== e.pointerId || !p.handle) return;
+    p.dy = Math.max(0, e.clientY - p.y);
+    const sheet = this.#root.querySelector<HTMLElement>('.ls-sheet');
+    if (sheet) {
+      sheet.style.animation = 'none';
+      sheet.style.transition = 'none';
+      sheet.style.transform = `translateY(${p.dy}px)`;
+    }
+  }
+
+  /**
+   * Touch and pen: a tap runs its action on pointerup, and the click that may follow is
+   * ignored. Android WebView sometimes drops that click (the first tap after a swipe or
+   * a fling, or after the pressed element re-rendered), which made the sheet's chevron
+   * and handle feel dead. Swiping the handle down 48 px or more collapses the sheet.
+   */
+  #pressEnd(e: PointerEvent, cancelled: boolean): void {
+    const p = this.#press;
+    if (!p || p.id !== e.pointerId) return;
+    this.#press = null;
+    const sheet = this.#root.querySelector<HTMLElement>('.ls-sheet');
+    if (p.handle && p.dy > 48) {
+      this.#pressedAt = performance.now();
+      this.closeSheet();
+      return;
+    }
+    if (sheet && p.handle) {
+      sheet.style.transition = '';
+      sheet.style.transform = '';
+    }
+    const moved = Math.hypot(e.clientX - p.x, e.clientY - p.y);
+    if (cancelled || moved > 12 || !p.el.isConnected) return;
+    if (p.handle && e.pointerType === 'mouse') return; // the click handles it
+    this.#pressedAt = performance.now();
+    this.#activate(p.el);
+  }
+
   /** Width used for "auto" layout; normally measured with ResizeObserver. */
   setWidth(width: number): void {
     this.#width = width;
@@ -253,6 +355,8 @@ export class LucidRibbonElement extends HTMLElement {
       this.#peek = false;
       this.render();
     }
+    // Phone: tapping the page (or anything outside the ribbon) collapses the sheet.
+    if (this.#phone.sheet || this.#phone.picker) this.closeSheet();
     for (const d of this.#root.querySelectorAll('details[open]')) d.removeAttribute('open');
   };
 
@@ -300,9 +404,31 @@ export class LucidRibbonElement extends HTMLElement {
     style.textContent = `:host { ${themeDeclarations(this.theme, accent)} } ${ribbonCss}`;
     const s = this.state();
     this.#root.replaceChildren(style, renderRibbon(document, this.registry, s), this.#tip);
+    // Tablet: collapse whole groups (rightmost first) until the row fits; no hidden overflow.
+    if (s.layout === 'tablet') {
+      const groups = this.#root.querySelectorAll('.ls-panel .ls-group').length;
+      const fits = (): boolean => {
+        const p = this.#root.querySelector<HTMLElement>('.ls-panel');
+        return !p || Boolean(p.hidden) || p.clientWidth === 0 || p.scrollWidth <= p.clientWidth + 1;
+      };
+      for (let n = 1; n <= groups && !fits(); n++) {
+        s.collapsedGroups = n;
+        this.#root.replaceChildren(style, renderRibbon(document, this.registry, s), this.#tip);
+      }
+    }
+    this.#root
+      .querySelector<HTMLElement>('.ls-tab[aria-selected="true"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     this.#lastTab = this.#activeTab;
     this.#lastContextual = new Set(s.contextual);
     this.toggleAttribute('data-backstage', this.#activeTab === 'file' && s.layout !== 'phone');
+    const open = s.layout === 'phone' && (s.phone.sheet || s.phone.picker);
+    if (open !== this.#sheetWasOpen) {
+      this.#sheetWasOpen = open;
+      this.dispatchEvent(
+        new CustomEvent('ls-sheet-change', { detail: { open }, bubbles: true, composed: true }),
+      );
+    }
     if (focusKey) {
       const el = this.#root.querySelector<HTMLElement>(focusKey);
       el?.focus();
@@ -387,6 +513,12 @@ export class LucidRibbonElement extends HTMLElement {
   #onClick(e: Event): void {
     const target = (e.target as Element | null)?.closest<HTMLElement>('[data-action]');
     if (!target) return;
+    // Already run on pointerup (touch or pen tap).
+    if (performance.now() - this.#pressedAt < 700) return;
+    this.#activate(target);
+  }
+
+  #activate(target: HTMLElement): void {
     const action = target.dataset['action'];
     if (action === 'tab') {
       const id = target.dataset['tab'] as TabId;
@@ -408,10 +540,7 @@ export class LucidRibbonElement extends HTMLElement {
       this.#phone.picker = !this.#phone.picker;
       this.render();
     } else if (action === 'sheet') {
-      this.#phone.sheet = !this.#phone.sheet;
-      this.#phone.picker = false;
-      this.#phone.subPage = null;
-      this.render();
+      this.#toggleSheet();
     } else if (action === 'back') {
       this.#phone.subPage = null;
       this.render();
@@ -521,9 +650,8 @@ export class LucidRibbonElement extends HTMLElement {
       } else if (this.#activeTab === 'file') {
         this.#setTab('home');
         this.render();
-      } else if (this.#phone.sheet) {
-        this.#phone.sheet = false;
-        this.render();
+      } else if (this.#phone.sheet || this.#phone.picker) {
+        this.closeSheet();
       }
       this.#hideTip();
       return;

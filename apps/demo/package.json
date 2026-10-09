@@ -18,6 +18,8 @@
     "@lucid-sentence/tokens": "workspace:*",
     "@tauri-apps/api": "2.12.2",
     "@tauri-apps/plugin-opener": "2.7.0",
+    "@tauri-apps/plugin-process": "2.4.0",
+    "@tauri-apps/plugin-updater": "2.13.2",
     "lucide": "1.53.0",
     "perfect-freehand": "^1.2.3"
   },

@@ -53,17 +53,38 @@ keeps the files as workflow artifacts without releasing. Assets have stable name
 
 `Lucid-Sentence-macOS.dmg`, `Lucid-Sentence-Windows-Setup.exe`,
 `Lucid-Sentence-Windows.msi`, `Lucid-Sentence-Linux.AppImage`,
-`Lucid-Sentence-Linux.deb`, `Lucid-Sentence-Android.apk`, `SHA256SUMS.txt`.
+`Lucid-Sentence-Linux.deb`, `Lucid-Sentence-Android.apk`, `SHA256SUMS.txt`, plus the
+updater files: `latest.json`, `Lucid-Sentence-macOS.app.tar.gz`, and a `.sig` next to
+each updatable file.
 
-Cut a release (after review):
+Cut a release (after review; bump the version in `tauri.conf.json`, `Cargo.toml`, and
+`package.json`, the numeric `bundleVersion`/`wix.version`, and Android's `versionCode`):
 
 ```sh
-git tag v0.1.0-preview && git push origin v0.1.0-preview
+git tag -s v0.1.1-preview -m "Lucid Sentence 0.1.1 preview" && git push origin v0.1.1-preview
 ```
 
 Release tags must be on a commit that contains this workflow. Tags with a
 pre-release part (for example `v0.1.0-preview`) are published as GitHub
 pre-releases; `releases/latest` skips those.
+
+### Auto-update
+
+| Platform              | How it updates                                                                                                                                                                                                                                                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS, Windows, Linux | Tauri's updater plugin. A few seconds after launch the app reads `https://doctornurse.github.io/Lucid-Sentence/updates/latest.json` (then `releases/latest/download/latest.json`), downloads the update, verifies its minisign signature against the public key in `tauri.conf.json`, and offers **Restart to update**. |
+| Android               | Tauri's updater doesn't support mobile. The web app asks the GitHub Releases API for the newest release (pre-releases included) and offers **Download update**, which opens the APK link; Android's installer finishes. APKs signed with the same release key install in place.                                         |
+| Web app, iOS          | The service worker downloads the new version in the background; the page offers **Reload for new version**.                                                                                                                                                                                                             |
+
+Why Pages: `releases/latest` skips pre-releases, and every release so far is a
+pre-release. After publishing, the Release workflow starts `pages.yml`, which copies
+`latest.json` from the newest release into the site at `updates/latest.json`.
+
+The updater key pair was made with `pnpm --filter @lucid-sentence/shell exec tauri
+signer generate`. Only the public key is in the repository. The private key and its
+password live in the `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+secrets (and a private offline backup). Losing the private key means existing installs
+can no longer auto-update: they would need a manual install of a build with a new key.
 
 ### Signing secrets (all optional)
 
@@ -71,20 +92,22 @@ Without them the build still succeeds: macOS gets an ad-hoc signature (users
 approve it once in System Settings), Windows installers are unsigned (SmartScreen
 warns), and the APK is signed with a temporary key.
 
-| Secret                         | Used for                                                                                                                                                                  |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `APPLE_CERTIFICATE`            | Base64 of the **Developer ID Application** certificate exported as `.p12` (`openssl base64 -A -in cert.p12`).                                                             |
-| `APPLE_CERTIFICATE_PASSWORD`   | The `.p12` export password.                                                                                                                                               |
-| `APPLE_SIGNING_IDENTITY`       | Optional. For example `Developer ID Application: Lucid Systems LLC (TEAMID)`. If unset, the workflow uses the first Developer ID Application identity in the certificate. |
-| `APPLE_ID`                     | Apple Account email used for notarization.                                                                                                                                |
-| `APPLE_PASSWORD`               | An **app-specific password** for that Apple Account (appleid.apple.com → Sign-In and Security → App-Specific Passwords).                                                  |
-| `APPLE_TEAM_ID`                | The 10-character Team ID (developer.apple.com → Membership).                                                                                                              |
-| `WINDOWS_CERTIFICATE`          | Base64 of a code-signing `.pfx`.                                                                                                                                          |
-| `WINDOWS_CERTIFICATE_PASSWORD` | The `.pfx` password.                                                                                                                                                      |
-| `ANDROID_KEYSTORE`             | Base64 of a release keystore (`.jks`). Keep the keystore itself out of the repository and backed up safely: Android updates must be signed with the same key.             |
-| `ANDROID_KEYSTORE_PASSWORD`    | Keystore password.                                                                                                                                                        |
-| `ANDROID_KEY_ALIAS`            | Key alias in the keystore.                                                                                                                                                |
-| `ANDROID_KEY_PASSWORD`         | Optional; defaults to the keystore password.                                                                                                                              |
+| Secret                               | Used for                                                                                                                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `APPLE_CERTIFICATE`                  | Base64 of the **Developer ID Application** certificate exported as `.p12` (`openssl base64 -A -in cert.p12`).                                                             |
+| `APPLE_CERTIFICATE_PASSWORD`         | The `.p12` export password.                                                                                                                                               |
+| `APPLE_SIGNING_IDENTITY`             | Optional. For example `Developer ID Application: Lucid Systems LLC (TEAMID)`. If unset, the workflow uses the first Developer ID Application identity in the certificate. |
+| `APPLE_ID`                           | Apple Account email used for notarization.                                                                                                                                |
+| `APPLE_PASSWORD`                     | An **app-specific password** for that Apple Account (appleid.apple.com → Sign-In and Security → App-Specific Passwords).                                                  |
+| `APPLE_TEAM_ID`                      | The 10-character Team ID (developer.apple.com → Membership).                                                                                                              |
+| `WINDOWS_CERTIFICATE`                | Base64 of a code-signing `.pfx`.                                                                                                                                          |
+| `WINDOWS_CERTIFICATE_PASSWORD`       | The `.pfx` password.                                                                                                                                                      |
+| `ANDROID_KEYSTORE`                   | Base64 of a release keystore (`.jks`). Keep the keystore itself out of the repository and backed up safely: Android updates must be signed with the same key.             |
+| `ANDROID_KEYSTORE_PASSWORD`          | Keystore password.                                                                                                                                                        |
+| `ANDROID_KEY_ALIAS`                  | Key alias in the keystore.                                                                                                                                                |
+| `ANDROID_KEY_PASSWORD`               | Optional; defaults to the keystore password.                                                                                                                              |
+| `TAURI_SIGNING_PRIVATE_KEY`          | The updater private key (contents of the key file from `tauri signer generate`). Without it, no updater files are built.                                                  |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | The updater key's password.                                                                                                                                               |
 
 With the Apple secrets set, Tauri signs the app with the hardened runtime and
 notarizes it, then the workflow signs the `.dmg`, submits it with
@@ -102,6 +125,8 @@ base64 -i lucid-sentence-release.jks | pbcopy   # macOS; paste into the ANDROID_
 
 Without `ANDROID_KEYSTORE`, each release's APK is signed with a new temporary key,
 so installing a newer preview over an older one fails: uninstall the old one first.
+(0.1.0-preview was built that way. From 0.1.1-preview on, the repository has a
+permanent release key, so APKs update in place.)
 
 ## Swapping in the engine later
 

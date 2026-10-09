@@ -4,12 +4,12 @@ const CACHE = 'lucid-sentence-__VERSION__';
 const FILES = [/* __FILES__ */];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(FILES))
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)));
+});
+
+// An update waits until the page's "Reload for new version" button asks for it.
+self.addEventListener('message', (event) => {
+  if (event.data === 'skip-waiting') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -23,7 +23,10 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  // The desktop update feed is never cached.
+  if (url.pathname.includes('/updates/')) return;
   // Pages: network first so updates show up, cache when offline.
   if (request.mode === 'navigate') {
     event.respondWith(

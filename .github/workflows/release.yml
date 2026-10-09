@@ -7,6 +7,9 @@ name: Release
 #   everything and keep the installers as workflow artifacts only (no release).
 # Code signing and notarization run only when the matching secrets exist; without
 # them the build still succeeds and produces unsigned installers.
+# Desktop auto-update: with TAURI_SIGNING_PRIVATE_KEY set, the build also produces
+# signed updater files (.sig), and the release gets a latest.json that the apps read
+# from GitHub Pages (pages.yml copies it there after each release).
 
 on:
   push:
@@ -56,6 +59,7 @@ jobs:
       HAS_APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' }}
       HAS_APPLE_NOTARY: ${{ secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
       HAS_WINDOWS_CERT: ${{ secrets.WINDOWS_CERTIFICATE != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+      HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -145,15 +149,21 @@ jobs:
           APPLE_ID: ${{ env.HAS_APPLE_CERT == 'true' && env.HAS_APPLE_NOTARY == 'true' && secrets.APPLE_ID || '' }}
           APPLE_PASSWORD: ${{ env.HAS_APPLE_CERT == 'true' && env.HAS_APPLE_NOTARY == 'true' && secrets.APPLE_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ env.HAS_APPLE_CERT == 'true' && env.HAS_APPLE_NOTARY == 'true' && secrets.APPLE_TEAM_ID || '' }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           # Empty notarization variables would make Tauri try (and fail) to notarize.
           [ -n "$APPLE_ID" ] || unset APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
-          CONFIG='{}'
-          if [ "$RUNNER_OS" = "macOS" ]; then
-            CONFIG="$(node -e 'console.log(JSON.stringify({bundle:{macOS:{signingIdentity:process.env.MAC_SIGNING_IDENTITY||"-"}}}))')"
-          elif [ -n "${WINDOWS_THUMBPRINT:-}" ]; then
-            CONFIG="$(node -e 'console.log(JSON.stringify({bundle:{windows:{certificateThumbprint:process.env.WINDOWS_THUMBPRINT.trim(),digestAlgorithm:"sha256",timestampUrl:"http://timestamp.digicert.com"}}}))')"
+          if [ "$HAS_UPDATER_KEY" != "true" ]; then
+            unset TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+            echo "::notice::TAURI_SIGNING_PRIVATE_KEY is not set, so no updater files are built (the apps won't auto-update)."
           fi
+          CONFIG="$(node -e '
+            const c = { bundle: { createUpdaterArtifacts: process.env.HAS_UPDATER_KEY === "true" } };
+            if (process.env.RUNNER_OS === "macOS") c.bundle.macOS = { signingIdentity: process.env.MAC_SIGNING_IDENTITY || "-" };
+            else if (process.env.WINDOWS_THUMBPRINT) c.bundle.windows = { certificateThumbprint: process.env.WINDOWS_THUMBPRINT.trim(), digestAlgorithm: "sha256", timestampUrl: "http://timestamp.digicert.com" };
+            console.log(JSON.stringify(c));
+          ')"
           pnpm --filter @lucid-sentence/shell exec tauri build ${{ matrix.args }} --config "$CONFIG"
 
       - name: Sign, notarize, and staple the .dmg
@@ -178,21 +188,31 @@ jobs:
         run: |
           OUT="$RUNNER_TEMP/out"; mkdir -p "$OUT"
           B=apps/shell/src-tauri/target
-          # Copy the first file matching a pattern, under a stable name (for releases/latest/download links).
+          # Copy the first file matching a pattern, under a stable name (for download links).
           take() {
             f="$(find "$1" -maxdepth 1 -name "$2" | head -n 1)"
             [ -n "$f" ] || { echo "::error::No $2 in $1"; exit 1; }
             cp "$f" "$OUT/$3"
           }
+          # Updater files: an installer's signature (.sig), and on macOS the app archive.
+          # The signature covers the file's bytes, so renaming is safe.
+          upd() { [ "$HAS_UPDATER_KEY" = "true" ] && take "$@"; return 0; }
           case "$RUNNER_OS" in
             macOS)
-              take "$B/universal-apple-darwin/release/bundle/dmg" '*.dmg' Lucid-Sentence-macOS.dmg ;;
+              M="$B/universal-apple-darwin/release/bundle"
+              take "$M/dmg" '*.dmg' Lucid-Sentence-macOS.dmg
+              upd "$M/macos" '*.app.tar.gz' Lucid-Sentence-macOS.app.tar.gz
+              upd "$M/macos" '*.app.tar.gz.sig' Lucid-Sentence-macOS.app.tar.gz.sig ;;
             Windows)
               take "$B/release/bundle/msi" '*.msi' Lucid-Sentence-Windows.msi
-              take "$B/release/bundle/nsis" '*-setup.exe' Lucid-Sentence-Windows-Setup.exe ;;
+              take "$B/release/bundle/nsis" '*-setup.exe' Lucid-Sentence-Windows-Setup.exe
+              upd "$B/release/bundle/msi" '*.msi.sig' Lucid-Sentence-Windows.msi.sig
+              upd "$B/release/bundle/nsis" '*-setup.exe.sig' Lucid-Sentence-Windows-Setup.exe.sig ;;
             Linux)
               take "$B/release/bundle/appimage" '*.AppImage' Lucid-Sentence-Linux.AppImage
-              take "$B/release/bundle/deb" '*.deb' Lucid-Sentence-Linux.deb ;;
+              take "$B/release/bundle/deb" '*.deb' Lucid-Sentence-Linux.deb
+              upd "$B/release/bundle/appimage" '*.AppImage.sig' Lucid-Sentence-Linux.AppImage.sig
+              upd "$B/release/bundle/deb" '*.deb.sig' Lucid-Sentence-Linux.deb.sig ;;
           esac
           ls -la "$OUT"
       - uses: actions/upload-artifact@v4
@@ -285,12 +305,27 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # Starts the Pages deploy that publishes latest.json for the desktop updater.
+      actions: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
       - uses: actions/download-artifact@v4
         with:
           pattern: installers-*
           path: dist
           merge-multiple: true
+      - name: Updater manifest (latest.json)
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ls dist/*.sig > /dev/null 2>&1; then
+            node scripts/updater-manifest.mjs "$TAG" dist "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG" > dist/latest.json
+            cat dist/latest.json
+          else
+            echo "::notice::No updater signatures, so no latest.json (the desktop apps won't see this release as an update)."
+          fi
       - name: Checksums
         working-directory: dist
         run: sha256sum -- * > SHA256SUMS.txt && cat SHA256SUMS.txt
@@ -310,6 +345,8 @@ jobs:
           - **Linux**: make `Lucid-Sentence-Linux.AppImage` executable and run it, or install the `.deb`.
           - **iPhone and iPad**: open the web app in Safari and choose **Add to Home Screen** (see the README).
 
+          **Updates.** From v0.1.1-preview on, the desktop apps check for updates on launch and offer **Restart to update** (updates are signed and verified before they install). The Android app checks GitHub Releases on launch and offers to download the new APK; Android APKs are now signed with a permanent release key, so later versions install over this one. If you have v0.1.0-preview installed (Android or desktop), install this version by hand once: on Android, uninstall v0.1.0-preview first, because it was signed with a temporary key. The home-screen web app offers **Reload for new version** when one is ready.
+
           Checksums are in `SHA256SUMS.txt`. Full install steps: [README → Download](https://github.com/DoctorNurse/Lucid-Sentence#download).
           NOTES
           # Versions with a pre-release part (v0.1.0-preview) are published as pre-releases.
@@ -317,3 +354,7 @@ jobs:
           case "$TAG" in *-*) PRERELEASE=(--prerelease) ;; esac
           gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag "${PRERELEASE[@]}" \
             --title "Lucid Sentence ${TAG#v}" --notes-file notes.md --generate-notes
+      - name: Publish the update feed on GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main

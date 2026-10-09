@@ -86,7 +86,8 @@ Bundled third-party code
                                  from Feather: MIT License, Copyright (c)
                                  2013-present Cole Bemis.
   perfect-freehand 1.2.3         MIT License, Copyright (c) 2021 Stephen Ruiz Ltd.
-  @tauri-apps/api, @tauri-apps/plugin-opener
+  @tauri-apps/api, @tauri-apps/plugin-opener, @tauri-apps/plugin-updater,
+  @tauri-apps/plugin-process
                                  Apache-2.0 OR MIT, Copyright (c) the Tauri
                                  Programme within The Commons Conservancy.
 

@@ -39,6 +39,11 @@ export interface RibbonState {
   appearing?: ReadonlySet<TabId>;
   /** The active tab changed since the last render (panel animates in). */
   tabChanged?: boolean;
+  /**
+   * Tablet: how many groups, counted from the end, collapse to a single button so the
+   * row fits the width (Word collapses the rightmost groups first). Set by the element.
+   */
+  collapsedGroups?: number;
 }
 
 type Attrs = Record<string, string | boolean | undefined>;
@@ -216,7 +221,8 @@ function desktopGroup(doc: Document, g: Group, state: RibbonState): HTMLElement 
   return groupSection(doc, g, body);
 }
 
-function tabletGroup(doc: Document, g: Group, state: RibbonState): HTMLElement {
+function tabletGroup(doc: Document, g: Group, state: RibbonState, collapsed = false): HTMLElement {
+  if (collapsed) return collapsedGroup(doc, g, state);
   const inline = inlinePrioritiesForTablet(state.width);
   const shown = g.commands.filter((c) => inline.has(c.placement.tablet.priority));
   const overflow = g.commands.filter((c) => !inline.has(c.placement.tablet.priority));
@@ -252,6 +258,41 @@ function tabletGroup(doc: Document, g: Group, state: RibbonState): HTMLElement {
     );
   }
   return groupSection(doc, g, body);
+}
+
+/** A whole group as one button with all its commands in a menu (narrow tablets). */
+function collapsedGroup(doc: Document, g: Group, state: RibbonState): HTMLElement {
+  const first = g.commands.find((c) => glyph(doc, c, 18));
+  const body = h(
+    doc,
+    'div',
+    { class: 'ls-group__body' },
+    h(
+      doc,
+      'details',
+      { class: 'ls-overflow ls-overflow--group' },
+      h(
+        doc,
+        'summary',
+        {
+          class: 'ls-overflow__toggle ls-overflow__toggle--group',
+          'data-tip': `${g.label} commands`,
+          'aria-label': `${g.label} commands`,
+        },
+        first ? glyph(doc, first, 18) : svgIcon(doc, Ellipsis, 18),
+        svgIcon(doc, ChevronDown, 12, 'ls-chev'),
+      ),
+      h(
+        doc,
+        'div',
+        { class: 'ls-overflow__menu', role: 'menu', 'aria-label': `${g.label} commands` },
+        ...g.commands.map((c) => commandButton(doc, c, state, 'row')),
+      ),
+    ),
+  );
+  const section = groupSection(doc, g, body);
+  section.classList.add('ls-group--collapsed');
+  return section;
 }
 
 function backstage(doc: Document, tab: Tab, state: RibbonState): HTMLElement {
@@ -313,8 +354,15 @@ function renderWide(doc: Document, reg: Registry, state: RibbonState): HTMLEleme
     panel.classList.add('ls-panel--backstage');
     panel.append(backstage(doc, tab, state));
   } else {
-    const groupFn = state.layout === 'tablet' ? tabletGroup : desktopGroup;
-    panel.append(...tab.groups.map((g) => groupFn(doc, g, state)));
+    const n = tab.groups.length;
+    const collapsedFrom = n - (state.collapsedGroups ?? 0);
+    panel.append(
+      ...tab.groups.map((g, i) =>
+        state.layout === 'tablet'
+          ? tabletGroup(doc, g, state, i >= collapsedFrom)
+          : desktopGroup(doc, g, state),
+      ),
+    );
   }
   return h(
     doc,
@@ -324,6 +372,7 @@ function renderWide(doc: Document, reg: Registry, state: RibbonState): HTMLEleme
       'data-layout': state.layout,
       'data-collapsed': state.collapsed ? 'true' : undefined,
       'data-tab-kind': tab.kind,
+      'data-narrow': state.layout === 'tablet' && state.width < 900 ? 'true' : undefined,
     },
     tabRow(doc, reg, state),
     panel,

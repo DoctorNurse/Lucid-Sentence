@@ -6,10 +6,11 @@
  *   opened from the OS (.docx file association) show the preview message.
  * - On the web (https): registers the service worker so the PWA works offline
  *   after the first visit and can be added to the home screen.
- *
- * Nothing here makes a network request of its own.
+ * - Update checks (see updates.ts) are the only requests this file starts: the
+ *   desktop app's signed updater feed, and on Android the GitHub Releases API.
  */
 import { invoke, isTauri } from '@tauri-apps/api/core';
+import { checkAndroidUpdate, checkDesktopUpdate, watchServiceWorker } from './updates.js';
 
 /** Message shown when the OS hands the preview a document it can't open yet. */
 export function openedFilesMessage(names: readonly string[]): string {
@@ -55,15 +56,20 @@ async function wireDesktop(toast: (message: string, ms?: number) => void): Promi
   };
   await listen('ls-open-files', () => void showOpened());
   await showOpened();
-}
-
-function registerServiceWorker(): void {
-  if (location.protocol !== 'https:' || !('serviceWorker' in navigator)) return;
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {
-      /* offline support is optional */
-    });
-  });
+  // Look for an update a few seconds after launch, so starting up stays quick.
+  setTimeout(() => {
+    const quiet = (): void => {
+      /* offline or no update feed: try again next launch */
+    };
+    if (/Android/i.test(navigator.userAgent)) {
+      void import('@tauri-apps/api/app')
+        .then(({ getVersion }) => getVersion())
+        .then((v) => checkAndroidUpdate(v, openUrl, toast))
+        .catch(quiet);
+    } else {
+      checkDesktopUpdate().catch(quiet);
+    }
+  }, 4000);
 }
 
 export function initPlatform(toast: (message: string, ms?: number) => void): void {
@@ -73,6 +79,6 @@ export function initPlatform(toast: (message: string, ms?: number) => void): voi
       /* the editor still works without the native glue */
     });
   } else {
-    registerServiceWorker();
+    watchServiceWorker();
   }
 }

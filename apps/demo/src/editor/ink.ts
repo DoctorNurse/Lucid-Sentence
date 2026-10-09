@@ -3,9 +3,14 @@
  *
  * - Pressure-sensitive, smoothed strokes (perfect-freehand, MIT), rendered as SVG.
  * - Pen, pencil (tilt widens the line), highlighter, stroke and point erasers, lasso select.
- * - Palm rejection: touch is ignored while a pen is in contact or hovering, and
- *   unless "Draw with Touch" is on.
- * - Pen hover preview (pointer events from a pen with buttons = 0).
+ * - Touch: fingers draw when "Draw with Touch" is on (the default on phones, where many
+ *   styluses are capacitive and report pointerType 'touch'). Two fingers scroll and pinch-zoom.
+ * - Palm rejection: once a real pen (pointerType 'pen') is detected, a phone's default
+ *   switches to pen only; touch is also ignored while a pen is in contact or hovering.
+ * - Pen hover preview (pen pointer moves with no contact; tracked by pointer id, because
+ *   some Android WebViews report buttons = 0 or pressure = 0 during contact).
+ * - Android: a pen's touch events are cancelled while it draws, so the WebView never turns
+ *   the stroke into a scroll (which would fire pointercancel and cut the line short).
  * - Stylus barrel/eraser buttons (buttons bitmask 2 or 32) erase while held.
  * - Every change is an undoable operation (see history.ts).
  * - Strokes carry a recording timestamp when audio is recording (Notes mode).
@@ -34,6 +39,11 @@ export type InkOp =
   | { kind: 'move'; ids: number[]; dx: number; dy: number };
 
 export interface InkOptions {
+  /** A real pen was detected for the first time while touch drawing was the default. */
+  onPenDetected?: () => void;
+  /** Current zoom in percent, and a setter (two-finger pinch while drawing). */
+  getZoom?: () => number;
+  setZoom?: (percent: number) => void;
   /** Called for each completed operation (for the shared undo timeline). */
   onOp: (op: InkOp) => void;
   /** A pen touched the page while draw mode was off. Return true to start drawing. */
@@ -97,6 +107,13 @@ export class InkLayer {
   drawWithTouch = false;
   /** Enter draw mode automatically when a pen touches the page. */
   autoSwitch = true;
+  /**
+   * Touch drawing is the device default (phones), not a user choice: the first real pen
+   * turns it off so the pen gets palm rejection.
+   */
+  touchAuto = false;
+  /** A pointer with pointerType 'pen' has been seen this session. */
+  penDetected = false;
   /** Pointer type of the last accepted stroke (status and tests). */
   lastPointerType = '';
   /** Count of touches rejected as palms (tests and diagnostics). */
@@ -106,6 +123,8 @@ export class InkLayer {
   #nextId = 1;
   #live: { stroke: Stroke; path: SVGPathElement; pointerType: string } | null = null;
   #penSeenAt = -Infinity;
+  /** Pointers in contact with the ink layer (pen hover = a pen move not in this set). */
+  #contacts = new Set<number>();
   #erasing: {
     tool: 'eraser' | 'point-eraser';
     before: Stroke[];
@@ -115,6 +134,11 @@ export class InkLayer {
   #lasso: { pts: [number, number][]; path: SVGPathElement } | null = null;
   #drag: { x: number; y: number; dx: number; dy: number } | null = null;
   #pan: { y: number; x: number } | null = null;
+  /** Touch pointers down on the ink layer while drawing (for two-finger gestures). */
+  #touches = new Map<number, [number, number]>();
+  #pinch: { dist: number; mid: [number, number]; zoom: number } | null = null;
+  /** After a two-finger gesture, remaining fingers don't draw until all are lifted. */
+  #gestureLock = false;
   readonly #hoverDot: SVGCircleElement;
   readonly #group: SVGGElement;
   readonly #overlay: SVGGElement;
@@ -147,10 +171,29 @@ export class InkLayer {
     svg.addEventListener('pointerleave', (e) => {
       if (e.pointerType === 'pen') this.#hover(null);
     });
+    // Pen side button / long press would open a context menu over the page.
+    svg.addEventListener('contextmenu', (e) => {
+      if (this.active) e.preventDefault();
+    });
+    // Android WebView: a stylus also sends touch events. If they aren't cancelled, the
+    // WebView pans the page and cancels the pen's pointer stream after a few points.
+    // (Cancelling them also stops the keyboard's handwriting mode taking over the pen.)
+    const guard = (e: TouchEvent): void => {
+      const stylus = [...e.changedTouches].some(
+        (t) => (t as Touch & { touchType?: string }).touchType === 'stylus',
+      );
+      const penBusy = this.#live?.pointerType === 'pen' || this.#penContact;
+      if ((stylus && (this.active || this.autoSwitch)) || penBusy) {
+        if (e.cancelable) e.preventDefault();
+      }
+    };
+    page.addEventListener('touchstart', guard, { passive: false });
+    page.addEventListener('touchmove', guard, { passive: false });
     // Auto-switch: a pen touching the page enters draw mode (setting).
     page.addEventListener(
       'pointerdown',
       (e) => {
+        if (e.pointerType === 'pen') this.#detectPen();
         if (this.active || e.pointerType !== 'pen' || !this.autoSwitch) return;
         if (this.opts.onPenWhileIdle()) {
           e.preventDefault();
@@ -160,7 +203,10 @@ export class InkLayer {
       true,
     );
     page.addEventListener('pointermove', (e) => {
-      if (e.pointerType === 'pen') this.#penSeenAt = performance.now();
+      if (e.pointerType === 'pen') {
+        this.#penSeenAt = performance.now();
+        this.#detectPen();
+      }
     });
     // Tap a timestamped stroke (not drawing) to seek the recording.
     page.addEventListener('click', (e) => {
@@ -180,11 +226,69 @@ export class InkLayer {
     });
   }
 
+  #detectPen(): void {
+    if (this.penDetected) return;
+    this.penDetected = true;
+    if (this.touchAuto && this.drawWithTouch) {
+      this.drawWithTouch = false;
+      this.touchAuto = false;
+      this.opts.onPenDetected?.();
+    }
+  }
+
+  /** Abandon whatever a finger started: a second finger means scroll or zoom. */
+  #abortTouch(): void {
+    if (this.#live?.pointerType === 'touch') {
+      this.#live.path.remove();
+      this.#live = null;
+    }
+    if (this.#erasing) {
+      const er = this.#erasing;
+      this.#erasing = null;
+      if (er.hits > 0) {
+        this.opts.onOp({
+          kind: 'replace',
+          before: er.before,
+          after: this.strokes.map((s) => ({ ...s })),
+        });
+      }
+    }
+    if (this.#lasso) {
+      this.#lasso.path.remove();
+      this.#lasso = null;
+    }
+    if (this.#drag) {
+      this.#group.querySelectorAll('path.is-selected').forEach((p) => {
+        p.removeAttribute('transform');
+      });
+      this.#drag = null;
+    }
+    this.#pan = null;
+  }
+
+  #pinchState(): { dist: number; mid: [number, number] } {
+    const [a, b] = [...this.#touches.values()];
+    return {
+      dist: Math.hypot(a![0] - b![0], a![1] - b![1]),
+      mid: [(a![0] + b![0]) / 2, (a![1] + b![1]) / 2],
+    };
+  }
+
+  /** Whether a two-finger gesture is in progress (tests and diagnostics). */
+  get gesturing(): boolean {
+    return this.#pinch !== null;
+  }
+
   setActive(on: boolean): void {
     this.active = on;
     this.svg.classList.toggle('ink--active', on);
     this.svg.dataset['tool'] = this.tool;
     if (!on) {
+      this.#contacts.clear();
+      this.#touches.clear();
+      this.#pinch = null;
+      this.#gestureLock = false;
+      this.#penContact = false;
       this.select([]);
       this.#hover(null);
     }
@@ -217,9 +321,29 @@ export class InkLayer {
     return performance.now() - this.#penSeenAt > 700;
   }
 
+  /** A pen is in contact with the ink layer. */
+  #penContact = false;
+
   #down(e: PointerEvent): void {
     if (!this.active) return;
-    if (e.pointerType === 'pen') this.#penSeenAt = performance.now();
+    this.#contacts.add(e.pointerId);
+    if (e.pointerType === 'pen') {
+      this.#penSeenAt = performance.now();
+      this.#penContact = true;
+      this.#detectPen();
+    }
+    if (e.pointerType === 'touch') {
+      this.#touches.set(e.pointerId, [e.clientX, e.clientY]);
+      if (this.#touches.size >= 2) {
+        // Two fingers: scroll and zoom, never ink.
+        e.preventDefault();
+        this.#abortTouch();
+        this.#gestureLock = true;
+        this.#pinch = { ...this.#pinchState(), zoom: this.opts.getZoom?.() ?? 100 };
+        return;
+      }
+      if (this.#gestureLock) return;
+    }
     if (!this.accepts(e.pointerType)) {
       this.rejected++;
       if (e.pointerType === 'touch' && !this.drawWithTouch)
@@ -269,6 +393,21 @@ export class InkLayer {
   }
 
   #move(e: PointerEvent): void {
+    if (e.pointerType === 'touch' && this.#touches.has(e.pointerId)) {
+      this.#touches.set(e.pointerId, [e.clientX, e.clientY]);
+      if (this.#pinch) {
+        if (this.#touches.size < 2) return;
+        const now = this.#pinchState();
+        this.scroller.scrollBy(this.#pinch.mid[0] - now.mid[0], this.#pinch.mid[1] - now.mid[1]);
+        this.#pinch.mid = now.mid;
+        if (this.opts.setZoom && this.#pinch.dist > 0) {
+          const z = Math.round((this.#pinch.zoom * now.dist) / this.#pinch.dist);
+          if (Math.abs(z - (this.opts.getZoom?.() ?? z)) >= 2) this.opts.setZoom(z);
+        }
+        return;
+      }
+      if (this.#gestureLock) return;
+    }
     if (this.#pan && e.pointerType === 'touch') {
       this.scroller.scrollBy(this.#pan.x - e.clientX, this.#pan.y - e.clientY);
       this.#pan = { x: e.clientX, y: e.clientY };
@@ -276,7 +415,7 @@ export class InkLayer {
     }
     if (e.pointerType === 'pen') this.#penSeenAt = performance.now();
     const [x, y] = this.#pt(e);
-    if (e.pointerType === 'pen' && e.buttons === 0 && !this.#live) {
+    if (e.pointerType === 'pen' && !this.#contacts.has(e.pointerId)) {
       this.#hover([x, y]);
       return;
     }
@@ -314,6 +453,14 @@ export class InkLayer {
 
   #up(e: PointerEvent): void {
     this.#pan = null;
+    this.#contacts.delete(e.pointerId);
+    if (e.pointerType === 'touch') {
+      this.#touches.delete(e.pointerId);
+      if (this.#touches.size < 2) this.#pinch = null;
+      if (this.#touches.size === 0) this.#gestureLock = false;
+      if (this.#gestureLock || this.#pinch) return;
+    }
+    if (e.pointerType === 'pen') this.#penContact = false;
     if (e.pointerType === 'pen') this.#penSeenAt = performance.now();
     if (this.#erasing) {
       const er = this.#erasing;

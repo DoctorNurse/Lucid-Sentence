@@ -201,6 +201,12 @@ button:focus-visible, summary:focus-visible, input:focus-visible {
   animation: ls-enter var(--ls-motion-quick) var(--ls-ease) both;
 }
 [data-layout='tablet'] .ls-overflow__menu .ls-cmd--row { min-height: var(--ls-touch); }
+.ls-overflow__menu { max-height: min(70vh, 560px); overflow-y: auto; overscroll-behavior: contain; }
+.ls-overflow__toggle--group {
+  grid-auto-flow: column; gap: 2px; padding: 0 10px; border-radius: var(--ls-radius-pill);
+}
+/* Narrow tablets (portrait iPad mini/11"): tighter tabs so all of them fit. */
+[data-layout='tablet'][data-narrow] .ls-tab { padding-inline: 9px; }
 
 /* Backstage (File): rail + host-provided page */
 .ls-panel--backstage { min-height: calc(100dvh - 140px); padding: 0; overflow: visible; }
@@ -250,8 +256,9 @@ button:focus-visible, summary:focus-visible, input:focus-visible {
 .ls-picker__item[aria-selected='true'] { background: var(--ls-selected); color: var(--ls-on-selected); font-weight: 600; }
 .ls-sheet { max-height: 58dvh; overflow-y: auto; overscroll-behavior: contain; }
 .ls-sheet--full { max-height: 85dvh; }
+.ls-sheet { transition: transform var(--ls-motion-fast) var(--ls-ease); }
 .ls-handle {
-  position: sticky; top: 0; z-index: 1; display: grid; place-items: center; width: 100%; height: 24px;
+  position: sticky; top: 0; z-index: 1; display: grid; place-items: center; width: 100%; height: 32px; cursor: grab;
   background: var(--ls-raised); border-radius: var(--ls-radius-xl) var(--ls-radius-xl) 0 0; touch-action: none;
 }
 .ls-handle span { width: 40px; height: 5px; border-radius: 3px; background: var(--ls-hairline); box-shadow: inset 0 0 0 10px color-mix(in srgb, var(--ls-ink) 22%, transparent); }

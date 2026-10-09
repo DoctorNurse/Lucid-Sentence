@@ -108,12 +108,14 @@ export function openPopover(
     document.removeEventListener('keydown', onKey, true);
     document.removeEventListener('pointerdown', onDown, true);
     opts.onClose?.();
+    window.dispatchEvent(new Event('ls-popover-change'));
   }
   document.addEventListener('keydown', onKey, true);
   setTimeout(() => {
     document.addEventListener('pointerdown', onDown, true);
   }, 0);
   current = { root, close };
+  window.dispatchEvent(new Event('ls-popover-change'));
   if (opts.focus) {
     root
       .querySelector<HTMLElement>(
@@ -317,12 +319,39 @@ export function tableGrid(onPick: (rows: number, cols: number) => void): HTMLEle
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
+/**
+ * Keep a toast clear of the splash promo card (it rests in the bottom-right corner after
+ * loading): center the toast in the free space to the card's left, or lift it above.
+ */
+function avoidPromo(t: HTMLElement): void {
+  t.style.removeProperty('left');
+  t.style.removeProperty('bottom');
+  t.style.removeProperty('max-width');
+  const card = document
+    .querySelector('ls-splash')
+    ?.shadowRoot?.querySelector<HTMLElement>('.promo')
+    ?.getBoundingClientRect();
+  if (!card || card.width === 0) return;
+  const r = t.getBoundingClientRect();
+  const overlaps =
+    r.left < card.right && r.right > card.left && r.top < card.bottom && r.bottom > card.top;
+  if (!overlaps) return;
+  const free = card.left - 24;
+  if (free >= 280) {
+    t.style.left = `${12 + free / 2}px`;
+    t.style.maxWidth = `${free}px`;
+  } else {
+    t.style.bottom = `${window.innerHeight - card.top + 12}px`;
+  }
+}
+
 export function toast(message: string, ms = 2600): void {
   const t = document.querySelector<HTMLElement>('#toast');
   if (!t) return;
   t.textContent = message;
   t.hidden = false;
   t.classList.remove('toast--out');
+  avoidPromo(t);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
     t.classList.add('toast--out');
@@ -330,6 +359,42 @@ export function toast(message: string, ms = 2600): void {
       t.hidden = true;
     }, 200);
   }, ms);
+}
+
+/**
+ * A polite, persistent update notice: a message, one action, and "Later".
+ * Shows at most one at a time; the action button reports failures in a toast.
+ */
+export function updatePrompt(
+  message: string,
+  actionLabel: string,
+  action: () => void | Promise<void>,
+): HTMLElement {
+  document.querySelector('.update-bar')?.remove();
+  const later = el('button', { type: 'button', class: 'btn btn--chip' }, 'Later');
+  const go = el('button', { type: 'button', class: 'btn btn--primary' }, actionLabel);
+  const bar = el(
+    'div',
+    { class: 'update-bar', role: 'status', 'aria-live': 'polite' },
+    el('span', { class: 'update-bar__text' }, message),
+    el('span', { class: 'update-bar__actions' }, later, go),
+  );
+  later.addEventListener('click', () => {
+    bar.remove();
+  });
+  go.addEventListener('click', () => {
+    go.disabled = true;
+    Promise.resolve(action())
+      .then(() => {
+        bar.remove();
+      })
+      .catch(() => {
+        go.disabled = false;
+        toast('The update didn’t finish. Try again later.');
+      });
+  });
+  document.body.append(bar);
+  return bar;
 }
 
 /** A small form popover (label + input + primary button). */
