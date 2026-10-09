@@ -20,8 +20,10 @@
     "@tauri-apps/plugin-opener": "2.7.0",
     "@tauri-apps/plugin-process": "2.4.0",
     "@tauri-apps/plugin-updater": "2.13.2",
+    "@tesseract.js-data/eng": "1.0.0",
     "lucide": "1.53.0",
-    "perfect-freehand": "^1.2.3"
+    "perfect-freehand": "^1.2.3",
+    "tesseract.js": "7.0.0"
   },
   "devDependencies": {
     "vite": "^8.3.4"

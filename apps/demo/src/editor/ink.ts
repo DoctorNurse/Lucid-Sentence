@@ -47,6 +47,7 @@ import {
   type Stroke,
   type StrokeTool,
 } from './ink/model.js';
+import { recognizeShape } from './ink/shapes.js';
 import { PalmGuard, type TouchLike } from './ink/palm.js';
 import {
   LiveOutline,
@@ -96,6 +97,8 @@ interface Live {
 export class InkLayer {
   strokes: Stroke[] = [];
   tool: InkTool = 'pen';
+  /** Ink to Shape: closed strokes and lines become clean shapes as they're drawn. */
+  shapeMode = false;
   color = '#1a1916';
   size = 4;
   active = false;
@@ -589,6 +592,13 @@ export class InkLayer {
     ) {
       stroke.points = straighten(stroke.points);
       stroke.shape = 'line';
+    }
+    if (this.shapeMode && !stroke.shape) {
+      const shape = recognizeShape(stroke.points);
+      if (shape) {
+        stroke.points = shape.points;
+        stroke.shape = shape.kind;
+      }
     }
     const op: InkOp = { kind: 'add', strokes: [stroke] };
     this.apply(op);
@@ -1096,6 +1106,27 @@ export class InkLayer {
     }
   }
 
+  /**
+   * Ink to Shape on existing strokes: convert the ones that read as shapes (one undo
+   * step). Returns how many changed.
+   */
+  convertToShapes(ids: readonly number[]): number {
+    const want = new Set(ids);
+    let changed = 0;
+    const after = this.strokes.map((s) => {
+      if (!want.has(s.id) || s.shape) return s;
+      const shape = recognizeShape(s.points);
+      if (!shape) return s;
+      changed++;
+      return { ...s, points: shape.points, shape: shape.kind };
+    });
+    if (changed === 0) return 0;
+    const op: InkOp = { kind: 'replace', before: this.strokes.map((s) => ({ ...s })), after };
+    this.apply(op);
+    this.opts.onOp(op);
+    return changed;
+  }
+
   deleteSelection(): void {
     const strokes = this.strokes.filter((s) => this.selected.has(s.id));
     if (strokes.length === 0) return;
@@ -1190,10 +1221,26 @@ export class InkLayer {
     }
   }
 
-  /** Replay strokes in drawing order. */
-  replay(): void {
+  get replaying(): boolean {
+    return this.#replaying !== null;
+  }
+
+  /**
+   * Replay strokes in drawing order; calling it again stops the replay. It's an explicit
+   * request, so it runs even with reduced motion (just faster). Long pages are sped up
+   * to finish in about 8 seconds. Returns false when there's no ink.
+   */
+  replay(onDone?: () => void): boolean {
+    if (this.#replaying) {
+      this.#replaying = null;
+      return true;
+    }
     const all = [...this.strokes];
-    if (all.length === 0 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (all.length === 0) return false;
+    const total = all.reduce((n, s) => n + s.points.length, 0);
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const perFrame = Math.max(reduced ? 12 : 3, Math.ceil(total / ((reduced ? 2 : 8) * 60)));
+    this.#syncView();
     this.#replaying = { upTo: 0 };
     this.render();
     let si = 0;
@@ -1204,9 +1251,10 @@ export class InkLayer {
         this.#replaying = null;
         this.#liveLayer.clear();
         this.render();
+        onDone?.();
         return;
       }
-      pi = Math.min(s.points.length, pi + 3);
+      pi = Math.min(s.points.length, pi + perFrame);
       const partial: Stroke = { ...s, points: s.points.slice(0, pi) };
       const host = s.tool === 'highlighter' ? this.#hlLayer(s.color).root : this.inkRoot;
       host.append(this.#liveLayer.el);
@@ -1232,6 +1280,7 @@ export class InkLayer {
       requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
+    return true;
   }
 
   /** Read a layer pixel at a page point (tests): 'ink', 'live', or a highlighter color. */

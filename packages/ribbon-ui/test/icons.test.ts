@@ -131,6 +131,24 @@ describe('<ls-ribbon> with a host dispatcher', () => {
     el.remove();
   });
 
+  it('tapping a stub (unavailable) command reports it instead of doing nothing', () => {
+    const el = document.createElement('ls-ribbon') as LucidRibbonElement;
+    el.setAttribute('layout', 'desktop');
+    el.wired = new Set();
+    document.body.append(el);
+    const fired: { id: string; stub?: boolean }[] = [];
+    el.addEventListener('ls-command-pending', (e) =>
+      fired.push((e as CustomEvent<{ id: string; stub?: boolean }>).detail),
+    );
+    const stub = el.shadowRoot!.querySelector<HTMLElement>('[aria-disabled="true"][data-command]');
+    expect(stub).toBeTruthy();
+    stub!.click();
+    expect(fired).toEqual([{ id: stub!.dataset['command'], stub: true }]);
+    el.invoke(stub!.dataset['command']!);
+    expect(fired).toHaveLength(2);
+    el.remove();
+  });
+
   it('collapses and restores the ribbon', () => {
     const el = document.createElement('ls-ribbon') as LucidRibbonElement;
     document.body.append(el);

@@ -22,6 +22,7 @@
  * F/T/OTx/OTy on re-save, how it anchors ink, and whether it reads `inkEffects` as a
  * brushProperty.
  */
+import { isShapeKind } from './model.js';
 import type { Point, Stroke, StrokeTool } from './model.js';
 
 export const INKML_NS = 'http://www.w3.org/2003/InkML';
@@ -348,7 +349,7 @@ export function inkMLToStrokes(xml: string, firstId = 1): InkMLResult {
       points,
       pressure: brush.pressure && iF >= 0,
       source: source === 'pen' || source === 'touch' || source === 'mouse' ? source : 'import',
-      ...(shape === 'line' ? { shape: 'line' as const } : {}),
+      ...(isShapeKind(shape) ? { shape } : {}),
       ...(rec && t ? { rec, t: Number(t) } : {}),
     });
   }

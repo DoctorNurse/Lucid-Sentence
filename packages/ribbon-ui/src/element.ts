@@ -560,7 +560,10 @@ export class LucidRibbonElement extends HTMLElement {
       this.#invoke(btn);
       return true;
     }
-    if (cmd.stub) return false;
+    if (cmd.stub) {
+      this.#pending(id, true);
+      return false;
+    }
     if (this.#wired && !this.#wired.has(id)) {
       this.#pending(id);
       return false;
@@ -569,9 +572,13 @@ export class LucidRibbonElement extends HTMLElement {
     return true;
   }
 
-  #pending(id: string): void {
+  #pending(id: string, stub = false): void {
     this.dispatchEvent(
-      new CustomEvent('ls-command-pending', { detail: { id }, bubbles: true, composed: true }),
+      new CustomEvent('ls-command-pending', {
+        detail: { id, stub },
+        bubbles: true,
+        composed: true,
+      }),
     );
   }
 
@@ -582,8 +589,13 @@ export class LucidRibbonElement extends HTMLElement {
   }
 
   #invoke(button: HTMLElement): void {
-    if (button.getAttribute('aria-disabled') === 'true') return;
     const id = button.dataset['command']!;
+    if (button.getAttribute('aria-disabled') === 'true') {
+      // Not available: say so (a disabled-looking button that does nothing feels broken).
+      this.#showTip(button);
+      this.#pending(id, true);
+      return;
+    }
     const kind = button.dataset['kind']!;
     if (button.dataset['pending']) {
       this.#showTip(button);

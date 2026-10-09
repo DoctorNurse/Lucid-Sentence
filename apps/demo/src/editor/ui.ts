@@ -19,6 +19,37 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return e;
 }
 
+/**
+ * Run `fn` when `target` is tapped or clicked. Touch and pen taps run on pointerup
+ * (a press that ends on the element without moving more than 12 px), and the click
+ * that may follow is ignored. Android WebView sometimes drops that click (after a
+ * swipe or a fling, or when the pressed element re-rendered), which made buttons feel
+ * dead on tablets. Mouse and keyboard use the click as usual.
+ */
+export function tap(target: HTMLElement, fn: (e: Event) => void): void {
+  let press: { id: number; x: number; y: number } | null = null;
+  let tappedAt = -Infinity;
+  target.addEventListener('pointerdown', (e) => {
+    press = e.pointerType === 'mouse' ? null : { id: e.pointerId, x: e.clientX, y: e.clientY };
+  });
+  target.addEventListener('pointercancel', () => {
+    press = null;
+  });
+  target.addEventListener('pointerup', (e) => {
+    const p = press;
+    press = null;
+    if (!p || p.id !== e.pointerId) return;
+    if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > 12) return;
+    if ((target as HTMLButtonElement).disabled) return;
+    tappedAt = performance.now();
+    fn(e);
+  });
+  target.addEventListener('click', (e) => {
+    if (performance.now() - tappedAt < 700) return;
+    fn(e);
+  });
+}
+
 interface OpenPopover {
   root: HTMLElement;
   close: () => void;
@@ -69,17 +100,26 @@ export function openPopover(
   root.append(content);
   document.body.append(root);
   const phone = window.innerWidth < 700;
+  let resize: ResizeObserver | null = null;
   if (phone) {
     root.classList.add('pop--sheet');
   } else {
     const r = rectOf(anchor);
-    const w = root.offsetWidth;
-    const h = root.offsetHeight;
-    let top = r.y + r.height + 6;
-    if (top + h > window.innerHeight - 8) top = Math.max(8, r.y - h - 6);
-    const left = Math.max(8, Math.min(r.x, window.innerWidth - w - 8));
-    root.style.left = `${left}px`;
-    root.style.top = `${top}px`;
+    const place = (): void => {
+      const w = root.offsetWidth;
+      const h = root.offsetHeight;
+      let top = r.y + r.height + 6;
+      if (top + h > window.innerHeight - 8) top = Math.max(8, r.y - h - 6);
+      const left = Math.max(8, Math.min(r.x, window.innerWidth - w - 8));
+      root.style.left = `${left}px`;
+      root.style.top = `${top}px`;
+    };
+    place();
+    // Content that fills in later (recognition results) must stay on screen.
+    if (typeof ResizeObserver === 'function') {
+      resize = new ResizeObserver(place);
+      resize.observe(root);
+    }
   }
   const onKey = (e: KeyboardEvent): void => {
     if (e.key === 'Escape') {
@@ -104,6 +144,7 @@ export function openPopover(
   function close(): void {
     if (current?.root !== root) return;
     current = null;
+    resize?.disconnect();
     root.remove();
     document.removeEventListener('keydown', onKey, true);
     document.removeEventListener('pointerdown', onDown, true);
@@ -177,7 +218,7 @@ export function menu(entries: MenuEntry[]): HTMLElement {
       e.shortcut ? el('kbd', { class: 'pop__kbd' }, e.shortcut) : null,
     );
     keepSelection(b);
-    b.addEventListener('click', () => {
+    tap(b, () => {
       if (e.disabled) return;
       closePopover();
       e.run();
@@ -210,7 +251,7 @@ export function gallery(items: GalleryItem[], columns = 3): HTMLElement {
       el('span', { class: 'pop__tile-label' }, it.label),
     );
     keepSelection(b);
-    b.addEventListener('click', () => {
+    tap(b, () => {
       closePopover();
       it.run();
     });
@@ -247,7 +288,7 @@ export function colorPicker(
   const wrap = el('div', { class: 'pop__colors' });
   const none = el('button', { type: 'button', class: 'pop__item pop__none' }, noneLabel);
   keepSelection(none);
-  none.addEventListener('click', () => {
+  tap(none, () => {
     closePopover();
     onPick(null);
   });
@@ -262,7 +303,7 @@ export function colorPicker(
       style: `--sw:${c}`,
     });
     keepSelection(b);
-    b.addEventListener('click', () => {
+    tap(b, () => {
       closePopover();
       onPick(c);
     });
@@ -306,7 +347,7 @@ export function tableGrid(onPick: (rows: number, cols: number) => void): HTMLEle
       b.addEventListener('focus', () => {
         mark(r, c);
       });
-      b.addEventListener('click', () => {
+      tap(b, () => {
         closePopover();
         onPick(r, c);
       });
@@ -327,6 +368,16 @@ function avoidPromo(t: HTMLElement): void {
   t.style.removeProperty('left');
   t.style.removeProperty('bottom');
   t.style.removeProperty('max-width');
+  // Notes mode: sit above the magnifier strip and the Notes bar, not on top of them.
+  const bars = [
+    ...document.querySelectorAll<HTMLElement>('.strip:not([hidden]), #notesbar:not([hidden])'),
+  ]
+    .map((b) => b.getBoundingClientRect())
+    .filter((r) => r.height > 0);
+  if (bars.length > 0) {
+    const top = Math.min(...bars.map((r) => r.top));
+    t.style.bottom = `${Math.max(56, Math.round(window.innerHeight - top + 8))}px`;
+  }
   const card = document
     .querySelector('ls-splash')
     ?.shadowRoot?.querySelector<HTMLElement>('.promo')
@@ -379,10 +430,10 @@ export function updatePrompt(
     el('span', { class: 'update-bar__text' }, message),
     el('span', { class: 'update-bar__actions' }, later, go),
   );
-  later.addEventListener('click', () => {
+  tap(later, () => {
     bar.remove();
   });
-  go.addEventListener('click', () => {
+  tap(go, () => {
     go.disabled = true;
     Promise.resolve(action())
       .then(() => {

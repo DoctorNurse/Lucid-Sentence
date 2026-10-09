@@ -40,13 +40,27 @@ export interface Stroke {
   pressure?: boolean;
   /** Pointer type that drew the stroke. */
   source?: 'pen' | 'touch' | 'mouse' | 'import';
-  /** The stroke was straightened into a line. */
-  shape?: 'line';
+  /** The stroke was straightened into a line or converted into a shape (Ink to Shape). */
+  shape?: ShapeKind;
   /** Milliseconds into the active audio recording when the stroke began. */
   t?: number;
   /** Recording the timestamp belongs to. */
   rec?: string;
 }
+
+/** Shapes a stroke can be recognized as. */
+export const SHAPE_KINDS = [
+  'line',
+  'triangle',
+  'rectangle',
+  'quad',
+  'polygon',
+  'ellipse',
+  'circle',
+] as const;
+export type ShapeKind = (typeof SHAPE_KINDS)[number];
+export const isShapeKind = (v: unknown): v is ShapeKind =>
+  typeof v === 'string' && (SHAPE_KINDS as readonly string[]).includes(v);
 
 export type InkOp =
   | { kind: 'add'; strokes: Stroke[] }
@@ -89,7 +103,7 @@ export interface InkStroke {
   /** [x, y, w, h] in page px. */
   bbox: [number, number, number, number];
   audio?: { rec: string; t: number };
-  shape?: 'line';
+  shape?: ShapeKind;
 }
 
 export interface InkDocument {

@@ -1717,6 +1717,8 @@ button.status__item:hover {
   transform: translateX(-50%);
   animation: ls-toast-in var(--ls-motion-fast) var(--ls-motion-ease-out);
   transition: opacity var(--ls-motion-quick);
+  /* A message, never a tap target: taps go through to the controls underneath. */
+  pointer-events: none;
 }
 .toast[hidden] {
   display: none;
@@ -2089,16 +2091,15 @@ button.status__item:hover {
   height: 40px;
 }
 
-/* Magnifier writing strip */
+/* Magnifier writing strip: in the layout just above the Notes bar (never over controls) */
 .strip {
-  position: fixed;
-  left: 50%;
-  bottom: calc(112px + env(safe-area-inset-bottom));
-  z-index: 35;
+  position: relative;
+  flex: none;
   display: flex;
   align-items: stretch;
-  width: min(920px, calc(100vw - 24px));
-  height: 132px;
+  width: min(920px, calc(100% - 24px));
+  height: clamp(96px, 18vh, 132px);
+  margin: 6px auto;
   border-radius: var(--ls-radius-lg);
   background-color: var(--note-paper, #fff);
   background-image: repeating-linear-gradient(
@@ -2108,10 +2109,12 @@ button.status__item:hover {
   );
   background-position: 0 var(--strip-bg-y, 0);
   box-shadow:
-    var(--ls-shadow-lg),
+    var(--ls-shadow-md),
     0 0 0 2px var(--ls-accent);
-  transform: translateX(-50%);
   overflow: hidden;
+}
+.strip--night {
+  color-scheme: dark;
 }
 .strip[hidden],
 .strip-frame[hidden] {
@@ -2156,7 +2159,117 @@ button.status__item:hover {
   display: none;
 }
 .notesbar {
+  gap: 4px;
+  padding: 4px 6px 4px 0;
+}
+/* One row that scrolls sideways on narrow screens; Exit stays in reach on the right. */
+.notesbar,
+.timeline,
+.pentool,
+.strip {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.notesbar__scroll {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px 4px 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.notesbar__scroll::-webkit-scrollbar {
+  display: none;
+}
+.notesbar__scroll > * {
+  flex: none;
+}
+.notesbar .notes__close {
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+.notesbar .seg__btn {
+  min-height: 34px;
+}
+.notesbar .btn--chip {
+  min-height: 36px;
+}
+.notesbar .notes__swatch {
+  width: 28px;
+  height: 28px;
+}
+.timeline__marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.timeline__track {
+  touch-action: none;
+}
+.timeline__track.is-disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+@media (max-width: 760px) {
+  .timeline {
+    gap: 8px;
+    padding: 6px 10px;
+  }
+  .timeline__live {
+    display: none;
+  }
+  .timeline__pick {
+    flex: 0 1 150px;
+  }
+}
+.pentool__fav[aria-pressed='true'] {
+  box-shadow: 0 0 0 2px var(--ls-accent);
+}
+
+/* Convert to text / Search ink */
+.hw {
+  display: grid;
+  gap: 8px;
+  padding: 4px 6px 6px;
+  min-width: min(380px, calc(100vw - 40px));
+}
+.hw__status {
+  margin: 0;
+  color: var(--ls-muted);
+  line-height: 1.4;
+}
+.hw__text {
+  width: 100%;
+  border-radius: var(--ls-radius-md, 10px);
+  resize: vertical;
+  line-height: 1.45;
+}
+.hw__actions,
+.hw__search {
+  display: flex;
   flex-wrap: wrap;
+  gap: 6px;
+}
+.hw__search .pop__input {
+  flex: 1;
+}
+.hw__results .pop__item {
+  min-height: 40px;
+}
+
+/* Drawing Canvas (Draw tab): a framed space in the document to draw in */
+.doc .drawing-canvas {
+  display: block;
+  height: 240px;
+  margin: 12px 0;
+  border: 1.5px dashed color-mix(in srgb, var(--ls-accent) 55%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ls-accent) 3%, transparent);
+  user-select: none;
 }
 .notes__title {
   font-family: var(--ls-font-display);

@@ -1,5 +1,5 @@
 /** File backstage pages (rendered into <ls-ribbon>'s `backstage` slot). */
-import { el } from './ui.js';
+import { el, tap } from './ui.js';
 
 export interface BackstageContext {
   docName: string;
@@ -43,7 +43,7 @@ function action(
     el('span', { class: 'bs__card-label' }, label),
     el('span', { class: 'bs__card-detail' }, detail),
   );
-  b.addEventListener('click', run);
+  tap(b, run);
   return b;
 }
 

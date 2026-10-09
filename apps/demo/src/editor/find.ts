@@ -1,7 +1,7 @@
 /** Find and Replace panel (Ctrl+F / Ctrl+H) for the stand-in surface. */
 import { ChevronDown, ChevronUp, X } from 'lucide';
 import type { EditorSurface } from './surface.js';
-import { el, icon } from './ui.js';
+import { el, icon, tap } from './ui.js';
 
 interface HighlightRegistry {
   set(name: string, h: unknown): void;
@@ -68,12 +68,12 @@ export class FindPanel {
         title: label,
       });
       b.append(icon(node, 16));
-      b.addEventListener('click', run);
+      tap(b, run);
       return b;
     };
     const textBtn = (label: string, run: () => void): HTMLButtonElement => {
       const b = el('button', { type: 'button', class: 'btn btn--chip' }, label);
-      b.addEventListener('click', run);
+      tap(b, run);
       return b;
     };
     this.#replaceRow = el(
