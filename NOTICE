@@ -33,6 +33,17 @@ Upstream versions, commit hashes, and the date the license text was re-checked
 will be recorded here at fork time.
 
 -------------------------------------------------------------------------------
+Lucid Sentence name and logos
+-------------------------------------------------------------------------------
+
+The Lucid Sentence name, the "S" tile app icon, and the other brand images in
+assets/brand/ are (c) 2026 Lucid Systems. The AGPL-3.0 license covers the
+software; it grants no trademark rights. The logos and name are not licensed
+for use as a mark: forks and redistributions of modified versions must use
+their own name and icon. Accurate nominative references (e.g. "based on Lucid
+Sentence") are fine. See assets/brand/README.md.
+
+-------------------------------------------------------------------------------
 Other notices
 -------------------------------------------------------------------------------
 

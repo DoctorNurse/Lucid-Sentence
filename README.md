@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/brand/banner.png" alt="Lucid Sentence — open-source word processor for .docx" width="100%" />
+</p>
+
 # Lucid Sentence
 
 A free, open-source word processor for **.docx** with Word’s familiar ribbon and layout, and a fresher look — for Windows, macOS, Android, and iOS/iPadOS.
@@ -65,6 +69,7 @@ Lucid Sentence is **not affiliated with Microsoft**. Word is a trademark of Micr
 | `apps/desktop`       | Planned ONLYOFFICE DesktopEditors fork (placeholder)                                       |
 | `apps/mobile`        | Planned Capacitor shell for Android and iOS (placeholder)                                  |
 | `engine/`            | Planned ONLYOFFICE 9.4+ integration and attribution obligations                            |
+| `assets/brand/`      | App icon, banner, and social preview                                                       |
 | `eval/`              | M0 fidelity bake-off and mobile go/no-go gate                                              |
 
 ## Development
