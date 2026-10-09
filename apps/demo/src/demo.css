@@ -3044,3 +3044,67 @@ body.ready .stage {
   color: var(--ls-accent);
   text-align: center;
 }
+
+/* Document engine (ONLYOFFICE sdkjs in an iframe): replaces the preview canvas
+   while a .docx is open. Ink/Notes stay with the preview canvas. */
+.engine-host {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: var(--ls-page-canvas);
+  border-top: 1px solid var(--ls-hairline);
+}
+.engine-host[hidden] {
+  display: none;
+}
+.engine-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--ls-page-canvas);
+}
+body.engine .canvas,
+body.engine .navpane {
+  display: none;
+}
+body.engine .notesbar,
+body.engine .pentool,
+body.engine .timeline {
+  display: none;
+}
+.engine-loading::after {
+  content: 'Opening…';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ls-text-muted, #666);
+  font: 500 14px/1.4 var(--ls-font-ui, system-ui);
+}
+.engine-style {
+  padding: 6px 4px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.engine-style--title {
+  font-size: 18px;
+}
+.engine-style--heading-1 {
+  font-size: 16px;
+  color: #2f5496;
+}
+.engine-style--heading-2 {
+  font-size: 14px;
+  color: #2f5496;
+}
+.engine-style--heading-3 {
+  color: #1f3763;
+}
+.engine-style--quote,
+.engine-style--intense-quote {
+  font-style: italic;
+}

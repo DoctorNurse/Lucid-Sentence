@@ -11,12 +11,21 @@ export interface BackstageContext {
     comments: number;
     strokes: number;
   };
-  newDoc: (kind: 'blank' | 'sample') => void;
+  /** A .docx is open in the document engine (ONLYOFFICE). */
+  engine: boolean;
+  /** blank: a new Word document in the engine; notes/sample: the preview canvas (ink, Notes). */
+  newDoc: (kind: 'blank' | 'notes' | 'sample') => void;
+  /** Native dialog / File System Access picker; falls back to the <input> on this page. */
+  pickFile: (fallback: () => void) => void;
   openFile: (file: File) => void;
   save: () => void;
+  saveAs: () => void;
+  downloadDocx: () => void;
   downloadHtml: () => void;
   downloadText: () => void;
   print: () => void;
+  /** Engine documents: lay out and save as PDF. */
+  exportPdf: () => void;
   promosEnabled: boolean;
   settings: { autoSwitch: boolean; drawWithTouch: boolean; floatingToolbar: boolean };
   onSetting: (key: 'autoSwitch' | 'drawWithTouch' | 'floatingToolbar', value: boolean) => void;
@@ -82,12 +91,15 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
           { class: 'bs__grid' },
           action(
             'Blank document',
-            'Letter, Normal margins',
+            'Word document (.docx), Letter, Normal margins',
             () => {
               ctx.newDoc('blank');
             },
             true,
           ),
+          action('Blank notes page', 'Handwriting, ink and Notes mode (preview canvas)', () => {
+            ctx.newDoc('notes');
+          }),
           action('Sample: Quarterly Notes', 'Headings, a list, a table, and a comment', () => {
             ctx.newDoc('sample');
           }),
@@ -117,15 +129,15 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
         const f = input.files?.[0];
         if (f) ctx.openFile(f);
       });
-      const pick = el(
-        'label',
-        { class: 'bs__card bs__card--primary', for: 'open-file' },
-        el('span', { class: 'bs__card-label' }, 'Browse this device'),
-        el(
-          'span',
-          { class: 'bs__card-detail' },
-          '.docx opens with the engine (M1). Text and HTML open now as a preview.',
-        ),
+      const pick = action(
+        'Browse this device',
+        'Word documents (.docx) open for editing. Text and HTML open in the preview.',
+        () => {
+          ctx.pickFile(() => {
+            input.click();
+          });
+        },
+        true,
       );
       page.append(h('Open'), el('div', { class: 'bs__grid' }, pick, input));
       break;
@@ -133,10 +145,34 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
     case 'file.rail.save':
     case 'file.rail.save-as':
     case 'file.rail.export': {
+      if (ctx.engine) {
+        page.append(
+          h(id.endsWith('export') ? 'Export' : 'Save As', ctx.docName),
+          el(
+            'div',
+            { class: 'bs__grid' },
+            action(
+              'Save',
+              'Ctrl+S · back to the file you opened',
+              ctx.save,
+              id === 'file.rail.save',
+            ),
+            action('Save As…', 'F12 · choose a name and place', ctx.saveAs, id.endsWith('save-as')),
+            action('Download a copy', 'Word document (.docx)', ctx.downloadDocx),
+            action(
+              'PDF',
+              'Export a PDF, laid out like the pages',
+              ctx.exportPdf,
+              id.endsWith('export'),
+            ),
+          ),
+        );
+        break;
+      }
       page.append(
         h(
           id.endsWith('export') ? 'Export' : 'Save a copy',
-          '.docx save and PDF export arrive with the engine. Until then you can save a draft on this device or download a preview.',
+          'This is the preview canvas. To write a Word document, start a Blank document or open a .docx file. Here you can save a draft on this device or download a preview.',
         ),
         el(
           'div',
@@ -151,7 +187,12 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
     }
     case 'file.rail.print': {
       page.append(
-        h('Print', 'Prints the page only, with white paper and no interface.'),
+        h(
+          'Print',
+          ctx.engine
+            ? 'Prints the document as laid out on the pages. Where there is no print dialog, it is saved as a PDF to print from.'
+            : 'Prints the page only, with white paper and no interface.',
+        ),
         el(
           'div',
           { class: 'bs__grid' },
@@ -191,7 +232,18 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
           el(
             'li',
             {},
-            'Planned engine: based on ONLYOFFICE software developed by Ascensio System SIA (from M1).',
+            'Document engine: based on the original ONLYOFFICE software developed by Ascensio System SIA, version 9.4 (sdkjs) and 9.3 (x2t converter, compiled to WebAssembly by CryptPad). This version is modified by Lucid Systems. AGPL-3.0 with additional terms: ',
+            el(
+              'a',
+              { href: 'https://github.com/DoctorNurse/Lucid-Sentence/blob/main/NOTICE' },
+              'notices and license',
+            ),
+            '. ONLYOFFICE is a trademark of Ascensio System SIA; Lucid Sentence is not affiliated with or endorsed by it.',
+          ),
+          el(
+            'li',
+            {},
+            'Document fonts: Carlito and Caladea (SIL OFL 1.1), Liberation 2 and OpenSymbol (SIL OFL), Open Sans (Apache 2.0), DejaVu (Bitstream Vera license), ASC (Ascensio System SIA).',
           ),
           el('li', {}, 'Icons: Lucide (ISC); some icons derive from Feather (MIT).'),
           el('li', {}, 'Fonts: Fraunces, Instrument Sans, JetBrains Mono (SIL OFL 1.1).'),
@@ -285,7 +337,7 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
           el('dt', {}, 'Location'),
           el('dd', {}, 'This device'),
           el('dt', {}, 'Engine'),
-          el('dd', {}, 'Preview surface (ONLYOFFICE in M1)'),
+          el('dd', {}, ctx.engine ? 'ONLYOFFICE document engine' : 'Preview canvas'),
         ),
       );
     }

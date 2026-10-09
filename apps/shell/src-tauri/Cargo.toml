@@ -20,6 +20,10 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
+# File > Open / Save / Save As: native dialogs (the document picker on Android)
+# and reading/writing the picked files (paths on desktop, content:// URIs on Android).
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
 # Needed by `tauri::generate_context!` once tauri.conf.json has a `plugins` section.
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }

@@ -32,6 +32,7 @@ jobs:
         run: pnpm typecheck
       - name: Test (includes the command-registry parity rule)
         run: pnpm test
+      - uses: ./.github/actions/engine
       - name: Build
         run: pnpm build
 
@@ -46,12 +47,15 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/engine
       - name: Build the demo
         run: pnpm build
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
       - name: Run e2e tests
         run: pnpm e2e
+      - name: Document fidelity (round-trip the .docx corpus through x2t and sdkjs)
+        run: pnpm fidelity
       - name: Upload traces on failure
         if: failure()
         uses: actions/upload-artifact@v4

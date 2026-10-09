@@ -3,7 +3,7 @@
  *
  * - Inside the desktop/Android app (Tauri): links open in the system browser
  *   (only the few allowed by apps/shell/src-tauri/capabilities), and documents
- *   opened from the OS (.docx file association) show the preview message.
+ *   opened from the OS (.docx file association, Open With) open in the editor.
  * - On the web (https): registers the service worker so the PWA works offline
  *   after the first visit and can be added to the home screen.
  * - Update checks (see updates.ts) are the only requests this file starts: the
@@ -12,13 +12,10 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { checkAndroidUpdate, checkDesktopUpdate, watchServiceWorker } from './updates.js';
 
-/** Message shown when the OS hands the preview a document it can't open yet. */
-export function openedFilesMessage(names: readonly string[]): string {
-  const list = names.map((n) => `“${n}”`).join(', ');
-  return `${list} can’t be opened in this preview yet. Opening and saving .docx files arrive with the document engine.`;
-}
-
-async function wireDesktop(toast: (message: string, ms?: number) => void): Promise<void> {
+async function wireDesktop(
+  toast: (message: string, ms?: number) => void,
+  openPaths: (paths: string[]) => void,
+): Promise<void> {
   const [{ listen }, { openUrl }] = await Promise.all([
     import('@tauri-apps/api/event'),
     import('@tauri-apps/plugin-opener'),
@@ -51,8 +48,9 @@ async function wireDesktop(toast: (message: string, ms?: number) => void): Promi
     return null;
   };
   const showOpened = async (): Promise<void> => {
-    const names = await invoke<string[]>('take_opened_files');
-    if (names.length > 0) toast(openedFilesMessage(names), 9000);
+    // Paths the shell added to the file-system scope (see take_opened_files in lib.rs).
+    const paths = await invoke<string[]>('take_opened_files');
+    if (paths.length > 0) openPaths(paths);
   };
   await listen('ls-open-files', () => void showOpened());
   await showOpened();
@@ -63,8 +61,10 @@ async function wireDesktop(toast: (message: string, ms?: number) => void): Promi
     };
     if (/Android/i.test(navigator.userAgent)) {
       void import('@tauri-apps/api/app')
-        .then(({ getVersion }) => getVersion())
-        .then((v) => checkAndroidUpdate(v, openUrl, toast))
+        .then(async ({ getVersion }) => {
+          const arch = await invoke<string>('app_arch').catch(() => undefined);
+          await checkAndroidUpdate(await getVersion(), arch, openUrl, toast);
+        })
         .catch(quiet);
     } else {
       checkDesktopUpdate().catch(quiet);
@@ -72,10 +72,13 @@ async function wireDesktop(toast: (message: string, ms?: number) => void): Promi
   }, 4000);
 }
 
-export function initPlatform(toast: (message: string, ms?: number) => void): void {
+export function initPlatform(
+  toast: (message: string, ms?: number) => void,
+  openPaths: (paths: string[]) => void,
+): void {
   if (isTauri()) {
     document.documentElement.dataset['shell'] = 'app';
-    wireDesktop(toast).catch(() => {
+    wireDesktop(toast, openPaths).catch(() => {
       /* the editor still works without the native glue */
     });
   } else {

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -29,16 +29,19 @@ function serviceWorker(): Plugin {
       };
       walk(outDir);
       files.sort();
-      // Handwriting recognition files (~11 MB) load on first use and are cached then,
-      // so installing the web app doesn't download them up front.
+      // Handwriting recognition files (~11 MB) and the document engine (~97 MB) load
+      // on first use and are cached then, so installing the web app stays small.
       // The on-device AI runtime (ai/, ~25 MB) is cached when the user downloads a model.
-      const precache = files.filter((f) => {
-        const rel = relative(outDir, f);
-        return !rel.startsWith(`ocr${sep}`) && !rel.startsWith(`ai${sep}`);
-      });
+      const lazy = (f: string): boolean => /^(ocr|engine|ai)[\\/]/.test(relative(outDir, f));
+      const url = (f: string): string => `./${relative(outDir, f).split(sep).join('/')}`;
+      const precache = files.filter((f) => !lazy(f));
+      const engineFiles = files.filter((f) => relative(outDir, f).startsWith(`engine${sep}`));
       const hash = createHash('sha256');
-      for (const f of files) hash.update(f).update(readFileSync(f));
-      const urls = ['./', ...precache.map((f) => `./${relative(outDir, f).split(sep).join('/')}`)];
+      for (const f of precache) hash.update(f).update(readFileSync(f));
+      // The engine is pinned by its build stamp, so we don't re-read ~97 MB here.
+      const stamp = join(outDir, 'engine', 'SOURCES.json');
+      if (existsSync(stamp)) hash.update(readFileSync(stamp));
+      const urls = ['./', ...precache.map(url)];
       const template = readFileSync(
         fileURLToPath(new URL('./sw.template.js', import.meta.url)),
         'utf8',
@@ -48,7 +51,8 @@ function serviceWorker(): Plugin {
         template
           .replace('__VERSION__', hash.digest('hex').slice(0, 12))
           .replace('__AI_VERSION__', aiVersion())
-          .replace('[/* __FILES__ */]', JSON.stringify(urls)),
+          .replace('[/* __FILES__ */]', JSON.stringify(urls))
+          .replace('[/* __ENGINE__ */]', JSON.stringify(engineFiles.map(url))),
       );
     },
   };
@@ -151,11 +155,68 @@ function aiAssets(): Plugin {
   };
 }
 
+/**
+ * The ONLYOFFICE document engine, built by `pnpm engine:build` into engine/dist
+ * (see engine/README.md): served at engine/ in dev and copied into the build.
+ */
+const ENGINE_DIST = fileURLToPath(new URL('../../engine/dist', import.meta.url));
+const MIME: Record<string, string> = {
+  '.js': 'text/javascript',
+  '.wasm': 'application/wasm',
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+};
+function engineAssets(): Plugin {
+  const missing = (): boolean => !existsSync(join(ENGINE_DIST, 'SOURCES.json'));
+  return {
+    name: 'lucid-sentence-engine',
+    configureServer(server) {
+      if (missing())
+        server.config.logger.warn(
+          'engine/dist is missing: run `pnpm engine:build` to open .docx files',
+        );
+      server.middlewares.use((req, res, next) => {
+        const m = /\/engine\/([^?#]+)/.exec(req.url ?? '');
+        if (!m) {
+          next();
+          return;
+        }
+        const file = join(ENGINE_DIST, decodeURIComponent(m[1]!));
+        if (!file.startsWith(ENGINE_DIST + sep) || !existsSync(file) || !statSync(file).isFile()) {
+          res.statusCode = 404;
+          res.end();
+          return;
+        }
+        const ext = /\.[a-z0-9]+$/i.exec(file)?.[0] ?? '';
+        res.setHeader('Content-Type', MIME[ext] ?? 'application/octet-stream');
+        res.end(readFileSync(file));
+      });
+    },
+    writeBundle: {
+      // Before the service worker plugin lists the output.
+      order: 'pre',
+      sequential: true,
+      handler(options) {
+        if (missing()) {
+          if (process.env['LUCID_ENGINE'] === 'off') return;
+          throw new Error(
+            'engine/dist is missing: run `pnpm engine:build` (or set LUCID_ENGINE=off)',
+          );
+        }
+        cpSync(ENGINE_DIST, join(options.dir ?? 'dist', 'engine'), { recursive: true });
+      },
+    },
+  };
+}
+
 const src = (pkg: string): string =>
   fileURLToPath(new URL(`../../packages/${pkg}/src/index.ts`, import.meta.url));
 
 export default defineConfig({
-  plugins: [ocrAssets(), aiAssets(), serviceWorker()],
+  plugins: [engineAssets(), ocrAssets(), aiAssets(), serviceWorker()],
   // Promo flag: LUCID_PROMOS=off pnpm build  -> no promo card in this build.
   define: {
     __LUCID_PROMOS__: JSON.stringify(process.env['LUCID_PROMOS'] !== 'off'),

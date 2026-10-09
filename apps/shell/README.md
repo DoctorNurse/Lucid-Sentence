@@ -53,7 +53,8 @@ keeps the files as workflow artifacts without releasing. Assets have stable name
 
 `Lucid-Sentence-macOS.dmg`, `Lucid-Sentence-Windows-Setup.exe`,
 `Lucid-Sentence-Windows.msi`, `Lucid-Sentence-Linux.AppImage`,
-`Lucid-Sentence-Linux.deb`, `Lucid-Sentence-Android.apk`, `SHA256SUMS.txt`, plus the
+`Lucid-Sentence-Linux.deb`, `Lucid-Sentence-Android.apk` (arm64; also
+`-armv7.apk` and `-x86_64.apk`, built with `--split-per-abi`), `SHA256SUMS.txt`, plus the
 updater files: `latest.json`, `Lucid-Sentence-macOS.app.tar.gz`, and a `.sig` next to
 each updatable file.
 

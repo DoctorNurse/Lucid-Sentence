@@ -1,0 +1,20 @@
+name: Build the document engine
+description: >
+  Builds engine/dist (ONLYOFFICE sdkjs + x2t + fonts, see engine/README.md),
+  reusing engine/.cache and engine/dist from earlier runs when the inputs match.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - uses: actions/cache@v4
+      with:
+        path: |
+          engine/.cache
+          engine/dist
+        key: engine-${{ runner.os }}-${{ hashFiles('engine/manifest.json', 'engine/build.mjs', 'engine/fonts/**', 'engine/host/**', 'engine/sdkjs-addon/**') }}
+        restore-keys: engine-${{ runner.os }}-
+    - name: pnpm engine:build
+      shell: bash
+      run: pnpm engine:build
