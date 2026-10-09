@@ -2,7 +2,7 @@
 // Same-origin files only; no request ever leaves for another site.
 const CACHE = 'lucid-sentence-__VERSION__';
 const FILES = [/* __FILES__ */];
-// The document engine (~85 MB): not precached at install. The app asks for it
+// The document engine (~97 MB): not precached at install. The app asks for it
 // ('cache-engine') once a .docx has opened, so later opens work offline.
 const ENGINE = [/* __ENGINE__ */];
 

@@ -155,7 +155,7 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
               'Save',
               'Ctrl+S · back to the file you opened',
               ctx.save,
-              !id.endsWith('save-as'),
+              id === 'file.rail.save',
             ),
             action('Save As…', 'F12 · choose a name and place', ctx.saveAs, id.endsWith('save-as')),
             action('Download a copy', 'Word document (.docx)', ctx.downloadDocx),

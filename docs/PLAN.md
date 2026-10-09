@@ -444,32 +444,32 @@ lucid-sentence/      # GitHub: lucid-sentence (AGPL-3.0)
 | **Beta 2: Release candidate** (public beta) | Performance hardening (re-run the §3.4 targets on the full feature set), accessibility, localization, crash-free sessions, store submissions or alternative channels, documentation. | Release criteria below are met. |
 | **v1.0** | Single release on four platforms | Fidelity gate, §3.4 performance targets, zero known data-loss bugs, legal sign-off |
 
-#### M1 status: document engine spike (branch `feat/m1-engine`)
+#### M1 status: document engine (branch `feat/m1-engine`, PR #6)
 
-- **Engine:** ONLYOFFICE sdkjs `release/v9.4.0` (pinned commit), built with its own `build.py` plus our bridge addon (`engine/sdkjs-addon`). x2t WASM comes from CryptPad's 9.3.2 build. Fonts come from ONLYOFFICE core-fonts. `pnpm engine:build` writes `engine/dist`, and the app serves it offline from `/engine/` (the service worker caches it on first use).
+- **Engine:** ONLYOFFICE sdkjs `release/v9.4.0` (pinned commit), built with its own `build.py` plus our bridge addon (`engine/sdkjs-addon`). x2t WASM comes from CryptPad's 9.3.2 build. Fonts: core-fonts (Carlito, Caladea, OpenSymbol, …) plus Liberation 2.1.5 (OFL). Hunspell dictionaries for five languages. `pnpm engine:build` writes `engine/dist` (~97 MB, 24 MB gzipped), and the app serves it offline from `/engine/` (the service worker caches it on first use).
 - **Works (web/PWA, verified by e2e):**
-  - Open a .docx (File System Access API or `<input>`).
-  - Edit it with the ribbon slice:
-    - clipboard
-    - font family and size, grow/shrink, clear formatting
+  - Open a .docx (File System Access API or `<input>`), including files saved by Microsoft Word.
+  - Edit it with the ribbon:
+    - clipboard, font family and size, grow/shrink, clear formatting
     - bold, italic, underline, strike, subscript, superscript
-    - bullets, numbering, indents, alignment, formatting marks
-    - the Styles gallery
-    - select all, page break
-    - zoom
+    - bullets (Word's Symbol bullets draw as •), numbering, indents, alignment, formatting marks
+    - the Styles gallery, select all, page break, zoom
+    - Insert › Table (grid) and the Table Design/Layout tabs: insert/delete rows and columns, merge/split, select
+    - Insert › Pictures (native dialog or file picker) and the Picture Format tab
+    - Insert › Header, Footer, Page Number, and the Header & Footer tab
+    - Review › Spelling (F7) with suggestions; right-click menu with suggestions and table commands
   - Undo/redo from the Quick Access Toolbar and the keyboard.
   - New blank document.
-  - Save (back to the same file handle), Save As (picker), and download fallback.
+  - Save (back to the same file handle), Save As (picker), download fallback; pictures, tables and headers survive the round trip.
+  - Print (Ctrl+P) and File › Export › PDF, laid out by sdkjs and written by x2t with embedded fonts.
   - Ink and Notes mode are unchanged on notes pages.
-- **Desktop/Android (Tauri):** File > Open/Save As use the native dialogs (`tauri-plugin-dialog`), and the Android document picker comes through the same plugin. Files go through `tauri-plugin-fs`. Files the OS opens with the app load in the engine. Code builds and passes clippy and the tests; not yet run on a device.
-- **Fidelity eval:** `pnpm fidelity` round-trips a 10-file corpus through x2t alone and through x2t plus sdkjs in Chromium. 240 of 240 checks pass, with a baseline in CI.
+- **Desktop/Android (Tauri):** File > Open/Save As and Insert › Pictures use the native dialogs (`tauri-plugin-dialog`); files go through `tauri-plugin-fs`. Files the OS opens with the app load in the engine. Print saves a PDF there (no in-app PDF viewer). Android ships one APK per CPU type; `Lucid-Sentence-Android.apk` is arm64. Code builds and passes clippy and the tests; not yet run on a device.
+- **Fidelity eval:** `pnpm fidelity` round-trips 24 files (10 generated, 14 saved by Microsoft Word, from python-docx and Apache POI) through x2t alone and through x2t plus sdkjs in Chromium. 575 of 576 checks pass (a picture inside a comment is dropped by the editor), with a baseline in CI.
 - **Open items:**
-  - Wire the remaining registry commands (tables, images, headers/footers, review).
-  - Print and PDF export.
-  - Spell-check dictionaries.
+  - Wire the remaining registry commands (shapes, charts, references, review tracking).
   - x2t 9.4 build (we use 9.3.2).
   - Test on Android and desktop devices.
-  - Real-world (Word-authored) corpus.
+  - Minify `sdk-all.js` (sdkjs 9.4's build only concatenates; 27 MB raw, 4.5 MB gzipped).
 
 ### 7.2 Post-v1 phases
 

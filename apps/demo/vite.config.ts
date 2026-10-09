@@ -29,7 +29,7 @@ function serviceWorker(): Plugin {
       };
       walk(outDir);
       files.sort();
-      // Handwriting recognition files (~11 MB) and the document engine (~85 MB) load
+      // Handwriting recognition files (~11 MB) and the document engine (~97 MB) load
       // on first use and are cached then, so installing the web app stays small.
       const lazy = (f: string): boolean => /^(ocr|engine)[\\/]/.test(relative(outDir, f));
       const url = (f: string): string => `./${relative(outDir, f).split(sep).join('/')}`;
@@ -37,7 +37,7 @@ function serviceWorker(): Plugin {
       const engineFiles = files.filter((f) => relative(outDir, f).startsWith(`engine${sep}`));
       const hash = createHash('sha256');
       for (const f of precache) hash.update(f).update(readFileSync(f));
-      // The engine is pinned by its build stamp, so we don't re-read 85 MB here.
+      // The engine is pinned by its build stamp, so we don't re-read ~97 MB here.
       const stamp = join(outDir, 'engine', 'SOURCES.json');
       if (existsSync(stamp)) hash.update(readFileSync(stamp));
       const urls = ['./', ...precache.map(url)];
