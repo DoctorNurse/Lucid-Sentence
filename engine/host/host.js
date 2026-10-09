@@ -6,7 +6,7 @@
  * Copyright (C) 2026 Lucid Systems and the Lucid Sentence contributors.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-/* global Asc */
+/* global Asc, AscCommon */
 (function () {
   'use strict';
 
@@ -17,6 +17,11 @@
    *   title:    file name shown in sdkjs messages
    *   register: called with the api before loading, to attach callbacks
    */
+  // No spelling dictionaries ship yet: don't start sdkjs's spell-check worker
+  // (it would request common/spell/spell/spell.js, which we don't stage).
+  // sdk-all-min.js has loaded synchronously above, so the prototype exists.
+  AscCommon.baseEditorsApi.prototype._coSpellCheckInit = function () {};
+
   function boot(opts) {
     return new Promise(function (resolve, reject) {
       var api = new Asc.asc_docs_api({ 'id-view': 'editor_sdk', translate: {} });

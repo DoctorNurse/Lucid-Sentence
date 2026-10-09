@@ -1,0 +1,302 @@
+{
+  "01-basic.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "02-styles.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "03-lists.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "04-tables.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "05-images.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "06-sections.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "07-text.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "08-links.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "09-long.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "10-comments.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  }
+}

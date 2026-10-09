@@ -25,12 +25,32 @@
       AscCommon.g_oDocumentUrls.addUrls(images);
     }
     var file = new AscCommon.OpenFileResult();
-    file.data = window['LucidPendingOpen'] || AscCommon.getEmpty();
+    file.data = window['LucidPendingOpen'] || blankDocument();
     window['LucidPendingOpen'] = null;
     window['LucidPendingImages'] = null;
     file.bSerFormat = AscCommon.checkStreamSignature(file.data, AscCommon.c_oSerFormat.Signature);
     this.onEndLoadFile(file);
   };
+
+  /** sdkjs's blank document (word/document/empty.js, loaded by the host page) as bytes. */
+  function blankDocument() {
+    var s = window['g_sEmpty_bin'],
+      bytes = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
+    return bytes;
+  }
+
+  /** "bullet", "number", or null for the paragraph at the cursor. */
+  function listType(api) {
+    var doc = api.WordControl.m_oLogicDocument;
+    var para = doc && doc.GetCurrentParagraph();
+    var numPr = para && para.GetNumPr ? para.GetNumPr() : null;
+    if (!numPr || !numPr.IsValid || !numPr.IsValid()) return null;
+    var num = doc.GetNumbering().GetNum(numPr.NumId);
+    var lvl = num && num.GetLvl(numPr.Lvl || 0);
+    if (!lvl) return null;
+    return lvl.IsBulleted() ? 'bullet' : 'number';
+  }
 
   /** The document as a "DOCY;v10;" binary (header included): x2t's input for .docx. */
   function getBinary(api) {
@@ -89,6 +109,7 @@
   }
 
   window['LucidBridge'] = {
+    listType: listType,
     version: 1,
     getBinary: getBinary,
     mediaNames: mediaNames,

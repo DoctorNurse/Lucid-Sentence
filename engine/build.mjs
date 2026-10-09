@@ -138,6 +138,8 @@ function stageSdkjs({ src, out }) {
   ]) {
     cpSync(join(common, p), join(dst, 'common', p), { recursive: true });
   }
+  // The built-in blank document (AscCommon.getEmpty), for File > New.
+  cpSync(join(src, 'word', 'document', 'empty.js'), join(dst, 'word', 'document', 'empty.js'));
   cpSync(join(ROOT, 'fonts', 'AllFonts.js'), join(dst, 'common', 'AllFonts.js'));
   for (const v of ['xregexp-all-min.js', 'jquery.min.js']) {
     cpSync(join(src, 'vendor', v), join(dst, 'vendor', v));
