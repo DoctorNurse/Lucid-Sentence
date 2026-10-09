@@ -1,6 +1,6 @@
 {
   "name": "@lucid-sentence/shell",
-  "version": "0.1.1-preview",
+  "version": "0.1.2-preview",
   "private": true,
   "description": "Installable preview shell (Tauri 2) wrapping the Lucid Sentence web app for desktop and Android.",
   "license": "AGPL-3.0-only",

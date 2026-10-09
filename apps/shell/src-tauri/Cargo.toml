@@ -1,6 +1,6 @@
 [package]
 name = "lucid-sentence"
-version = "0.1.1-preview"
+version = "0.1.2-preview"
 description = "Lucid Sentence installable preview"
 authors = ["Lucid Systems and the Lucid Sentence contributors"]
 license = "AGPL-3.0-only"
