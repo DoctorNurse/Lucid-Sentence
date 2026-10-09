@@ -1,101 +1,186 @@
-:root {
-  color-scheme: light dark;
-  --bg: #f4f5f2;
-  --fg: #1d2220;
-  --muted: #69716d;
-  --page: #ffffff;
-  --line: #e2e5e1;
-  --accent: #0b7488;
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    'Helvetica Neue',
-    Arial,
-    sans-serif;
-  font-size: 13px;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']):not([data-theme='high-contrast']) {
-    --bg: #141716;
-    --fg: #e9ecea;
-    --muted: #9aa29e;
-    --page: #1d211f;
-    --line: #2f3532;
-    --accent: #45c3d6;
-  }
-}
-:root[data-theme='dark'] {
-  --bg: #141716;
-  --fg: #e9ecea;
-  --muted: #9aa29e;
-  --page: #1d211f;
-  --line: #2f3532;
-  --accent: #45c3d6;
-}
-:root[data-theme='high-contrast'] {
-  --bg: #000;
-  --fg: #fff;
-  --muted: #fff;
-  --page: #000;
-  --line: #fff;
-  --accent: #ffd400;
-}
+/*
+ * Demo shell styles. Every color, radius, shadow, and UI font is a --ls-* token
+ * from @lucid-sentence/tokens (injected by main.ts). See docs/DESIGN.md.
+ *
+ * Two font worlds:
+ * - UI chrome uses the bundled UI fonts (Instrument Sans, Fraunces, JetBrains Mono).
+ * - Document content (.page) uses whatever the .docx defines. This mock stands in
+ *   with common document fonts installed on the system; the UI fonts never apply
+ *   to document text.
+ */
 * {
   box-sizing: border-box;
 }
+html {
+  background: var(--ls-canvas);
+}
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--ls-canvas);
+  color: var(--ls-ink);
+  font-family: var(--ls-font-sans);
+  font-size: var(--ls-type-sm);
+  line-height: 1.45;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  -webkit-font-smoothing: antialiased;
 }
+:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/* Title bar */
 .titlebar {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 4px;
+}
+.titlebar__row {
+  display: flex;
   align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 8px 14px;
+  gap: 12px;
+  min-width: 0;
 }
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 700;
+  gap: 10px;
+}
+.brand__name {
+  font-family: var(--ls-font-display);
+  font-size: var(--ls-type-xl);
+  font-weight: 500;
+  letter-spacing: var(--ls-type-track-tight);
+  white-space: nowrap;
 }
 .mark {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: block;
+  border-radius: 6px;
 }
-.doc {
-  color: var(--muted);
+.doc-chip,
+.saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 12px;
+  border-radius: var(--ls-radius-pill);
+  box-shadow: inset 0 0 0 1px var(--ls-hairline);
+  color: var(--ls-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doc-chip__dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ls-ok);
+}
+.saved {
+  font-family: var(--ls-font-mono);
+  font-size: var(--ls-type-label);
+  letter-spacing: var(--ls-type-track-label);
+  text-transform: uppercase;
+  color: var(--ls-subtle);
 }
 .spacer {
   flex: 1;
 }
+
+/* Demo controls: segmented capsules (Chapternal .desk-pill) */
 .controls {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 14px;
   flex-wrap: wrap;
 }
-.controls label {
+.controls > * {
+  flex: none;
+}
+.seg {
   display: inline-flex;
-  gap: 6px;
   align-items: center;
-  color: var(--muted);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.seg__label {
+  float: left;
+  padding: 0;
+  font-family: var(--ls-font-mono);
+  font-size: var(--ls-type-label);
+  font-weight: 500;
+  letter-spacing: var(--ls-type-track-label);
+  text-transform: uppercase;
+  color: var(--ls-subtle);
+}
+.seg__track {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--ls-radius-pill);
+  background: var(--ls-recess);
+  box-shadow: var(--ls-shadow-inset);
+}
+.seg__track label {
+  position: relative;
+  display: inline-flex;
+}
+.seg__track input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.seg__track span {
+  padding: 3px 12px;
+  border-radius: var(--ls-radius-pill);
+  color: var(--ls-muted);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background var(--ls-motion-quick) var(--ls-motion-ease-out),
+    color var(--ls-motion-quick);
+}
+.seg__track label:hover span {
+  color: var(--ls-ink);
+}
+.seg__track input:checked + span {
+  background: var(--ls-selected);
+  color: var(--ls-on-selected);
+  font-weight: 600;
+  box-shadow: var(--ls-shadow-sm);
+}
+.seg__track input:focus-visible + span {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 1px;
+}
+.pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 select {
   font: inherit;
-  padding: 3px 6px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--page);
-  color: var(--fg);
+  color: var(--ls-ink);
+  padding: 4px 12px;
+  border: 0;
+  border-radius: var(--ls-radius-pill);
+  background: var(--ls-recess);
+  box-shadow: var(--ls-shadow-inset);
 }
+
+/* Stage */
 .stage {
   flex: 1;
   display: flex;
@@ -105,29 +190,287 @@ select {
 .canvas {
   flex: 1;
   overflow: auto;
-  padding: 24px 12px;
+  padding: 20px 12px 40px;
+  background: var(--ls-page-canvas);
+  border-top: 1px solid var(--ls-hairline);
 }
-.page {
-  max-width: 816px;
-  min-height: 600px;
+
+/* Page view: rulers + page at true size (96 px per inch), scaled to fit with zoom */
+.sheet {
+  --page-w: 816px;
+  --page-h: 1056px;
+  --margin: 96px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px var(--page-w);
+  grid-template-rows: 18px auto;
+  gap: 4px;
+  width: max-content;
   margin: 0 auto;
-  padding: 72px 80px;
-  background: var(--page);
-  border-radius: 4px;
-  box-shadow:
-    0 1px 3px rgb(0 0 0 / 8%),
-    0 8px 24px rgb(0 0 0 / 6%);
-  font-family: Carlito, Calibri, 'Liberation Sans', sans-serif;
-  font-size: 15px;
-  line-height: 1.6;
 }
+.sheet[data-size='a4'] {
+  --page-w: 794px;
+  --page-h: 1123px;
+  --margin: 96px;
+}
+.ruler {
+  position: relative;
+  overflow: hidden;
+  background: var(--ls-ruler-margin);
+  color: var(--ls-ruler-ink);
+  border-radius: var(--ls-radius-xs);
+  box-shadow: inset 0 0 0 1px var(--ls-hairline);
+  font-family: var(--ls-font-mono);
+  font-size: 9px;
+}
+.ruler--h {
+  grid-column: 2;
+  grid-row: 1;
+  height: 18px;
+}
+.ruler--v {
+  grid-column: 1;
+  grid-row: 2;
+  width: 18px;
+}
+.ruler__text {
+  position: absolute;
+  background: var(--ls-ruler);
+}
+.ruler--h .ruler__text {
+  top: 0;
+  bottom: 0;
+}
+.ruler--v .ruler__text {
+  left: 0;
+  right: 0;
+}
+/* Indent / margin markers */
+.ruler--h .ruler__text::before,
+.ruler--h .ruler__text::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  border: 4px solid transparent;
+  border-bottom: 5px solid var(--ls-accent);
+  transform: translateX(-50%);
+}
+.ruler--h .ruler__text::before {
+  left: 0;
+}
+.ruler--h .ruler__text::after {
+  left: 100%;
+}
+.ruler__tick,
+.ruler__num {
+  position: absolute;
+}
+.ruler--h .ruler__tick {
+  bottom: 4px;
+  width: 1px;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.6;
+}
+.ruler--h .ruler__tick--half {
+  height: 6px;
+}
+.ruler--h .ruler__num {
+  top: 3px;
+  transform: translateX(-50%);
+  line-height: 1;
+}
+.ruler--v .ruler__tick {
+  right: 4px;
+  height: 1px;
+  width: 3px;
+  background: currentColor;
+  opacity: 0.6;
+}
+.ruler--v .ruler__tick--half {
+  width: 6px;
+}
+.ruler--v .ruler__num {
+  left: 0;
+  right: 0;
+  text-align: center;
+  transform: translateY(-50%);
+  line-height: 1;
+}
+
+/*
+ * The page. Default white in every theme (print fidelity); the optional dark
+ * page is a view preference only and never changes the saved document.
+ */
+.page {
+  grid-column: 2;
+  grid-row: 2;
+  position: relative;
+  width: var(--page-w);
+  min-height: var(--page-h);
+  padding: var(--margin);
+  background: var(--ls-paper);
+  color: var(--ls-paper-ink);
+  box-shadow: var(--ls-shadow-page);
+  border-radius: 2px;
+  /* Stand-ins for document-defined fonts (Word defaults Aptos / Calibri). */
+  font-family: Aptos, Carlito, Calibri, 'Liberation Sans', Arial, sans-serif;
+  font-size: 14.667px; /* 11 pt */
+  line-height: 1.5;
+}
+.sheet[data-paper='dark'] .page {
+  background: var(--ls-paper-dark);
+  color: var(--ls-paper-dark-ink);
+}
+.d-title {
+  margin: 0;
+  font-family: 'Aptos Display', Carlito, Calibri, 'Liberation Sans', Arial, sans-serif;
+  font-size: 37.33px; /* 28 pt */
+  font-weight: 400;
+  line-height: 1.15;
+}
+.d-subtitle {
+  margin: 4px 0 20px;
+  font-size: 18.67px; /* 14 pt */
+  color: #595959;
+}
+.sheet[data-paper='dark'] .d-subtitle {
+  color: #b5b2ab;
+}
+.d-h1 {
+  margin: 22px 0 6px;
+  font-size: 21.33px; /* 16 pt */
+  font-weight: 400;
+  color: #0f4761; /* Word's default Heading 1 color */
+}
+.sheet[data-paper='dark'] .d-h1 {
+  color: #8cc9e0;
+}
+.page p,
+.page ul {
+  margin: 0 0 10.67px;
+}
+.page ul {
+  padding-left: 24px;
+}
+.d-table {
+  width: 100%;
+  margin: 6px 0 14px;
+  border-collapse: collapse;
+}
+.d-table th,
+.d-table td {
+  padding: 4px 8px;
+  border: 1px solid currentColor;
+  text-align: left;
+  vertical-align: top;
+}
+.d-table thead th {
+  font-weight: 700;
+}
+.d-table :is(th, td) {
+  border-color: rgb(127 127 127 / 55%);
+}
+/* Comment anchor + margin pin (UI overlay, not document formatting) */
+.d-comment {
+  color: inherit;
+  background: rgb(255 214 102 / 45%);
+  border-bottom: 2px solid #e0a800;
+  border-radius: 1px;
+}
+.sheet[data-paper='dark'] .d-comment {
+  background: rgb(255 214 102 / 22%);
+}
+.d-comment-pin {
+  position: absolute;
+  right: 36px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-family: var(--ls-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--ls-accent);
+  color: var(--ls-on-accent);
+  box-shadow: var(--ls-shadow-md);
+}
+.balloon {
+  position: absolute;
+  left: calc(100% + 16px);
+  width: 240px;
+  padding: 10px 12px;
+  background: var(--ls-raised);
+  color: var(--ls-ink);
+  border-radius: var(--ls-radius-md);
+  box-shadow: var(--ls-shadow-md);
+  border-left: 3px solid var(--ls-accent);
+}
+.sheet[data-balloon='hidden'] .balloon {
+  display: none;
+}
+.balloon__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.balloon__avatar {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0a0a0a;
+  background: linear-gradient(135deg, var(--ls-logo-a), var(--ls-logo-mid) 55%, var(--ls-logo-b));
+}
+.balloon__who {
+  font-weight: 600;
+}
+.balloon__when {
+  margin-left: auto;
+  font-family: var(--ls-font-mono);
+  font-size: var(--ls-type-label);
+  letter-spacing: var(--ls-type-track-wide);
+  color: var(--ls-subtle);
+}
+.balloon__text {
+  margin: 0;
+  color: var(--ls-muted);
+}
+
+/* Status bar (mono, uppercase, letter-spaced) */
 .status {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 14px;
   padding: 6px 14px;
-  color: var(--muted);
-  border-top: 1px solid var(--line);
+  background: var(--ls-surface);
+  border-top: 1px solid var(--ls-hairline);
+  color: var(--ls-subtle);
+  font-family: var(--ls-font-mono);
+  font-size: var(--ls-type-label);
+  letter-spacing: var(--ls-type-track-wide);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
 }
+#last {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: none;
+}
+.zoom {
+  padding: 1px 8px;
+  border-radius: var(--ls-radius-pill);
+  background: var(--ls-recess);
+  box-shadow: var(--ls-shadow-inset);
+  color: var(--ls-muted);
+}
+
 /* Phone: ribbon bar docks to the bottom, as in Word mobile. */
 @media (max-width: 699px) {
   .stage[data-layout='auto'] ls-ribbon {
@@ -135,8 +478,20 @@ select {
     position: sticky;
     bottom: 0;
   }
-  .page {
-    padding: 28px 20px;
+  .controls {
+    flex-wrap: nowrap;
+    margin: 0 -14px;
+    padding-inline: 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-block: 0 2px;
+  }
+  .saved,
+  .hide-narrow {
+    display: none;
+  }
+  .canvas {
+    padding: 12px 8px 24px;
   }
 }
 .stage[data-layout='phone'] ls-ribbon {

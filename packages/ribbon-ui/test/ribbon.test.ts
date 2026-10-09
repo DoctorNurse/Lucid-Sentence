@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import {
   defineRibbon,
   initials,
+  ribbonCss,
   renderRibbon,
   resolveLayout,
   themeDeclarations,
@@ -192,6 +193,14 @@ describe('theme tokens', () => {
       expect(t.accent.toLowerCase()).not.toMatch(/2b579a|185abd/);
     expect(themeDeclarations('dark')).toContain('--ls-accent: #45c3d6;');
     expect(themeDeclarations('light', '#7c3aed')).toContain('--ls-accent: #7c3aed;');
+  });
+
+  it('draws its theme from @lucid-sentence/tokens (Chapternal Paper / Studio)', () => {
+    expect(themes.light.chrome).toBe('#efe8dc');
+    expect(themes.light.accent).toBe('#0a6a7c');
+    expect(themes.dark.chrome).toBe('#0a0a0a');
+    expect(ribbonCss).toContain('var(--ls-radius-pill)');
+    expect(ribbonCss).toContain('text-transform: uppercase');
   });
 
   it('builds placeholder glyph initials', () => {

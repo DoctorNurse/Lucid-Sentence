@@ -11,6 +11,7 @@ export default defineConfig({
       '@lucid-sentence/commands': src('commands'),
       '@lucid-sentence/ribbon-ui': src('ribbon-ui'),
       '@lucid-sentence/splash': src('splash'),
+      '@lucid-sentence/tokens': src('tokens'),
     },
   },
   test: {

@@ -64,7 +64,7 @@ export const promos: readonly Promo[] = [
     ctaLabel: 'Listen free on Chapternal',
     // Colors from chapternal.com's stylesheet: --color-logo-a #2ecbff,
     // --color-logo-mid #7b8cff, --color-logo-b #e879f9, background #0a0a0a,
-    // foreground #e8e6e1, muted #9a968e. Display serif: Fraunces (Google Fonts).
+    // foreground #e8e6e1, muted #9a968e. Display serif: Fraunces (OFL, bundled locally in packages/tokens/fonts).
     theme: {
       background:
         'radial-gradient(120% 90% at 0% 0%, rgb(46 203 255 / 16%), transparent 55%), radial-gradient(100% 80% at 100% 100%, rgb(232 121 249 / 14%), transparent 55%), #0c0b0a',

@@ -1,4 +1,4 @@
-import { themeDeclarations, type ThemeName } from '@lucid-sentence/ribbon-ui';
+import { themeDeclarations, type ThemeName } from '@lucid-sentence/tokens';
 import { promosEnabled } from './config.js';
 import { promos as defaultPromos, type Promo } from './promos.js';
 import { claimLaunchPromo, type KeyValueStore } from './rotation.js';

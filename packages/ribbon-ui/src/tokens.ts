@@ -1,26 +1,32 @@
 /**
- * Theme tokens (plan §4.7): Inter type, 8–12 px radii, a soft elevated ribbon,
- * quiet group labels, and a distinctive accent that is not Word blue.
- * Light, Dark, and High-contrast; "auto" follows the OS.
+ * Ribbon theme tokens. The source of truth is @lucid-sentence/tokens (Chapternal
+ * lineage; see docs/DESIGN.md). This module keeps the earlier ribbon-ui API
+ * (`themes`, `shape`, `themeDeclarations`) as a thin view over that package.
  */
+import {
+  colors,
+  fonts,
+  motion,
+  radii,
+  shadows,
+  themeDeclarations,
+  touchTarget,
+  type,
+  type ThemeName,
+} from '@lucid-sentence/tokens';
 
-export type ThemeName = 'light' | 'dark' | 'high-contrast';
+export { themeDeclarations, type ThemeName };
 
+/** Legacy flat view of a theme (prefer `colors` from @lucid-sentence/tokens). */
 export interface ThemeTokens {
-  /** App chrome behind the ribbon. */
   chrome: string;
-  /** Ribbon surface. */
   surface: string;
-  /** Raised elements (sheets, popovers). */
   raised: string;
   text: string;
   textMuted: string;
   border: string;
   hover: string;
-  /**
-   * Accent: "Lucid cyan", matched to the app icon (hue ~190°). Light: 5.4:1 with
-   * white text; dark: 7.8:1 on the dark surface. User-selectable accents override this.
-   */
+  /** Lucid cyan. Light #0a6a7c (AA as text and with white text), dark #45c3d6. */
   accent: string;
   accentText: string;
   accentSoft: string;
@@ -28,68 +34,39 @@ export interface ThemeTokens {
   focus: string;
 }
 
+const view = (name: ThemeName): ThemeTokens => {
+  const c = colors[name];
+  return {
+    chrome: c.canvas,
+    surface: c.surface,
+    raised: c.raised,
+    text: c.ink,
+    textMuted: c.muted,
+    border: c.hairline,
+    hover: c.hover,
+    accent: c.accent,
+    accentText: c.onAccent,
+    accentSoft: c.accentSoft,
+    shadow: shadows[name].md,
+    focus: c.focus,
+  };
+};
+
 export const themes: Record<ThemeName, ThemeTokens> = {
-  light: {
-    chrome: '#f4f5f2',
-    surface: '#ffffff',
-    raised: '#ffffff',
-    text: '#1d2220',
-    textMuted: '#69716d',
-    border: '#e2e5e1',
-    hover: '#eef2ef',
-    accent: '#0b7488',
-    accentText: '#ffffff',
-    accentSoft: '#dbeff3',
-    shadow: '0 1px 2px rgb(16 24 20 / 6%), 0 4px 16px rgb(16 24 20 / 6%)',
-    focus: '#0b7488',
-  },
-  dark: {
-    chrome: '#141716',
-    surface: '#1d211f',
-    raised: '#252a28',
-    text: '#e9ecea',
-    textMuted: '#9aa29e',
-    border: '#2f3532',
-    hover: '#2a302d',
-    accent: '#45c3d6',
-    accentText: '#06232a',
-    accentSoft: '#143840',
-    shadow: '0 1px 2px rgb(0 0 0 / 40%), 0 6px 20px rgb(0 0 0 / 35%)',
-    focus: '#45c3d6',
-  },
-  'high-contrast': {
-    chrome: '#000000',
-    surface: '#000000',
-    raised: '#000000',
-    text: '#ffffff',
-    textMuted: '#ffffff',
-    border: '#ffffff',
-    hover: '#1f1f1f',
-    accent: '#ffd400',
-    accentText: '#000000',
-    accentSoft: '#3a3000',
-    shadow: 'none',
-    focus: '#ffd400',
-  },
+  light: view('light'),
+  dark: view('dark'),
+  'high-contrast': view('high-contrast'),
 };
 
 /** Non-color tokens shared by all themes. */
 export const shape = {
-  font: "'Inter', ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif",
-  fontSize: '13px',
-  radiusSm: '8px',
-  radiusLg: '12px',
-  motion: '140ms',
+  font: fonts.sans,
+  fontMono: fonts.mono,
+  fontDisplay: fonts.display,
+  fontSize: type.sm,
+  radiusSm: radii.sm,
+  radiusLg: radii.md,
+  motion: motion.quick,
   /** Minimum touch target on tablet and phone (plan §4.6). */
-  touchTarget: '44px',
+  touchTarget,
 } as const;
-
-const KEBAB = (s: string): string => s.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
-
-/** CSS custom-property declarations for a theme, e.g. `--ls-accent: #0b7488;`. */
-export function themeDeclarations(name: ThemeName, accent?: string): string {
-  const t = { ...themes[name], ...(accent ? { accent, focus: accent } : {}) };
-  return Object.entries(t)
-    .map(([k, v]) => `--ls-${KEBAB(k)}: ${v};`)
-    .join(' ');
-}

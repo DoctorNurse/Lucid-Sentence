@@ -55,6 +55,20 @@ the AGPL or for use as marks. Forks and redistributions can turn promos off at
 build time or at runtime (see packages/splash/README.md).
 
 -------------------------------------------------------------------------------
+Bundled fonts (SIL Open Font License 1.1)
+-------------------------------------------------------------------------------
+
+packages/tokens/fonts/ contains Latin subsets (WOFF2) of these fonts. They are
+licensed under the SIL Open Font License, Version 1.1, not the AGPL. Each
+license text is next to its font file.
+
+  Fraunces        Copyright 2018 The Fraunces Project Authors
+  Instrument Sans Copyright 2022 The Instrument Sans Project Authors
+  JetBrains Mono  Copyright 2020 The JetBrains Mono Project Authors
+
+The UI design is adapted from Chapternal (Lucid Systems LLC); see docs/DESIGN.md.
+
+-------------------------------------------------------------------------------
 Other notices
 -------------------------------------------------------------------------------
 

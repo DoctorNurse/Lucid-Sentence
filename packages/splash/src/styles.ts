@@ -1,11 +1,11 @@
-import { shape } from '@lucid-sentence/ribbon-ui';
+/** Splash styles. All colors, radii, shadows, motion, and fonts are --ls-* tokens (@lucid-sentence/tokens). */
 
 export const splashCss = /* css */ `
 :host {
   position: fixed; inset: 0; z-index: 2147483000;
-  font-family: ${shape.font}; font-size: ${shape.fontSize}; line-height: 1.45;
-  color: var(--ls-text);
-  --ls-motion: ${shape.motion};
+  font-family: var(--ls-font-sans); font-size: var(--ls-type-sm); line-height: 1.45;
+  color: var(--ls-ink);
+  --ls-motion: var(--ls-motion-quick);
 }
 :host([data-state='done']) { pointer-events: none; }
 :host([hidden]) { display: none; }
@@ -15,17 +15,17 @@ export const splashCss = /* css */ `
 .loader {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 14px;
-  background: var(--ls-chrome);
-  transition: opacity 200ms ease;
+  background: var(--ls-canvas);
+  transition: opacity var(--ls-motion-fast) var(--ls-motion-ease-out);
 }
 :host([data-state='done']) .loader { opacity: 0; visibility: hidden; }
 /* While a promo shows during loading, keep the loader clear of the card. */
 :host([data-promo]) .loader { justify-content: flex-start; padding-top: max(40px, 16vh); }
-.loader__icon { width: 96px; height: 96px; border-radius: 22px; box-shadow: var(--ls-shadow); }
-.loader__name { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+.loader__icon { width: 96px; height: 96px; border-radius: 22px; box-shadow: var(--ls-shadow-lg); }
+.loader__name { font-family: var(--ls-font-display); font-size: var(--ls-type-display); font-weight: 500; letter-spacing: var(--ls-type-track-tight); }
 .loader__bar {
   position: relative; width: 180px; height: 4px; overflow: hidden;
-  border-radius: 999px; background: var(--ls-border);
+  border-radius: var(--ls-radius-pill); background: var(--ls-recess); box-shadow: var(--ls-shadow-inset);
 }
 .loader__bar span {
   position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: inherit;
@@ -33,33 +33,36 @@ export const splashCss = /* css */ `
 }
 @keyframes ls-slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 @media (prefers-reduced-motion: reduce) { .loader__bar span { animation: none; width: 100%; opacity: 0.6; } }
-.loader__status { color: var(--ls-text-muted); }
+.loader__status {
+  color: var(--ls-subtle); font-family: var(--ls-font-mono); font-size: var(--ls-type-label);
+  letter-spacing: var(--ls-type-track-label); text-transform: uppercase;
+}
 
 .promo {
   --promo-bg: var(--ls-raised);
-  --promo-text: var(--ls-text);
-  --promo-muted: var(--ls-text-muted);
+  --promo-text: var(--ls-ink);
+  --promo-muted: var(--ls-muted);
   --promo-a: var(--ls-accent);
   --promo-b: var(--ls-accent);
   --promo-c: var(--ls-accent);
-  --promo-cta-text: var(--ls-accent-text);
-  --promo-display: inherit;
+  --promo-cta-text: var(--ls-on-accent);
+  --promo-display: var(--ls-font-display);
   pointer-events: auto;
   position: absolute; left: 50%; bottom: 48px; transform: translateX(-50%);
   width: min(400px, calc(100vw - 24px)); overflow: hidden;
   display: flex; flex-direction: column; gap: 12px;
   padding: 16px 16px 18px;
   color: var(--promo-text);
-  border: 1px solid var(--ls-border); border-radius: 16px;
+  border: 1px solid var(--ls-hairline); border-radius: var(--ls-radius-lg);
   background: var(--promo-bg);
-  box-shadow: var(--ls-shadow);
-  animation: promo-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  box-shadow: var(--ls-shadow-lg);
+  animation: promo-in var(--ls-motion-fast) var(--ls-motion-ease-out) both;
 }
 .promo--branded {
   border-color: transparent;
   background: linear-gradient(120deg, var(--promo-a), var(--promo-b), var(--promo-c), var(--promo-a));
   background-size: 300% 100%;
-  animation: promo-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both, promo-sheen 9s linear infinite;
+  animation: promo-in var(--ls-motion-fast) var(--ls-motion-ease-out) both, promo-sheen 9s linear infinite;
   box-shadow: 0 18px 50px rgb(0 0 0 / 45%),
     0 0 44px -14px color-mix(in srgb, var(--promo-a) 70%, transparent);
 }
@@ -77,8 +80,8 @@ export const splashCss = /* css */ `
 
 .promo__head { display: flex; align-items: center; justify-content: space-between; margin: -4px -6px -2px 0; }
 .promo__eyebrow {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--promo-muted);
+  font-family: var(--ls-font-mono); font-size: var(--ls-type-label); font-weight: 500;
+  letter-spacing: var(--ls-type-track-label); text-transform: uppercase; color: var(--promo-muted);
 }
 .promo__close {
   width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 999px;
@@ -95,7 +98,7 @@ export const splashCss = /* css */ `
 }
 .promo__titles { min-width: 0; }
 .promo__title {
-  margin: 0; font-family: var(--promo-display); font-size: 22px; font-weight: 600;
+  margin: 0; font-family: var(--promo-display, var(--ls-font-display)); font-size: 22px; font-weight: 600;
   letter-spacing: -0.01em; line-height: 1.15;
 }
 .promo__tagline { margin: 2px 0 0; font-size: 14px; font-weight: 500; color: var(--promo-text); opacity: 0.92; }
@@ -103,7 +106,7 @@ export const splashCss = /* css */ `
 .promo__desc:empty { display: none; }
 .promo__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .promo__chips li {
-  padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500;
+  padding: 3px 10px; border-radius: var(--ls-radius-pill); font-size: 12px; font-weight: 500;
   color: var(--promo-text);
   background: color-mix(in srgb, var(--promo-text) 7%, transparent);
   border: 1px solid color-mix(in srgb, var(--promo-text) 14%, transparent);
@@ -111,7 +114,7 @@ export const splashCss = /* css */ `
 .promo__cta {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 42px; padding: 0 18px; margin-top: 2px;
-  border-radius: 999px; font-weight: 700; font-size: 14px; text-decoration: none;
+  border-radius: var(--ls-radius-pill); font-weight: 700; font-size: 14px; text-decoration: none;
   color: var(--promo-cta-text);
   background: linear-gradient(100deg, var(--promo-a), var(--promo-b) 50%, var(--promo-c));
   box-shadow: 0 6px 20px -6px color-mix(in srgb, var(--promo-b) 70%, transparent);

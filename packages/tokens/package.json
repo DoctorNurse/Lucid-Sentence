@@ -1,8 +1,8 @@
 {
-  "name": "@lucid-sentence/ribbon-ui",
+  "name": "@lucid-sentence/tokens",
   "version": "0.0.0",
   "private": true,
-  "description": "Framework-light web component that renders the Lucid Sentence ribbon (desktop, tablet, phone) from the command registry.",
+  "description": "Lucid Sentence design tokens (light, dark, high-contrast), adapted from Chapternal's token system, plus bundled OFL fonts.",
   "license": "AGPL-3.0-only",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,16 +11,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./fonts/*": "./fonts/*"
   },
   "files": [
-    "dist"
+    "dist",
+    "fonts"
   ],
   "scripts": {
     "build": "tsc -b"
-  },
-  "dependencies": {
-    "@lucid-sentence/commands": "workspace:*",
-    "@lucid-sentence/tokens": "workspace:*"
   }
 }

@@ -47,6 +47,9 @@ importers:
       '@lucid-sentence/splash':
         specifier: workspace:*
         version: link:../../packages/splash
+      '@lucid-sentence/tokens':
+        specifier: workspace:*
+        version: link:../../packages/tokens
     devDependencies:
       vite:
         specifier: ^8.3.4
@@ -59,12 +62,17 @@ importers:
       '@lucid-sentence/commands':
         specifier: workspace:*
         version: link:../commands
+      '@lucid-sentence/tokens':
+        specifier: workspace:*
+        version: link:../tokens
 
   packages/splash:
     dependencies:
-      '@lucid-sentence/ribbon-ui':
+      '@lucid-sentence/tokens':
         specifier: workspace:*
-        version: link:../ribbon-ui
+        version: link:../tokens
+
+  packages/tokens: {}
 
 packages:
 

@@ -69,8 +69,9 @@ Lucid Sentence is **not affiliated with Microsoft**. Word is a trademark of Micr
 | -------------------- | ------------------------------------------------------------------------------------------ |
 | `packages/commands`  | Single command registry: every tab → group → command, with desktop/tablet/phone placements |
 | `packages/ribbon-ui` | `<ls-ribbon>` web component rendering the registry in three layouts, with themes           |
+| `packages/tokens`    | Design tokens (light, dark, high contrast) from Chapternal, plus bundled OFL UI fonts      |
 | `packages/splash`    | Splash/loading screen with one optional promo per launch for Lucid Systems apps            |
-| `apps/demo`          | Vite dev page showing the ribbon                                                           |
+| `apps/demo`          | Vite dev page: ribbon and page view                                                        |
 | `apps/desktop`       | Planned ONLYOFFICE DesktopEditors fork (placeholder)                                       |
 | `apps/mobile`        | Planned Capacitor shell for Android and iOS (placeholder)                                  |
 | `engine/`            | Planned ONLYOFFICE 9.4+ integration and attribution obligations                            |
@@ -94,3 +95,5 @@ Issues and Discussions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md): **si
 ## Planning document
 
 Full plan (draft v0.5): **[docs/PLAN.md](docs/PLAN.md)**
+
+Design system and token sources: **[docs/DESIGN.md](docs/DESIGN.md)**

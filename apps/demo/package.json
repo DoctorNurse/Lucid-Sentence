@@ -14,7 +14,8 @@
   "dependencies": {
     "@lucid-sentence/commands": "workspace:*",
     "@lucid-sentence/ribbon-ui": "workspace:*",
-    "@lucid-sentence/splash": "workspace:*"
+    "@lucid-sentence/splash": "workspace:*",
+    "@lucid-sentence/tokens": "workspace:*"
   },
   "devDependencies": {
     "vite": "^8.3.4"

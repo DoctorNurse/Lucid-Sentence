@@ -3,7 +3,7 @@ import type { Command } from '@lucid-sentence/commands';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
- * Placeholder glyph: an original 1.5 px line tile with the command's initials,
+ * Placeholder glyph: an original 1.5 px line ring with the command's initials,
  * plus a small kind marker (chevron for menus and galleries, corner arrow for
  * dialogs). The final icon set is original line art (plan §4.7); no Microsoft
  * or ONLYOFFICE artwork is used.
@@ -26,13 +26,11 @@ export function glyph(doc: Document, command: Command, px: number): SVGSVGElemen
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('class', 'ls-glyph');
 
-  const tile = doc.createElementNS(SVG_NS, 'rect');
+  const tile = doc.createElementNS(SVG_NS, 'circle');
   for (const [k, v] of Object.entries({
-    x: '2.75',
-    y: '2.75',
-    width: '18.5',
-    height: '18.5',
-    rx: '5',
+    cx: '12',
+    cy: '12',
+    r: '9.25',
     fill: 'none',
     stroke: 'currentColor',
     'stroke-width': '1.5',
@@ -53,7 +51,7 @@ export function glyph(doc: Document, command: Command, px: number): SVGSVGElemen
 
   if (command.kind === 'dialog') {
     const p = doc.createElementNS(SVG_NS, 'path');
-    p.setAttribute('d', 'M15.5 18.5h3v-3');
+    p.setAttribute('d', 'M17 20.5h3.5V17');
     p.setAttribute('fill', 'none');
     p.setAttribute('stroke', 'currentColor');
     p.setAttribute('stroke-width', '1.5');
