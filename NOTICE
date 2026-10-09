@@ -6,31 +6,69 @@ the terms of the GNU Affero General Public License version 3 (AGPL-3.0-only).
 See the LICENSE file for the full text. It is distributed WITHOUT ANY WARRANTY.
 
 -------------------------------------------------------------------------------
-ONLYOFFICE attribution (placeholder: completed when upstream code is vendored)
+ONLYOFFICE document engine
 -------------------------------------------------------------------------------
 
-Lucid Sentence is planned to be based on ONLYOFFICE software developed by
-Ascensio System SIA, modified by Lucid Systems and the Lucid Sentence
-contributors. No ONLYOFFICE source code is included in this repository yet.
+Lucid Sentence's document engine is based on the original ONLYOFFICE software
+developed by Ascensio System SIA. This version is modified by Lucid Systems
+and the Lucid Sentence contributors (see legal/MODIFICATIONS.md for what was
+changed and when). ONLYOFFICE is licensed under the GNU AGPL v3 with the
+additional terms below; the copies of the license that ship with the engine
+are in engine/dist/licenses/ (built by `pnpm engine:build`).
 
-When ONLYOFFICE code (version 9.4 or later; sdkjs, web-apps, core/x2t,
-desktop-sdk, desktop-apps) is added, this file and the in-app Legal Notices
-screen must, per the additional terms in ONLYOFFICE's LICENSE:
+  sdkjs (word editor)   https://github.com/ONLYOFFICE/sdkjs
+                        branch release/v9.4.0, commit
+                        d8e412430b8cb856edd46e15b18ad44814e307fb (9.4.0)
+                        Copyright (C) Ascensio System SIA 2009-2026
+  x2t (format converter, ONLYOFFICE core 9.3.2) compiled to WebAssembly by
+                        CryptPad: https://github.com/cryptpad/onlyoffice-x2t-wasm
+                        release v9.3.2+3 (x2t.zip, sha512 pinned in
+                        engine/manifest.json)
+  core-fonts            https://github.com/ONLYOFFICE/core-fonts, commit
+                        7030c6681fb5bbed560675cb42422f91df15d5c9 (see "Document
+                        fonts" below)
 
-  1. Retain all copyright, license, warranty, and attribution/origin notices.
-  2. State prominently that the modified version is "based on the original
+Every engine file keeps its upstream copyright, license, warranty and
+attribution notices. The built word SDK additionally carries a notice that it
+is a modified version based on the original ONLYOFFICE software, with the
+build date. The license text was re-checked against the release/v9.4.0
+branch on 2026-10-09.
+
+Additional terms (from ONLYOFFICE's LICENSE, AGPL-3.0 section 7), as they
+apply to Lucid Sentence:
+
+  1. All copyright, license, warranty and attribution/origin notices in the
+     ONLYOFFICE files are retained.
+  2. Modified versions state prominently that they are "based on the original
      ONLYOFFICE software developed by Ascensio System SIA", with modification
-     dates (see the modification log, to be added at legal/MODIFICATIONS.md).
-  3. Provide a visible UI feature showing Appropriate Legal Notices that
-     identifies ONLYOFFICE as the original developer, says this version may be
-     modified, and links to the license.
-  4. Grant no trademark rights. ONLYOFFICE is a trademark of Ascensio System
-     SIA; the name is used here only nominatively.
-  5. Honor CC BY-SA 4.0 for any ONLYOFFICE illustrations, icon sets, or
-     documentation that are kept (the plan is to replace them with original art).
+     dates: this file, legal/MODIFICATIONS.md, and the notice in the built SDK.
+  3. Appropriate Legal Notices are shown in the app: File > Account identifies
+     ONLYOFFICE as the original developer, says this version is modified, and
+     links to these notices and the license.
+  4. No trademark rights are granted. ONLYOFFICE is a trademark of Ascensio
+     System SIA, used here only to identify the original software. Lucid
+     Sentence uses no ONLYOFFICE logo and is not affiliated with or endorsed
+     by Ascensio System SIA.
+  5. Non-code content from ONLYOFFICE (illustrations, icons, documentation) is
+     CC BY-SA 4.0. Lucid Sentence does not use ONLYOFFICE's editor UI
+     (web-apps); the sdkjs images it ships (cursors, placeholders) keep their
+     notices.
 
-Upstream versions, commit hashes, and the date the license text was re-checked
-will be recorded here at fork time.
+Document fonts (shipped in engine/dist/fonts, used only to lay out documents):
+
+  Carlito               SIL Open Font License 1.1, (c) tyPoland Lukasz Dziedzic
+  Caladea               SIL Open Font License 1.1, (c) 2012 The Caladea
+                        Project Authors
+  Liberation Sans/Serif/Mono 1.x
+                        Liberation Fonts license (GPLv2 with the font
+                        exception), (c) Red Hat, Inc. ONLYOFFICE core-fonts
+                        ships no license file for these; replacing them with
+                        Liberation 2.x (SIL OFL 1.1) is an open M1 item.
+  Open Sans             Apache License 2.0, (c) Google Corporation
+  DejaVu Sans           Bitstream Vera Fonts license / public domain changes
+  ASC                   (c) Ascensio System SIA, from ONLYOFFICE core-fonts
+
+The license files that core-fonts provides are copied to engine/dist/licenses/.
 
 -------------------------------------------------------------------------------
 Lucid Sentence name and logos
@@ -94,13 +132,17 @@ Bundled third-party code
   @tesseract.js-data/eng 1.0.0   MIT (package); the English model is from
                                  tessdata_best, Apache-2.0, Google LLC.
   @tauri-apps/api, @tauri-apps/plugin-opener, @tauri-apps/plugin-updater,
-  @tauri-apps/plugin-process
+  @tauri-apps/plugin-process, @tauri-apps/plugin-dialog, @tauri-apps/plugin-fs
                                  Apache-2.0 OR MIT, Copyright (c) the Tauri
                                  Programme within The Commons Conservancy.
 
 The installable preview (apps/shell) is built with Tauri 2 and its Rust crates
 (mostly MIT and/or Apache-2.0). A complete list of the licenses of crates
 compiled into the installers will be generated for the first stable release.
+
+  jQuery 3, XRegExp 4 (bundled by sdkjs under engine/dist/sdkjs/vendor)
+                                 MIT License, Copyright OpenJS Foundation and
+                                 other contributors; Copyright Steven Levithan.
 
 Full license texts: legal/THIRD_PARTY_LICENSES.txt. Build-only tools that are
 not shipped (for example @resvg/resvg-js, MPL-2.0, which renders the icon set

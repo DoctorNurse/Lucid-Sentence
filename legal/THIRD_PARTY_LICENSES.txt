@@ -301,3 +301,39 @@ https://github.com/naptha/tessdata
 https://github.com/tesseract-ocr/tessdata_best
 -------------------------------------------------------------------------------
 
+
+-------------------------------------------------------------------------------
+jQuery 3.2.1 and XRegExp 3.0.0 (bundled with ONLYOFFICE sdkjs, engine/dist/sdkjs/vendor)
+https://jquery.com  https://xregexp.com
+-------------------------------------------------------------------------------
+
+MIT License
+
+Copyright JS Foundation and other contributors, https://jquery.org/
+(jQuery); Copyright (c) 2007-present Steven Levithan (XRegExp)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+ONLYOFFICE sdkjs, x2t (core) and core-fonts
+-------------------------------------------------------------------------------
+
+GNU AGPL v3 with additional terms: see NOTICE and LICENSE. The upstream
+license file ships as engine/dist/licenses/sdkjs-LICENSE.txt, and the fonts'
+license files sit next to it.
