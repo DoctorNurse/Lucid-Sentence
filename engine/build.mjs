@@ -179,7 +179,8 @@ async function stageFonts() {
     }
     rmSync(dir, { recursive: true, force: true });
     mkdirSync(dir, { recursive: true });
-    sh('tar', ['-xzf', `${name}-${a.sha256.slice(0, 12)}.tar.gz`, '-C', dir], CACHE);
+    // Relative paths only: Windows tar builds misread drive-letter paths (D:\…).
+    sh('tar', ['-xzf', `../${name}-${a.sha256.slice(0, 12)}.tar.gz`], dir);
     cpSync(join(dir, a.root, a.license), join(DIST, 'licenses', `font-${name}-LICENSE.txt`));
     return (unpacked[name] = join(dir, a.root));
   };
