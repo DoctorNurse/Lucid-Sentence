@@ -1,7 +1,8 @@
 # Lucid Sentence — Desktop (Windows, macOS)
 
 **Status: placeholder.** No shell code yet. This directory will hold the desktop
-app for milestone M0/M1.
+app for milestone M0/M1. Until then, installable preview builds come from the Tauri 2
+app in [`apps/shell`](../shell/README.md).
 
 ## Plan (docs/PLAN.md §3.1)
 

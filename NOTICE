@@ -86,6 +86,13 @@ Bundled third-party code
                                  from Feather: MIT License, Copyright (c)
                                  2013-present Cole Bemis.
   perfect-freehand 1.2.3         MIT License, Copyright (c) 2021 Stephen Ruiz Ltd.
+  @tauri-apps/api, @tauri-apps/plugin-opener
+                                 Apache-2.0 OR MIT, Copyright (c) the Tauri
+                                 Programme within The Commons Conservancy.
+
+The installable preview (apps/shell) is built with Tauri 2 and its Rust crates
+(mostly MIT and/or Apache-2.0). A complete list of the licenses of crates
+compiled into the installers will be generated for the first stable release.
 
 Full license texts: legal/THIRD_PARTY_LICENSES.txt. Build-only tools that are
 not shipped (for example @resvg/resvg-js, MPL-2.0, which renders the icon set

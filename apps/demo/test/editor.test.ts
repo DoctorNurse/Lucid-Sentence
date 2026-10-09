@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { WIRED, handlers } from '../src/editor/commands.js';
 import { inside, segDist } from '../src/editor/ink.js';
 import { rank } from '../src/editor/palette.js';
+import { openedFilesMessage } from '../src/native.js';
 import { formatTime, markPosition, marksFor, seekTime, type Mark } from '../src/editor/timeline.js';
 
 describe('audio timeline helpers', () => {
@@ -87,5 +88,14 @@ describe('command dispatcher', () => {
     ]) {
       expect(WIRED.has(id), id).toBe(true);
     }
+  });
+});
+
+describe('installable preview', () => {
+  it('explains that opened .docx files arrive with the engine, without claiming saving works', () => {
+    const msg = openedFilesMessage(['Report.docx', 'Plan.docx']);
+    expect(msg).toContain('“Report.docx”, “Plan.docx”');
+    expect(msg).toMatch(/arrive with the document engine/);
+    expect(msg).not.toMatch(/saved|opened successfully/i);
   });
 });

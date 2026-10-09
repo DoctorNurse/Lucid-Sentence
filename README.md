@@ -8,6 +8,69 @@ A free, open-source word processor for **.docx** with Word’s familiar ribbon a
 
 **Status:** M0 foundations — command registry, ribbon UI, and a working demo editor; no document engine yet (`.docx` open/save arrives with ONLYOFFICE in M1).
 
+## Download
+
+> **Preview: .docx saving arrives with the engine.** This preview runs the full editor UI on a sample page so you can try the ribbon, pen, and Notes mode. It doesn't open or save your own `.docx` files yet. It works offline and collects nothing.
+
+[![Download for macOS](https://img.shields.io/badge/macOS-Download_.dmg-0a6a7c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/latest/download/Lucid-Sentence-macOS.dmg)
+[![Download for Windows](https://img.shields.io/badge/Windows-Download_installer-0a6a7c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/latest/download/Lucid-Sentence-Windows-Setup.exe)
+[![Download for Android](https://img.shields.io/badge/Android-Download_.apk-0a6a7c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/latest/download/Lucid-Sentence-Android.apk)
+[![Download for Linux](https://img.shields.io/badge/Linux-Download_AppImage-0a6a7c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/latest/download/Lucid-Sentence-Linux.AppImage)
+
+All files, including the Windows `.msi`, the Linux `.deb`, and checksums, are on the [latest release](https://github.com/DoctorNurse/Lucid-Sentence/releases/latest) page.
+
+<details>
+<summary><b>Mac</b> (Apple silicon and Intel)</summary>
+
+1. Download **Lucid-Sentence-macOS.dmg** and double-click it.
+2. Drag **Lucid Sentence** onto the **Applications** folder.
+3. Open it from Applications.
+
+If macOS says it can't check the app for malicious software (builds that aren't notarized yet):
+
+- Right-click (or Control-click) **Lucid Sentence** in Applications, choose **Open**, then **Open** again; or
+- On macOS 15 and later: try to open it once, then go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to the message about Lucid Sentence. Confirm with your password.
+
+</details>
+
+<details>
+<summary><b>Windows</b> 10 and 11</summary>
+
+1. Download **Lucid-Sentence-Windows-Setup.exe**.
+2. Double-click it. If Windows SmartScreen says "Windows protected your PC", click **More info**, then **Run anyway**.
+3. Follow the installer. Lucid Sentence appears in the Start menu.
+
+</details>
+
+<details>
+<summary><b>Android</b> phones and tablets</summary>
+
+1. On your Android device, download **Lucid-Sentence-Android.apk**.
+2. Open the downloaded file. If Android asks, allow your browser or Files app to **install unknown apps**.
+3. Tap **Install**, then **Open**.
+
+</details>
+
+<details>
+<summary><b>iPhone and iPad</b> (add the web app to your Home Screen)</summary>
+
+There's no App Store build yet. Instead, install the web app:
+
+1. Open **https://doctornurse.github.io/Lucid-Sentence/** in **Safari**.
+2. Tap the **Share** button (on newer iOS versions it can be inside the **•••** menu), then **Add to Home Screen**.
+3. Tap **Add**. Open **Sentence** from your Home Screen. It runs full screen and works offline after the first visit.
+
+</details>
+
+<details>
+<summary><b>Linux</b></summary>
+
+1. Download **Lucid-Sentence-Linux.AppImage** (or the `.deb` for Debian and Ubuntu).
+2. Make it executable: right-click → Properties → Permissions → "Allow executing", or run `chmod +x Lucid-Sentence-Linux.AppImage`.
+3. Double-click it. For the `.deb`: `sudo apt install ./Lucid-Sentence-Linux.deb`.
+
+</details>
+
 ## Try the demo
 
 `pnpm dev` opens `apps/demo`: the full ribbon on a lightweight stand-in editor. What works today:
@@ -85,7 +148,8 @@ Lucid Sentence is **not affiliated with Microsoft**. Word is a trademark of Micr
 | `packages/tokens`    | Design tokens (light, dark, high contrast) from Chapternal, plus bundled OFL UI fonts      |
 | `packages/splash`    | Splash/loading screen with one optional promo per launch for Lucid Systems apps            |
 | `apps/demo`          | Vite demo: ribbon on a working stand-in editor, pen input, Notes mode                      |
-| `apps/desktop`       | Planned ONLYOFFICE DesktopEditors fork (placeholder)                                       |
+| `apps/shell`         | Installable preview: Tauri 2 app wrapping the web app for desktop and Android              |
+| `apps/desktop`       | Planned ONLYOFFICE DesktopEditors fork (placeholder); generated desktop icons              |
 | `apps/mobile`        | Planned Capacitor shell for Android and iOS (placeholder)                                  |
 | `engine/`            | Planned ONLYOFFICE 9.4+ integration and attribution obligations                            |
 | `assets/brand/`      | Vector icon master, generated icons (`pnpm icons`), banner, and social preview             |

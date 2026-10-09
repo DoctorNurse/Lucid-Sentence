@@ -1,0 +1,16 @@
+{
+  "name": "@lucid-sentence/shell",
+  "version": "0.1.0-preview",
+  "private": true,
+  "description": "Installable preview shell (Tauri 2) wrapping the Lucid Sentence web app for desktop and Android.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.1"
+  }
+}

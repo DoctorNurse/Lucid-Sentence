@@ -152,3 +152,7 @@ vite.config.ts.timestamp-*
 *.tsbuildinfo
 test-results/
 playwright-report/
+
+# Tauri shell (generated)
+apps/shell/src-tauri/target/
+apps/shell/src-tauri/gen/

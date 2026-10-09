@@ -2348,6 +2348,10 @@ body.ready .stage {
 }
 
 /* Accessibility: reduced motion, forced colors */
+/* Installed app (desktop/Android shell): the layout picker is a developer control. */
+[data-shell='app'] .controls .pick {
+  display: none;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

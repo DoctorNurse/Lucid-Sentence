@@ -40,6 +40,7 @@ import {
 import { Palette } from './editor/palette.js';
 import { EditorSurface } from './editor/surface.js';
 import { closePopover, el, popoverOpen, toast } from './editor/ui.js';
+import { initPlatform } from './native.js';
 import { drawRulers, geometry, type PageSetup } from './page.js';
 
 // Design tokens and bundled UI fonts (no network). See docs/DESIGN.md.
@@ -972,6 +973,7 @@ applyView();
 comments.render();
 refresh();
 if (params.get('notes') === '1') setNotes(true);
+initPlatform(toast);
 if (params.get('tab')) ribbon.activeTab = params.get('tab') as TabId;
 void document.fonts.ready.then(() => {
   layout();

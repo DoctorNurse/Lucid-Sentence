@@ -1,0 +1,94 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Lucid Sentence",
+  "version": "0.1.0-preview",
+  "identifier": "com.lucidsystems.sentence",
+  "build": {
+    "frontendDist": "../../demo/dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm --filter @lucid-sentence/demo dev",
+    "beforeBuildCommand": "pnpm -w run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Lucid Sentence",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 360,
+        "minHeight": 560,
+        "center": true,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self' ipc: http://ipc.localhost",
+        "connect-src": "ipc: http://ipc.localhost",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob:",
+        "media-src": "'self' blob: mediastream:",
+        "font-src": "'self' data:",
+        "object-src": "'none'",
+        "base-uri": "'self'"
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "Lucid Systems",
+    "copyright": "© 2026 Lucid Systems and the Lucid Sentence contributors",
+    "license": "AGPL-3.0-only",
+    "category": "Productivity",
+    "homepage": "https://github.com/DoctorNurse/Lucid-Sentence",
+    "shortDescription": "Open-source word processor for .docx (preview)",
+    "longDescription": "Lucid Sentence is a free, open-source word processor for .docx with Word's familiar ribbon. This is a preview: it runs the editor UI on a sample page, and .docx opening and saving arrive with the document engine.",
+    "icon": [
+      "../../desktop/icons/linux/hicolor/32x32/apps/lucid-sentence.png",
+      "../../desktop/icons/linux/hicolor/128x128/apps/lucid-sentence.png",
+      "../../desktop/icons/linux/hicolor/256x256/apps/lucid-sentence.png",
+      "../../desktop/icons/linux/hicolor/512x512/apps/lucid-sentence.png",
+      "../../desktop/icons/macos/LucidSentence.icns",
+      "../../desktop/icons/windows/lucid-sentence.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["docx"],
+        "name": "Word Document",
+        "description": "Word document (.docx)",
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "contentTypes": ["org.openxmlformats.wordprocessingml.document"],
+        "role": "Viewer",
+        "rank": "Alternate"
+      }
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "bundleVersion": "0.1.0",
+      "hardenedRuntime": true,
+      "entitlements": "./Entitlements.plist",
+      "signingIdentity": "-"
+    },
+    "windows": {
+      "wix": {
+        "version": "0.1.0"
+      },
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "linux": {
+      "deb": {
+        "section": "editors",
+        "desktopTemplate": "./lucid-sentence.desktop"
+      }
+    },
+    "android": {
+      "minSdkVersion": 24,
+      "versionCode": 1
+    }
+  }
+}

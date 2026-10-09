@@ -1,0 +1,29 @@
+[package]
+name = "lucid-sentence"
+version = "0.1.0-preview"
+description = "Lucid Sentence installable preview"
+authors = ["Lucid Systems and the Lucid Sentence contributors"]
+license = "AGPL-3.0-only"
+repository = "https://github.com/DoctorNurse/Lucid-Sentence"
+edition = "2021"
+rust-version = "1.80"
+publish = false
+
+[lib]
+# The `_lib` suffix avoids a name clash with the binary on Windows (Tauri's template convention).
+name = "lucid_sentence_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
