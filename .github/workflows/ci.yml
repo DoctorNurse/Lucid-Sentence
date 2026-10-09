@@ -24,6 +24,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Banned-word check
+        run: pnpm check:words
       - name: Lint
         run: pnpm lint
       - name: Typecheck
@@ -32,3 +34,28 @@ jobs:
         run: pnpm test
       - name: Build
         run: pnpm build
+
+  e2e:
+    name: End-to-end (Playwright, headless Chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the demo
+        run: pnpm build
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run e2e tests
+        run: pnpm e2e
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results
+          retention-days: 7

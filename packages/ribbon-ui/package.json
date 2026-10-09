@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@lucid-sentence/commands": "workspace:*",
-    "@lucid-sentence/tokens": "workspace:*"
+    "@lucid-sentence/tokens": "workspace:*",
+    "lucide": "^1.53.0"
   }
 }

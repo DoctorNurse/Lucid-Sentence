@@ -4,12 +4,32 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <title>Lucid Sentence — ribbon demo</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
+    <title>Lucid Sentence — Quarterly-Notes.docx</title>
+    <meta
+      name="description"
+      content="Lucid Sentence: an open-source, .docx-only word processor with Word's ribbon."
+    />
+    <link rel="icon" href="./favicon.ico" sizes="48x48" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="./favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="./favicon-16.png" type="image/png" sizes="16x16" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="theme-color" content="#efe8dc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <meta property="og:title" content="Lucid Sentence" />
+    <meta
+      property="og:description"
+      content="An open-source, .docx-only word processor with Word's ribbon."
+    />
+    <meta property="og:image" content="./og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="stylesheet" href="./src/demo.css" />
   </head>
   <body>
+    <a class="skip" href="#doc">Skip to document</a>
     <header class="titlebar">
       <div class="titlebar__row">
         <span class="brand"
@@ -18,14 +38,45 @@
             >Lucid Sentence</span
           ></span
         >
+        <div class="qat" role="toolbar" aria-label="Quick Access Toolbar">
+          <button
+            type="button"
+            class="qat__btn"
+            data-qat="qat.save"
+            aria-label="Save"
+            data-tip="Save (Ctrl+S)"
+          ></button>
+          <button
+            type="button"
+            class="qat__btn"
+            data-qat="qat.undo"
+            aria-label="Undo"
+            data-tip="Undo (Ctrl+Z)"
+          ></button>
+          <button
+            type="button"
+            class="qat__btn"
+            data-qat="qat.redo"
+            aria-label="Redo"
+            data-tip="Redo (Ctrl+Y)"
+          ></button>
+        </div>
         <span class="doc-chip" title="Document"
-          ><span class="doc-chip__dot" aria-hidden="true"></span>Quarterly-Notes.docx</span
+          ><span class="doc-chip__dot" aria-hidden="true"></span
+          ><span id="doc-name">Quarterly-Notes.docx</span></span
         >
         <span class="spacer"></span>
-        <span class="saved">Saved</span>
+        <button type="button" class="notes-pill" id="notes-toggle" aria-pressed="false">
+          <span class="notes-pill__icon" aria-hidden="true"></span><span>Notes</span>
+        </button>
+        <button type="button" class="search-pill" id="open-palette" aria-keyshortcuts="Alt+Q">
+          <span class="search-pill__icon" aria-hidden="true"></span><span>Search</span
+          ><kbd class="search-pill__kbd" id="palette-kbd">Alt+Q</kbd>
+        </button>
+        <span class="saved" id="saved" role="status" aria-live="polite">Saved</span>
       </div>
       <form class="controls" aria-label="Demo controls">
-        <fieldset class="seg" aria-label="Theme">
+        <fieldset class="seg">
           <legend class="seg__label">Theme</legend>
           <span class="seg__track">
             <label><input type="radio" name="theme" value="auto" checked /><span>Auto</span></label>
@@ -36,22 +87,13 @@
             >
           </span>
         </fieldset>
-        <fieldset class="seg" aria-label="Page color">
+        <fieldset class="seg">
           <legend class="seg__label">Page</legend>
           <span class="seg__track">
             <label
               ><input type="radio" name="paper" value="white" checked /><span>White</span></label
             >
             <label><input type="radio" name="paper" value="dark" /><span>Dark</span></label>
-          </span>
-        </fieldset>
-        <fieldset class="seg" aria-label="Page size">
-          <legend class="seg__label">Size</legend>
-          <span class="seg__track">
-            <label
-              ><input type="radio" name="size" value="letter" checked /><span>Letter</span></label
-            >
-            <label><input type="radio" name="size" value="a4" /><span>A4</span></label>
           </span>
         </fieldset>
         <label class="pick"
@@ -63,94 +105,167 @@
             <option value="phone">Phone</option>
           </select>
         </label>
-        <label class="pick"
-          ><span class="seg__label">Context</span>
-          <select id="context">
-            <option value="">Body text</option>
-            <option value="table-design table-layout">In a table</option>
-            <option value="picture-format">Picture selected</option>
-            <option value="shape-format">Shape selected</option>
-            <option value="header-footer">Header &amp; footer</option>
-            <option value="equation">In an equation</option>
-          </select>
-        </label>
       </form>
     </header>
     <main id="stage" class="stage">
-      <ls-ribbon id="ribbon"></ls-ribbon>
-      <div class="canvas" id="canvas">
-        <div class="sheet" id="sheet" data-size="letter" data-paper="white">
-          <div class="ruler ruler--h" id="ruler-h" aria-hidden="true"></div>
-          <div class="ruler ruler--v" id="ruler-v" aria-hidden="true"></div>
-          <article class="page" aria-label="Page 1 of 1">
-            <!--
-              Everything inside .page imitates document content. Its fonts and
-              sizes stand in for what the .docx defines (theme fonts, styles);
-              the UI fonts (Fraunces, Instrument Sans, JetBrains Mono) never
-              apply here.
-            -->
-            <h1 class="d-title">Quarterly Notes</h1>
-            <p class="d-subtitle">Prepared for the Lucid Systems planning review</p>
-            <h2 class="d-h1">Summary</h2>
-            <p>
-              Lucid Sentence opens and saves <strong>.docx</strong> files and nothing else, so the
-              file you send is the file your reader sees. This quarter we focused on
-              <mark class="d-comment" id="comment-anchor">round-trip fidelity</mark>, the ribbon on
-              every screen size, and a calm, readable interface.
-            </p>
-            <ul>
-              <li>Ribbon commands render from one registry on desktop, tablet, and phone.</li>
-              <li>Every tab is reachable within three taps on a phone.</li>
-              <li>Pages stay white by default so what you see is what prints.</li>
-            </ul>
-            <h2 class="d-h1">Milestones</h2>
-            <table class="d-table">
-              <thead>
-                <tr>
-                  <th>Milestone</th>
-                  <th>Scope</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>M0</td>
-                  <td>Foundations, ribbon, splash</td>
-                  <td>Done</td>
-                </tr>
-                <tr>
-                  <td>M1</td>
-                  <td>Engine wiring (ONLYOFFICE 9.4+)</td>
-                  <td>Next</td>
-                </tr>
-                <tr>
-                  <td>M2</td>
-                  <td>Fidelity evaluation suite</td>
-                  <td>Planned</td>
-                </tr>
-              </tbody>
-            </table>
-            <p>
-              The document engine is wired in during M1. Until then this page is a static mock that
-              shows how documents sit inside the Lucid Sentence interface.
-            </p>
-            <span class="d-comment-pin" aria-hidden="true">1</span>
-          </article>
-          <aside class="balloon" aria-label="Comment 1 by R H">
-            <div class="balloon__head">
-              <span class="balloon__avatar" aria-hidden="true">RH</span
-              ><span class="balloon__who">R H</span><span class="balloon__when">2h</span>
+      <ls-ribbon id="ribbon"><div slot="backstage" id="backstage"></div></ls-ribbon>
+      <div class="workspace">
+        <nav class="navpane" id="navpane" aria-label="Navigation" hidden>
+          <h2 class="navpane__title">Navigation</h2>
+          <ol class="navpane__list" id="navlist"></ol>
+        </nav>
+        <div class="canvas" id="canvas">
+          <div class="sheet" id="sheet" data-paper="white">
+            <div class="ruler ruler--h" id="ruler-h" aria-hidden="true"></div>
+            <div class="ruler ruler--v" id="ruler-v" aria-hidden="true"></div>
+            <div class="page" id="page">
+              <div class="watermark" id="watermark" aria-hidden="true"></div>
+              <!--
+                Stand-in editor surface (contenteditable) until the ONLYOFFICE engine
+                lands in M1. Everything inside #doc is document content: its fonts and
+                sizes stand in for what the .docx defines. UI fonts never apply here.
+              -->
+              <div
+                id="doc"
+                class="doc"
+                contenteditable="true"
+                role="textbox"
+                aria-multiline="true"
+                aria-label="Document: Quarterly-Notes.docx"
+                spellcheck="true"
+                lang="en-US"
+              >
+                <h1>Quarterly Notes</h1>
+                <p class="d-subtitle">Prepared for the Lucid Systems planning review</p>
+                <h2>Summary</h2>
+                <p>
+                  Lucid Sentence opens and saves <strong>.docx</strong> files and nothing else, so
+                  the file you send is the file your reader sees. This quarter we focused on
+                  <mark class="d-comment" data-comment="c1">round-trip fidelity</mark>, the ribbon
+                  on every screen size, and a calm, readable interface.
+                </p>
+                <ul>
+                  <li>Ribbon commands render from one registry on desktop, tablet, and phone.</li>
+                  <li>Every tab is reachable within three taps on a phone.</li>
+                  <li>Pages stay white by default so what you see is what prints.</li>
+                </ul>
+                <h2>Milestones</h2>
+                <table class="d-table">
+                  <thead>
+                    <tr>
+                      <th>Milestone</th>
+                      <th>Scope</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>M0</td>
+                      <td>Foundations, ribbon, splash</td>
+                      <td>Done</td>
+                    </tr>
+                    <tr>
+                      <td>M1</td>
+                      <td>Engine wiring (ONLYOFFICE 9.4+)</td>
+                      <td>Next</td>
+                    </tr>
+                    <tr>
+                      <td>M2</td>
+                      <td>Fidelity evaluation suite</td>
+                      <td>Planned</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <blockquote>
+                  The document engine is wired in during M1. Until then, this page is a lightweight
+                  editor that shows how documents sit inside Lucid Sentence.
+                </blockquote>
+                <p>Try it: select text and press Ctrl+B, pick a style, or press Alt+Q to search.</p>
+              </div>
+              <svg class="ink" id="ink" aria-label="Ink layer" role="img"></svg>
+              <div class="page-marks" id="page-marks" aria-hidden="true"></div>
             </div>
-            <p class="balloon__text">Link this to the fidelity eval results once M2 lands.</p>
-          </aside>
+            <aside class="comments" id="comments" aria-label="Comments"></aside>
+          </div>
         </div>
+        <section class="findpanel" id="findpanel" aria-label="Find and replace" hidden></section>
       </div>
-      <footer class="status">
-        <span id="pageinfo">Page 1 of 1</span><span id="words"></span
-        ><span id="stats" class="hide-narrow"></span><span class="spacer"></span
-        ><span id="last">Ready</span><span class="zoom" id="zoom">100%</span>
+      <div class="notesbar" id="notesbar" role="toolbar" aria-label="Notes mode" hidden></div>
+      <footer class="status" aria-label="Status bar">
+        <button
+          type="button"
+          class="status__item"
+          id="pageinfo"
+          data-cmd="review.proofing.word-count"
+        >
+          Page 1 of 1
+        </button>
+        <button type="button" class="status__item" id="words" data-cmd="review.proofing.word-count">
+          0 words
+        </button>
+        <button
+          type="button"
+          class="status__item hide-narrow"
+          id="lang"
+          data-cmd="review.language.language"
+        >
+          English (US)
+        </button>
+        <span class="status__item hide-narrow" id="mode" aria-live="polite"></span>
+        <span class="spacer"></span>
+        <span id="last" class="status__last hide-narrow" aria-live="polite">Ready</span>
+        <span class="views hide-narrow" role="group" aria-label="Views">
+          <button
+            type="button"
+            class="status__icon"
+            data-cmd="view.immersive.focus"
+            aria-label="Focus"
+          ></button>
+          <button
+            type="button"
+            class="status__icon"
+            data-cmd="view.views.read-mode"
+            aria-label="Read Mode"
+          ></button>
+          <button
+            type="button"
+            class="status__icon"
+            data-cmd="view.views.print-layout"
+            aria-label="Print Layout"
+          ></button>
+          <button
+            type="button"
+            class="status__icon"
+            data-cmd="view.views.web-layout"
+            aria-label="Web Layout"
+          ></button>
+        </span>
+        <span class="zoomctl">
+          <button type="button" class="status__icon" id="zoom-out" aria-label="Zoom out"></button>
+          <input
+            type="range"
+            id="zoom-range"
+            min="50"
+            max="200"
+            step="10"
+            value="100"
+            aria-label="Zoom"
+          />
+          <button type="button" class="status__icon" id="zoom-in" aria-label="Zoom in"></button>
+          <button
+            type="button"
+            class="zoom"
+            id="zoom"
+            data-cmd="view.zoom.zoom"
+            aria-label="Zoom level"
+          >
+            100%
+          </button>
+        </span>
       </footer>
     </main>
+    <div class="pentool" id="pentool" role="toolbar" aria-label="Pen toolbar" hidden></div>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

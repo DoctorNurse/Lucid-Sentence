@@ -1,13 +1,9 @@
 import type { Command } from '@lucid-sentence/commands';
+import { iconFor, type IconNode } from './icon-map.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-/**
- * Placeholder glyph: an original 1.5 px line ring with the command's initials,
- * plus a small kind marker (chevron for menus and galleries, corner arrow for
- * dialogs). The final icon set is original line art (plan §4.7); no Microsoft
- * or ONLYOFFICE artwork is used.
- */
+/** Two-letter initials for a label (used by text-only fallbacks and avatars). */
 export function initials(label: string): string {
   const words = label
     .replace(/[^\p{L}\p{N} ]/gu, ' ')
@@ -18,45 +14,45 @@ export function initials(label: string): string {
   return (first[0]! + words[1]![0]!).toUpperCase();
 }
 
-export function glyph(doc: Document, command: Command, px: number): SVGSVGElement {
+/**
+ * Render a Lucide icon node as an inline SVG: a 24-unit grid, a 1.75 stroke in
+ * currentColor, with round caps and joins. It matches the Chapternal line look.
+ */
+export function svgIcon(
+  doc: Document,
+  node: IconNode,
+  px: number,
+  cls = 'ls-glyph',
+): SVGSVGElement {
   const svg = doc.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('width', String(px));
-  svg.setAttribute('height', String(px));
-  svg.setAttribute('aria-hidden', 'true');
-  svg.setAttribute('class', 'ls-glyph');
-
-  const tile = doc.createElementNS(SVG_NS, 'circle');
   for (const [k, v] of Object.entries({
-    cx: '12',
-    cy: '12',
-    r: '9.25',
+    viewBox: '0 0 24 24',
+    width: String(px),
+    height: String(px),
     fill: 'none',
     stroke: 'currentColor',
-    'stroke-width': '1.5',
+    'stroke-width': '1.75',
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
+    'aria-hidden': 'true',
+    focusable: 'false',
+    class: cls,
   })) {
-    tile.setAttribute(k, v);
+    svg.setAttribute(k, v);
   }
-  svg.append(tile);
-
-  const text = doc.createElementNS(SVG_NS, 'text');
-  text.setAttribute('x', '12');
-  text.setAttribute('y', '15.5');
-  text.setAttribute('text-anchor', 'middle');
-  text.setAttribute('font-size', '9');
-  text.setAttribute('font-weight', '600');
-  text.setAttribute('fill', 'currentColor');
-  text.textContent = initials(command.label);
-  svg.append(text);
-
-  if (command.kind === 'dialog') {
-    const p = doc.createElementNS(SVG_NS, 'path');
-    p.setAttribute('d', 'M17 20.5h3.5V17');
-    p.setAttribute('fill', 'none');
-    p.setAttribute('stroke', 'currentColor');
-    p.setAttribute('stroke-width', '1.5');
-    p.setAttribute('stroke-linecap', 'round');
-    svg.append(p);
+  for (const [tag, attrs] of node) {
+    const el = doc.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'key') continue;
+      el.setAttribute(k, String(v));
+    }
+    svg.append(el);
   }
   return svg;
+}
+
+/** The icon for a command, or null when the command is text-only (see TEXT_ONLY). */
+export function glyph(doc: Document, command: Command, px: number): SVGSVGElement | null {
+  const node = iconFor(command.id);
+  return node ? svgIcon(doc, node, px) : null;
 }

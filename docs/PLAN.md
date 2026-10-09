@@ -407,7 +407,7 @@ lucid-sentence/      # GitHub: lucid-sentence (AGPL-3.0)
 │  ├─ desktop/        # fork of DesktopEditors (Win/macOS), stripped to the word processor
 │  └─ mobile/         # Capacitor app: local editor-server shim, x2t (WASM → native plugin)
 ├─ packages/
-│  ├─ commands/       # the 351-command ribbon registry (exists)
+│  ├─ commands/       # the 352-command ribbon registry (exists)
 │  ├─ mcp-tools/      # proposed: one tool layer for MCP and the on-device model (§9.10)
 │  └─ ai-runtime/     # proposed: llama.cpp / LiteRT-LM / OS-model backends (§9.3)
 ├─ assets/            # original icons, OFL fonts, templates
@@ -532,7 +532,7 @@ lucid-sentence/      # GitHub: lucid-sentence (AGPL-3.0)
 | 1 | **Rewrite selection**: shorter, clearer, more formal, friendlier | Small text LLM | Shown as a diff and inserted as a tracked change. Selection-sized, so it fits small models. |
 | 2 | **Grammar and style with explanations** | Small text LLM, on top of the existing spell checker | Each suggestion comes with a one-line explanation. The deterministic checker (Hunspell or LanguageTool) still runs without a model. |
 | 3 | **Summarize** a selection or short document; **summarize tracked changes** | Small text LLM | "Short" is a proposal: up to about 4k tokens, roughly 3,000 words. Change summaries read the revision list, not the whole document. |
-| 4 | **Natural-language command palette**: maps phrases to the **351-command registry** in `packages/commands` | Small text LLM (constrained output), with `searchCommands` keyword search as the fallback | Output is constrained to a valid command id plus arguments, then confirmed by the user. This works on Tier 0 too, through keyword search only. |
+| 4 | **Natural-language command palette**: maps phrases to the **352-command registry** in `packages/commands` | Small text LLM (constrained output), with `searchCommands` keyword search as the fallback | Output is constrained to a valid command id plus arguments, then confirmed by the user. This works on Tier 0 too, through keyword search only. |
 | 5 | **Accessibility help**: alt-text drafts, fixing heading order | Small vision-language model for alt text; text LLM or rules for headings | Feasible: SmolVLM-256M/500M (Apache-2.0, under about 1–1.3 GB RAM) ✔ ([256M](https://huggingface.co/HuggingFaceTB/SmolVLM-256M-Instruct), [500M](https://huggingface.co/HuggingFaceTB/SmolVLM-500M-Instruct)). Gemma 4 and Qwen3.5 small models also accept images ✔. Drafts must always be reviewed by a human. |
 | 6 | **Smart templates and outlines** | Small text LLM | Produces structure (headings, sections), not long prose |
 | 7 | **Offline translation** | Dedicated small translation models | Mozilla's Firefox Translations models (MPL-2.0) ✔ ([mozilla/translations](https://github.com/mozilla/translations)). OPUS-MT is CC-BY-4.0 ✔ ([Opus-MT](https://github.com/helsinki-nlp/opus-mt)). Downloaded per language pair. |
@@ -670,7 +670,7 @@ The gate runs on the **S24 (8 GB, both Snapdragon and Exynos)**, the S26, an iPh
 | Tool | `text.read(range)`, `text.find(query)` | read | Ranges are addressed by stable paragraph anchors plus offsets (? anchor scheme to verify in sdkjs) |
 | Tool | `text.insert(range, text)`, `text.replace(range, text)` | suggest / edit | **Always a tracked change** with author `AI: <client name>`. Rejected if the range changed since it was read (optimistic concurrency). |
 | Tool | `style.apply(range, styleId)` | suggest / edit | Tracked as a formatting change |
-| Tool | `commands.list()`, `commands.run(id, args)` | read / edit | Exposes the **351-command registry**. Each command carries a permission class (read, format, structure, destructive). Destructive and file-level commands require in-app confirmation. |
+| Tool | `commands.list()`, `commands.run(id, args)` | read / edit | Exposes the **352-command registry**. Each command carries a permission class (read, format, structure, destructive). Destructive and file-level commands require in-app confirmation. |
 | Tool | `comments.list/add/reply/resolve` | read / comment | Comments are authored as the AI client |
 | Tool | `revisions.list`, `revisions.accept/reject` | read / **edit + user confirmation** | Agents can propose but never silently accept their own changes |
 | Tool | `export(format)` | read | Produces a PDF or .docx **copy**. It never overwrites the open file. |

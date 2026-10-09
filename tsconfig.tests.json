@@ -6,5 +6,12 @@
     "declarationMap": false,
     "noEmit": true
   },
-  "include": ["packages/*/test", "vitest.config.ts"]
+  "include": [
+    "packages/*/test",
+    "apps/demo/test",
+    "scripts/test",
+    "e2e",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ]
 }

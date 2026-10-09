@@ -15,7 +15,11 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['packages/*/test/**/*.test.ts'],
+    include: [
+      'packages/*/test/**/*.test.ts',
+      'apps/demo/test/**/*.test.ts',
+      'scripts/test/**/*.test.ts',
+    ],
     environment: 'happy-dom',
   },
 });

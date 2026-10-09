@@ -6,7 +6,20 @@
 
 A free, open-source word processor for **.docx** with Word’s familiar ribbon and layout, and a fresher look — for Windows, macOS, Android, and iOS/iPadOS.
 
-**Status:** M0 foundations — command registry and ribbon UI scaffold; no engine code yet.
+**Status:** M0 foundations — command registry, ribbon UI, and a working demo editor; no document engine yet (`.docx` open/save arrives with ONLYOFFICE in M1).
+
+## Try the demo
+
+`pnpm dev` opens `apps/demo`: the full ribbon on a lightweight stand-in editor. What works today:
+
+- **Editing**: fonts, sizes, bold/italic/underline and more, paragraph alignment, lists, indents, styles gallery (Title, Headings, Quote), tables with contextual Table Design and Layout tabs, pictures, links, page breaks, find and replace, undo/redo.
+- **Ribbon**: desktop, tablet (touch), and phone layouts from one command registry; contextual tabs; collapse (Ctrl+F1); Quick Access Toolbar; command search (Alt+Q); File backstage (Info, New, Open, Save, Print, Options).
+- **Pages**: Letter or A4, orientation, margins, rulers, zoom (fit width, one page, percent), page count, navigation pane, comments in the margin, Read, Focus, and Web layouts.
+- **Pen and tablet**: ink with pressure and tilt, pencil, highlighter, erasers, lasso; palm rejection, pen hover preview, barrel-button erase, auto-switch to drawing when a pen touches the page. See [docs/TABLET.md](docs/TABLET.md).
+- **Notes mode**: lined, grid, or dotted paper; floating pen toolbar with favorites; magnifier strip; audio recording kept in sync with ink and typing (tap a line to hear that moment), stored only on the device.
+- **Themes**: light, dark, high contrast; white pages by default in every theme.
+
+Commands that need the engine (for example mail merge, citations, track changes) show a "coming with the engine" tooltip and are marked as pending.
 
 ## Goals
 
@@ -71,11 +84,11 @@ Lucid Sentence is **not affiliated with Microsoft**. Word is a trademark of Micr
 | `packages/ribbon-ui` | `<ls-ribbon>` web component rendering the registry in three layouts, with themes           |
 | `packages/tokens`    | Design tokens (light, dark, high contrast) from Chapternal, plus bundled OFL UI fonts      |
 | `packages/splash`    | Splash/loading screen with one optional promo per launch for Lucid Systems apps            |
-| `apps/demo`          | Vite dev page: ribbon and page view                                                        |
+| `apps/demo`          | Vite demo: ribbon on a working stand-in editor, pen input, Notes mode                      |
 | `apps/desktop`       | Planned ONLYOFFICE DesktopEditors fork (placeholder)                                       |
 | `apps/mobile`        | Planned Capacitor shell for Android and iOS (placeholder)                                  |
 | `engine/`            | Planned ONLYOFFICE 9.4+ integration and attribution obligations                            |
-| `assets/brand/`      | App icon, banner, and social preview                                                       |
+| `assets/brand/`      | Vector icon master, generated icons (`pnpm icons`), banner, and social preview             |
 | `eval/`              | M0 fidelity bake-off and mobile go/no-go gate                                              |
 
 ## Development
@@ -86,6 +99,8 @@ Requires Node.js 20.19+ and pnpm 10 (`corepack enable`).
 pnpm install
 pnpm dev        # ribbon demo at http://localhost:5173
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
+pnpm e2e        # Playwright tests (Chromium): editor, pen, Notes mode
+pnpm icons      # regenerate every app icon from assets/brand/src/icon.svg
 ```
 
 ## Contributing
@@ -97,3 +112,5 @@ Issues and Discussions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md): **si
 Full plan (draft v0.5): **[docs/PLAN.md](docs/PLAN.md)**
 
 Design system and token sources: **[docs/DESIGN.md](docs/DESIGN.md)**
+
+Tablet, stylus, and Notes mode: **[docs/TABLET.md](docs/TABLET.md)**

@@ -77,5 +77,16 @@ Microsoft and Word are trademarks of the Microsoft group of companies and are
 used here only to describe file compatibility. No Microsoft icons, artwork, or
 fonts are included.
 
-Third-party licenses for bundled dependencies will be listed in
-legal/THIRD_PARTY_LICENSES when binaries are first distributed.
+-------------------------------------------------------------------------------
+Bundled third-party code
+-------------------------------------------------------------------------------
+
+  Lucide icons (lucide 1.53.0)   ISC License, Copyright (c) Lucide Icons and
+                                 Contributors. Some Lucide icons are derived
+                                 from Feather: MIT License, Copyright (c)
+                                 2013-present Cole Bemis.
+  perfect-freehand 1.2.3         MIT License, Copyright (c) 2021 Stephen Ruiz Ltd.
+
+Full license texts: legal/THIRD_PARTY_LICENSES.txt. Build-only tools that are
+not shipped (for example @resvg/resvg-js, MPL-2.0, which renders the icon set
+in scripts/icons.js) keep their own licenses in node_modules.

@@ -2,27 +2,59 @@
 
 The Lucid Sentence identity: a dark cyan acrylic tile with a white geometric "S".
 
-| File                            | Use                                                                                 |
-| ------------------------------- | ----------------------------------------------------------------------------------- |
-| `icon-1024.png` … `icon-16.png` | App icon, transparent outside the rounded tile (1024, 512, 256, 128, 64, 32, 16 px) |
-| `icon.ico`                      | Windows icon (16, 24, 32, 48, 64, 128, 256 px)                                      |
-| `icon.icns`                     | macOS icon (16–512 px, including @2x variants)                                      |
-| `banner.png`                    | README banner (1280×720)                                                            |
-| `social-preview.png`            | GitHub social preview (1280×640, 2:1)                                               |
-| `hero.png`                      | Hero / 3D icon artwork for the website and store listings (1280×720)                |
+## Source of truth
 
-Accent color matched to the icon (hue ≈ 190°): `#0b7488` on light surfaces
-and `#45c3d6` on dark surfaces. The theme tokens are in `packages/ribbon-ui/src/tokens.ts`.
+| File                  | What it is                                                                                                                                |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/icon.svg`        | Vector master (1024 × 1024): tile, rim and glyph, marked with `<!-- tile:start -->` style comments so the generator can reuse each layer. |
+| `src/text-paths.json` | Wordmark, tagline and labels pre-shaped into SVG paths (by `scripts/brand-text.py` with fontTools), so rendering needs no fonts.          |
 
-Notes:
+Every other icon file is generated. Don't edit generated PNGs by hand; edit the
+master and run:
 
-- The icon is cut from 1280×720 source art, where the tile is about 640 px
-  wide. `icon-1024.png` and the 512@2x `.icns` entry are upscaled, so replace
-  them with a vector or higher-resolution master when one exists.
-- The tile is slightly wider than tall (639×622 in the source), so the square
-  icons have a few pixels of transparent padding at the top and bottom.
-- To set the GitHub social preview, upload `social-preview.png` in the
-  repository's Settings → General → Social preview.
+```sh
+pnpm icons                                  # regenerate everything (deterministic)
+pnpm icons --contact-sheet /tmp/sheet.png   # also render a contact sheet of every size
+```
+
+`scripts/icons.js` renders with `@resvg/resvg-js` (a build-time dev dependency,
+not shipped) and writes opaque or transparent PNGs, `.ico` and `.icns` itself.
+`scripts/icons-manifest.json` lists every output with its size, and
+`scripts/test/icons.test.ts` checks the set: every inventoried file exists at
+its recorded size, the Windows `.ico` carries 16–256 px, the macOS `.icns` and
+`.iconset` are complete, every Android density has foreground, background and
+monochrome layers, iOS icons are opaque, and the PWA manifest points at real
+icons and uses the token colors.
+
+Small sizes (16–32 px) use a separate variant: a flatter tile, tighter corners and
+a heavier, larger "S", so the icon stays legible in tabs and title bars.
+
+## Outputs
+
+| Location                            | Contents                                                                                                                                          |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assets/brand/`                     | `icon-16.png` … `icon-1024.png`, `icon.svg`, `icon.ico`, `icon.icns`, `social-preview.png` (1280 × 640), `og-image.png` (1200 × 630)              |
+| `apps/demo/public/`                 | `favicon.ico`, `favicon.svg`, 16/32 px favicons, `apple-touch-icon.png`, PWA icons (192/512 and maskable), `manifest.webmanifest`, `og-image.png` |
+| `apps/desktop/icons/windows/`       | `lucid-sentence.ico` (16–256 px) and MSIX tiles in `msix/` (scales 100–400 plus `targetsize` variants)                                            |
+| `apps/desktop/icons/macos/`         | `LucidSentence.icns` and the `.iconset` folder it was built from                                                                                  |
+| `apps/desktop/icons/linux/hicolor/` | App icons 16–512 px plus scalable SVG, and `.docx` MIME type icons                                                                                |
+| `apps/desktop/icons/docx/`          | `.docx` document icon (SVG, PNG sizes, `.ico`, `.icns`) for file associations                                                                     |
+| `apps/mobile/android-res/`          | Adaptive icon (foreground, background, monochrome) for five densities, legacy and round icons, `mipmap-anydpi-v26` XML, Play Store 512            |
+| `apps/mobile/ios-res/`              | `AppIcon.appiconset` (single 1024 px, opaque) and `AppIcon-AllSizes.appiconset` (every slot, for older Xcode targets)                             |
+
+Other files:
+
+| File         | Use                                                                         |
+| ------------ | --------------------------------------------------------------------------- |
+| `banner.png` | README banner (1280 × 720). Older raster art, not generated from the master |
+| `hero.png`   | Hero / 3D icon artwork for the website and store listings (1280 × 720)      |
+
+Accent color matched to the icon (hue ≈ 190°): `#0a6a7c` on light surfaces and
+`#45c3d6` on dark surfaces; the tile is `#0a4c5a`. Theme tokens are in
+`packages/tokens`.
+
+To set the GitHub social preview, upload `social-preview.png` in the repository's
+Settings → General → Social preview (this needs the web UI).
 
 ## License and trademark
 

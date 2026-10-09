@@ -33,6 +33,10 @@ describe('layout', () => {
     expect(resolveLayout('auto', 820)).toBe('tablet');
     expect(resolveLayout('auto', 1440)).toBe('desktop');
     expect(resolveLayout('phone', 1440)).toBe('phone');
+    // Touch tablets in landscape (iPad Pro 13", Galaxy Tab) keep the touch layout.
+    expect(resolveLayout('auto', 1366, true)).toBe('tablet');
+    expect(resolveLayout('auto', 1366, false)).toBe('desktop');
+    expect(resolveLayout('auto', 1920, true)).toBe('desktop');
   });
 });
 

@@ -11,6 +11,7 @@ export const drawTab = tab('draw', 'Draw', 'standard', [
     cmd('eraser', 'Eraser', 'split', 'L', 1, 'strip+sub'),
     cmd('pens', 'Pens', 'gallery', 'L', 1, 'strip+sub'),
     cmd('add-pen', 'Add Pen', 'menu', 'L', 2, 'sub'),
+    cmd('draw-with-touch', 'Draw with Touch', 'toggle', 'L', 1, 'strip'),
   ]),
   group('convert', 'Convert', 'gap', [
     cmd('ink-to-shape', 'Ink to Shape', 'toggle', 'L', 2, 'sheet'),

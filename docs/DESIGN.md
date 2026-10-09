@@ -125,6 +125,15 @@ sub-page titles, and the splash.
 | Phone bar       | Floating dock card; tab picker is a filled pill                                          | `.desk-dock`                      |
 | Search, selects | Recessed pills with an inner shadow                                                      | wells                             |
 | Status bar      | Mono, uppercase, letter-spaced                                                           | Desk status rows                  |
+| Menus, popovers | `surface` cards, radius 14, `shadow-lg`; on phone they open as bottom sheets             | panels                            |
+| Command search  | Centered dialog with a recessed search pill and ranked results                           | wells                             |
+| Backstage       | Full-window panel with a dark nav rail and card content                                  | n/a (Lucid)                       |
+| Pen toolbar     | Floating, draggable pill with tool buttons, color dots, sizes, and favorites             | `.desk-dock`                      |
+| Notes timeline  | Transport row with a mono time readout and cyan marks for each stroke or paragraph       | Chapternal player timeline        |
+
+All icons are Lucide (ISC; some derived from Feather, MIT), drawn at a 1.75 px stroke.
+Every ribbon command has an icon except a few that render as text fields or text
+buttons (`TEXT_ONLY`); `packages/ribbon-ui/src/icon-map.ts` maps command ids to icons and `packages/ribbon-ui/test/icons.test.ts` checks the coverage.
 
 ## Document page view
 
