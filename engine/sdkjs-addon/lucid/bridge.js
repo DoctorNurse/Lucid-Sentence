@@ -19,8 +19,19 @@
   // Offline documents (DocInfo URL "_offline_") open through _openEmptyDocument.
   // Hand it the converted document, and register its pictures, instead of the
   // built-in empty page.
+  // The document's pictures as blob URLs, by "media/<name>". sdkjs's offline
+  // path re-registers every picture as documentUrl + "media/<name>" once the
+  // document loads, which would replace these, so addImageUrl keeps ours.
+  var documentImages = {};
+  var addImageUrl = AscCommon.DocumentUrls.prototype.addImageUrl;
+  AscCommon.DocumentUrls.prototype.addImageUrl = function (strPath, url) {
+    var own = documentImages[this.mediaPrefix + strPath];
+    return addImageUrl.call(this, strPath, own || url);
+  };
+
   AscCommon.baseEditorsApi.prototype._openEmptyDocument = function () {
     var images = window['LucidPendingImages'];
+    documentImages = images || {};
     if (images) {
       AscCommon.g_oDocumentUrls.addUrls(images);
     }
