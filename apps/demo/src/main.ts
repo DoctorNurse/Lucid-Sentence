@@ -845,11 +845,18 @@ function renderBackstage(): void {
 }
 
 function openBackstage(id: string): void {
+  closePopover();
   ribbon.backstagePage = id;
   ribbon.activeTab = 'file';
   stage.classList.add('backstage');
   renderBackstage();
 }
+
+// Clicks and keys inside the engine's iframe never reach this document, so a
+// ribbon popover can't see them; close it when focus moves into the frame.
+window.addEventListener('blur', () => {
+  if (popoverOpen() && document.activeElement?.classList.contains('engine-frame')) closePopover();
+});
 
 function backToDoc(): void {
   ribbon.activeTab = 'home';

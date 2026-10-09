@@ -231,7 +231,7 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
           el(
             'li',
             {},
-            'Document fonts: Carlito, Caladea, Open Sans (SIL OFL 1.1 / Apache 2.0), Liberation (Liberation Fonts license), DejaVu (Bitstream Vera license), ASC (Ascensio System SIA).',
+            'Document fonts: Carlito and Caladea (SIL OFL 1.1), Open Sans (Apache 2.0), Liberation (Liberation Fonts license), DejaVu (Bitstream Vera license), ASC (Ascensio System SIA).',
           ),
           el('li', {}, 'Icons: Lucide (ISC); some icons derive from Feather (MIT).'),
           el('li', {}, 'Fonts: Fraunces, Instrument Sans, JetBrains Mono (SIL OFL 1.1).'),

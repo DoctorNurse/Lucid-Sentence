@@ -103,7 +103,7 @@ function buildSdkjs() {
     ].join('\n');
     // sdkjs 9.4's own build: concatenates the sources (upstream dropped Closure).
     execFileSync(
-      'python3',
+      process.platform === 'win32' ? 'python' : 'python3',
       ['build.py', '--product', 'word', '--addon', join(ROOT, 'sdkjs-addon')],
       {
         cwd: join(src, 'build'),
