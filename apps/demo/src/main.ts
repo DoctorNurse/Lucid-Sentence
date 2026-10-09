@@ -84,9 +84,16 @@ const SAMPLE = doc.innerHTML;
 
 // ── Core
 const surface = new EditorSurface(doc);
+// Phones: fingers draw by default, because many phone styluses are capacitive and report
+// pointerType 'touch'. The first real pen switches this default to pen only.
+const TOUCH_KEY = 'lucid-sentence:draw-with-touch';
+const touchChoice = localStorage.getItem(TOUCH_KEY);
+const phoneLike =
+  window.matchMedia('(pointer: coarse)').matches &&
+  Math.min(window.innerWidth, window.innerHeight) < 600;
 const settings = {
   autoSwitch: localStorage.getItem('lucid-sentence:auto-switch') !== 'off',
-  drawWithTouch: false,
+  drawWithTouch: touchChoice === null ? phoneLike : touchChoice === 'on',
   floatingToolbar: true,
 };
 const view: ViewState = {
@@ -130,6 +137,17 @@ const ink = new InkLayer(document.querySelector<SVGSVGElement>('#ink')!, pageEl,
     setDraw(true);
     return true;
   },
+  onPenDetected: () => {
+    settings.drawWithTouch = false;
+    toast(
+      'Pen detected: only the pen draws now; fingers scroll. Draw with Touch turns finger drawing back on.',
+    );
+    refresh();
+  },
+  getZoom: () => view.zoom,
+  setZoom: (z) => {
+    setZoom(z);
+  },
   onStatus: (m) => {
     status(m);
   },
@@ -139,6 +157,7 @@ const ink = new InkLayer(document.querySelector<SVGSVGElement>('#ink')!, pageEl,
   },
 });
 ink.drawWithTouch = settings.drawWithTouch;
+ink.touchAuto = touchChoice === null && phoneLike;
 ink.autoSwitch = settings.autoSwitch;
 const history = new History(doc, ink, () => {
   refreshQat();
@@ -576,7 +595,11 @@ function renderBackstage(): void {
       onSetting: (k, v) => {
         settings[k] = v;
         ink.autoSwitch = settings.autoSwitch;
-        ink.drawWithTouch = settings.drawWithTouch;
+        if (k === 'drawWithTouch') {
+          ink.drawWithTouch = v;
+          ink.touchAuto = false;
+          localStorage.setItem(TOUCH_KEY, v ? 'on' : 'off');
+        }
         localStorage.setItem('lucid-sentence:auto-switch', settings.autoSwitch ? 'on' : 'off');
         refresh();
       },

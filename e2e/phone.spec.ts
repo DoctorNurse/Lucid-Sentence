@@ -27,6 +27,20 @@ test.afterEach(({ page }) => {
 const ribbon = (page: Page): Locator => page.locator('ls-ribbon');
 const sheet = (page: Page): Locator => ribbon(page).locator('.ls-sheet');
 
+const inkState = (page: Page) =>
+  page.evaluate(() => {
+    const ink = (
+      window as unknown as {
+        __ls: { ink: { drawWithTouch: boolean; penDetected: boolean; lastPointerType: string } };
+      }
+    ).__ls.ink;
+    return {
+      drawWithTouch: ink.drawWithTouch,
+      penDetected: ink.penDetected,
+      lastPointerType: ink.lastPointerType,
+    };
+  });
+
 async function center(l: Locator): Promise<{ x: number; y: number }> {
   const b = (await l.boundingBox())!;
   return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
@@ -203,18 +217,110 @@ test.describe('phone pen toolbar and ink', () => {
     await expect.poll(() => strokeCount(page)).toBe(0);
   });
 
-  test('fingers draw only with Draw with Touch on; a mouse always draws', async ({ page }) => {
+  test('fingers draw by default on a phone; a mouse always draws', async ({ page }) => {
     const { x, y } = await pageSpot(page);
     await touchDrag(page, scribble(x, y, 100, 20, 8));
-    expect(await strokeCount(page)).toBe(0);
-    await page.evaluate(() => {
-      const ls = (window as unknown as { __ls: { ink: { drawWithTouch: boolean } } }).__ls;
-      ls.ink.drawWithTouch = true;
-    });
-    await touchDrag(page, scribble(x, y, 100, 20, 8));
     await expect.poll(() => strokeCount(page)).toBe(1);
+    expect(await inkState(page)).toMatchObject({ drawWithTouch: true, lastPointerType: 'touch' });
     await penStroke(page, scribble(x, y + 60, 100, 20, 8), { pointerType: 'mouse' });
     await expect.poll(() => strokeCount(page)).toBe(2);
+  });
+
+  test('two fingers scroll and pinch-zoom instead of drawing', async ({ page }) => {
+    const { x, y } = await pageSpot(page);
+    const zoom0 = await page.evaluate(() =>
+      Number(document.querySelector('#zoom')!.textContent.replace('%', '')),
+    );
+    const top0 = await page.locator('#canvas').evaluate((el) => el.scrollTop);
+    const cdp = await page.context().newCDPSession(page);
+    const pts = (d: number, dy: number) => [
+      { x: x + 40 - d, y: y + 200 + dy, id: 1 },
+      { x: x + 40 + d, y: y + 200 + dy, id: 2 },
+    ];
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [pts(30, 0)[0]!],
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pts(30, 0) });
+    for (let i = 1; i <= 8; i++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: pts(30 + i * 8, -i * 12),
+      });
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp.detach();
+    expect(await strokeCount(page)).toBe(0);
+    const zoom1 = await page.evaluate(() =>
+      Number(document.querySelector('#zoom')!.textContent.replace('%', '')),
+    );
+    expect(zoom1).toBeGreaterThan(zoom0);
+    const top1 = await page.locator('#canvas').evaluate((el) => el.scrollTop);
+    expect(top1).toBeGreaterThan(top0);
+    // A single finger draws again afterwards.
+    await touchDrag(page, scribble(x, y, 80, 20, 6));
+    await expect.poll(() => strokeCount(page)).toBe(1);
+  });
+
+  test('the first real pen switches the phone default to pen only (palm rejection)', async ({
+    page,
+  }) => {
+    const { x, y } = await pageSpot(page);
+    await penStroke(page, scribble(x, y, 100, 20, 8));
+    await expect.poll(() => strokeCount(page)).toBe(1);
+    expect(await inkState(page)).toMatchObject({ drawWithTouch: false, penDetected: true });
+    // A resting palm no longer draws; the pen still does.
+    await touchDrag(page, scribble(x, y + 60, 100, 20, 8));
+    expect(await strokeCount(page)).toBe(1);
+    await penStroke(page, scribble(x, y + 120, 100, 20, 8));
+    await expect.poll(() => strokeCount(page)).toBe(2);
+  });
+
+  test('a pen whose moves report buttons = 0 during contact still draws', async ({ page }) => {
+    const { x, y } = await pageSpot(page);
+    const cdp = await page.context().newCDPSession(page);
+    const pen = { pointerType: 'pen', force: 0, button: 'left' } as const;
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x,
+      y,
+      pointerType: 'pen',
+      button: 'none',
+      buttons: 0,
+    });
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      x,
+      y,
+      clickCount: 1,
+      buttons: 1,
+      ...pen,
+    });
+    for (let i = 1; i <= 8; i++) {
+      await cdp.send('Input.dispatchMouseEvent', {
+        type: 'mouseMoved',
+        x: x + i * 12,
+        y: y + (i % 2) * 15,
+        buttons: 0,
+        ...pen,
+      });
+    }
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      x: x + 96,
+      y,
+      clickCount: 1,
+      buttons: 0,
+      ...pen,
+    });
+    await cdp.detach();
+    await expect.poll(() => strokeCount(page)).toBe(1);
+    const pts = await page.evaluate(
+      () =>
+        (window as unknown as { __ls: { ink: { strokes: { points: unknown[] }[] } } }).__ls.ink
+          .strokes[0]!.points.length,
+    );
+    expect(pts).toBeGreaterThan(5);
   });
 });
 

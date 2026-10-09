@@ -829,6 +829,8 @@ export const handlers: Record<string, Handler> = {
   'draw.drawing-tools.draw-with-touch': (a) => {
     a.settings.drawWithTouch = !a.settings.drawWithTouch;
     a.ink.drawWithTouch = a.settings.drawWithTouch;
+    a.ink.touchAuto = false;
+    localStorage.setItem('lucid-sentence:draw-with-touch', a.settings.drawWithTouch ? 'on' : 'off');
     toast(
       a.settings.drawWithTouch
         ? 'Draw with Touch on: fingers draw too'
