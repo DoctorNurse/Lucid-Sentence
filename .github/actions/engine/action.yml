@@ -13,7 +13,7 @@ runs:
         path: |
           engine/.cache
           engine/dist
-        key: engine-${{ runner.os }}-${{ hashFiles('engine/manifest.json', 'engine/build.mjs', 'engine/host/**', 'engine/sdkjs-addon/**') }}
+        key: engine-${{ runner.os }}-${{ hashFiles('engine/manifest.json', 'engine/build.mjs', 'engine/fonts/**', 'engine/host/**', 'engine/sdkjs-addon/**') }}
         restore-keys: engine-${{ runner.os }}-
     - name: pnpm engine:build
       shell: bash

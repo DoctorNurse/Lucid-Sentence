@@ -43,75 +43,75 @@
   },
   {
     "file": "007",
-    "source": "liberation/LiberationMono-Bold.ttf",
-    "sha256": "1e81c74bfaf93ce724e3c2118f085c84ee9f9aa7a56bfe4e87d7746863c4ab95",
-    "bytes": 105460
+    "source": "archive:liberation/LiberationMono-Bold.ttf",
+    "sha256": "bd62a0672d0b9b6710b01df434c80ad54fa5f0835207eb7b17b7a761463067bb",
+    "bytes": 307996
   },
   {
     "file": "008",
-    "source": "liberation/LiberationMono-BoldItalic.ttf",
-    "sha256": "319157f5d824ede8ce397e46d65d1fbd4d01c3699a903fff73c5a17ec120f5d9",
-    "bytes": 118296
+    "source": "archive:liberation/LiberationMono-BoldItalic.ttf",
+    "sha256": "79451f3c09fe25116098853b7a2ca6e2436220ccc11af022979adbcf195be130",
+    "bytes": 284068
   },
   {
     "file": "009",
-    "source": "liberation/LiberationMono-Italic.ttf",
-    "sha256": "00b76b2717491709a2c7f8dfacfebeeee12cdce06fb8a95b0dd8836033a432af",
-    "bytes": 124012
+    "source": "archive:liberation/LiberationMono-Italic.ttf",
+    "sha256": "605c01c711b44480a7508d349dfbf3264e81fa43d69e61cfa7d10b86e764c4d1",
+    "bytes": 281536
   },
   {
     "file": "010",
-    "source": "liberation/LiberationMono-Regular.ttf",
-    "sha256": "5738bfd34fac3e9454281b3ebdff6ba64f0558fac3dad4c7da22aae21a05fc1e",
-    "bytes": 108172
+    "source": "archive:liberation/LiberationMono-Regular.ttf",
+    "sha256": "f2b83c763e8afd21709333370bed4774337fae82267937e2b5aea7e2fbd922c1",
+    "bytes": 319508
   },
   {
     "file": "011",
-    "source": "liberation/LiberationSans-Bold.ttf",
-    "sha256": "e32256f280c7ffeb29f9b8da6ceb64781c440ccd683b5fcc9c22646ffec019c5",
-    "bytes": 137052
+    "source": "archive:liberation/LiberationSans-Bold.ttf",
+    "sha256": "788abee4c806d660e8aee46689dd8540cd4bb98da03dcc9d171ce3efd99a9173",
+    "bytes": 414456
   },
   {
     "file": "012",
-    "source": "liberation/LiberationSans-BoldItalic.ttf",
-    "sha256": "a3dbf57c98a0a6ec8fc7a10301f2f4440dbb171c90a3b5ab48b05622469bb9ce",
-    "bytes": 135124
+    "source": "archive:liberation/LiberationSans-BoldItalic.ttf",
+    "sha256": "698da70fc191cc5f33ad4d6d3fe830fe4624b898ea2e3169955928b7c491f1ee",
+    "bytes": 408996
   },
   {
     "file": "013",
-    "source": "liberation/LiberationSans-Italic.ttf",
-    "sha256": "0f9b08355791c08e7e704063d56971f72b31fde0bffe63a57f5683779ff9db8b",
-    "bytes": 162036
+    "source": "archive:liberation/LiberationSans-Italic.ttf",
+    "sha256": "e5bae5c4cde31f22142753855f4f8fb86da6ff39955ed3c0a11248b0d16948b0",
+    "bytes": 415816
   },
   {
     "file": "014",
-    "source": "liberation/LiberationSans-Regular.ttf",
-    "sha256": "d44ef4341131f4f9bc7d336e0d5c479fe6ecf15a183e6b5a4e88289dd2d333d6",
-    "bytes": 139512
+    "source": "archive:liberation/LiberationSans-Regular.ttf",
+    "sha256": "76d04c18ea243f426b7de1f3ad208e927008f961dc5945e5aad352d0dfde8ee8",
+    "bytes": 410712
   },
   {
     "file": "015",
-    "source": "liberation/LiberationSerif-Bold.ttf",
-    "sha256": "0755523e1bf3f40612a563c0f5f4ce2e97110a9f5900b15b3dd598185f138ecb",
-    "bytes": 147132
+    "source": "archive:liberation/LiberationSerif-Bold.ttf",
+    "sha256": "d754ba427cfe0bca54ae052384baa8f842da5bd6550ad4da024ac441e7a7d5ce",
+    "bytes": 370096
   },
   {
     "file": "016",
-    "source": "liberation/LiberationSerif-BoldItalic.ttf",
-    "sha256": "a9ddeee9ca1ec9138d9fef5e6103f84e9113d1f1f34f97db61e1cd034150f722",
-    "bytes": 151452
+    "source": "archive:liberation/LiberationSerif-BoldItalic.ttf",
+    "sha256": "f17db8af71e24d2066b587546021d4f0b296be389512b658dec3c09affeb11a7",
+    "bytes": 376772
   },
   {
     "file": "017",
-    "source": "liberation/LiberationSerif-Italic.ttf",
-    "sha256": "758024be56a69ac7222e41ea441c4a3bc2fef8386c27506afa0e52473a5df19d",
-    "bytes": 145028
+    "source": "archive:liberation/LiberationSerif-Italic.ttf",
+    "sha256": "0e3dea9f8d613e006ccfa62201f33e265d19167bd0907725c3e145368b04fc2e",
+    "bytes": 375632
   },
   {
     "file": "018",
-    "source": "liberation/LiberationSerif-Regular.ttf",
-    "sha256": "44c68d8acbf7314226592d30b50caf3832aaa81ab63b40f60cd11369618a613a",
-    "bytes": 152408
+    "source": "archive:liberation/LiberationSerif-Regular.ttf",
+    "sha256": "058ea80864aef09a23f45cbec2bb5400bc3dfbdea01c3f10538a21fcb497fb74",
+    "bytes": 393576
   },
   {
     "file": "019",
@@ -148,5 +148,11 @@
     "source": "caladea/caladea-regular.ttf",
     "sha256": "d2f6cad33f191e65b68bd74e6d4f7708080a41b32db635866109df3090265d91",
     "bytes": 58964
+  },
+  {
+    "file": "025",
+    "source": "openoffice/opens___.ttf",
+    "sha256": "49a64f3bcf20a7909ba2751349231d6652ded9cd2840e961b5164d09de3ffa63",
+    "bytes": 207400
   }
 ]

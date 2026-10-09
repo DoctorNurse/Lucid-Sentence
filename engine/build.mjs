@@ -12,7 +12,7 @@
  *   dist/lucid/apps/word/main/  the host page the app loads in an iframe
  *   dist/SOURCES.json       what went in, for the Legal Notices and Corresponding Source
  *
- * Needs git, python3, unzip, and network on the first run; later runs reuse
+ * Needs git, python3, unzip, tar, and network on the first run; later runs reuse
  * engine/.cache. `--check` only verifies that dist/ matches the manifest.
  *
  * Copyright (C) 2026 Lucid Systems and the Lucid Sentence contributors.
@@ -159,14 +159,41 @@ async function stageFonts() {
   const cacheDir = join(CACHE, `core-fonts-${commit.slice(0, 12)}`);
   mkdirSync(cacheDir, { recursive: true });
   mkdirSync(join(DIST, 'fonts'), { recursive: true });
+  // Fonts that come from a release archive instead of core-fonts ("archive:<name>/<file>").
+  const archives = manifest.fonts.archives ?? {};
+  const unpacked = {};
+  const unpack = async (name) => {
+    if (unpacked[name]) return unpacked[name];
+    const a = archives[name];
+    const dir = join(CACHE, `${name}-${a.sha256.slice(0, 12)}`);
+    const tgz = `${dir}.tar.gz`;
+    if (!existsSync(tgz) || sha('sha256', readFileSync(tgz)) !== a.sha256) {
+      log(`fetching ${a.url}`);
+      const data = await download(a.url);
+      if (sha('sha256', data) !== a.sha256) throw new Error(`sha256 mismatch: ${a.url}`);
+      writeFileSync(tgz, data);
+    }
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(dir, { recursive: true });
+    sh('tar', ['-xzf', `${name}-${a.sha256.slice(0, 12)}.tar.gz`, '-C', dir], CACHE);
+    cpSync(join(dir, a.root, a.license), join(DIST, 'licenses', `font-${name}-LICENSE.txt`));
+    return (unpacked[name] = join(dir, a.root));
+  };
   for (const f of list) {
-    const cached = join(cacheDir, f.source.replace(/\//g, '__'));
-    let data = existsSync(cached) ? readFileSync(cached) : null;
-    if (!data || sha('sha256', data) !== f.sha256) {
-      log(`fetching font ${f.source}`);
-      data = await download(raw(f.source));
+    let data;
+    if (f.source.startsWith('archive:')) {
+      const [name, file] = f.source.slice('archive:'.length).split('/');
+      data = readFileSync(join(await unpack(name), file));
       if (sha('sha256', data) !== f.sha256) throw new Error(`sha256 mismatch: ${f.source}`);
-      writeFileSync(cached, data);
+    } else {
+      const cached = join(cacheDir, f.source.replace(/\//g, '__'));
+      data = existsSync(cached) ? readFileSync(cached) : null;
+      if (!data || sha('sha256', data) !== f.sha256) {
+        log(`fetching font ${f.source}`);
+        data = await download(raw(f.source));
+        if (sha('sha256', data) !== f.sha256) throw new Error(`sha256 mismatch: ${f.source}`);
+        writeFileSync(cached, data);
+      }
     }
     const web = Buffer.from(data);
     for (let i = 0; i < 32 && i < web.length; i++) web[i] ^= FONT_KEY[i];

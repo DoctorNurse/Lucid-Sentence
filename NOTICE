@@ -59,16 +59,17 @@ Document fonts (shipped in engine/dist/fonts, used only to lay out documents):
   Carlito               SIL Open Font License 1.1, (c) tyPoland Lukasz Dziedzic
   Caladea               SIL Open Font License 1.1, (c) 2012 The Caladea
                         Project Authors
-  Liberation Sans/Serif/Mono 1.x
-                        Liberation Fonts license (GPLv2 with the font
-                        exception), (c) Red Hat, Inc. ONLYOFFICE core-fonts
-                        ships no license file for these; replacing them with
-                        Liberation 2.x (SIL OFL 1.1) is an open M1 item.
+  Liberation Sans/Serif/Mono 2.1.5
+                        SIL Open Font License 1.1, (c) 2010 Google Corporation,
+                        (c) 2012 Red Hat, Inc.; from the upstream release
+                        https://github.com/liberationfonts/liberation-fonts
+  OpenSymbol            SIL Open Font License 1.0, (c) 2009 Sun Microsystems
+                        Inc. and contributors (draws Symbol/Wingdings bullets)
   Open Sans             Apache License 2.0, (c) Google Corporation
   DejaVu Sans           Bitstream Vera Fonts license / public domain changes
   ASC                   (c) Ascensio System SIA, from ONLYOFFICE core-fonts
 
-The license files that core-fonts provides are copied to engine/dist/licenses/.
+Each font's license file is copied to engine/dist/licenses/.
 
 -------------------------------------------------------------------------------
 Lucid Sentence name and logos

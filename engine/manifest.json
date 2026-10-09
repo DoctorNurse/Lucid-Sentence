@@ -24,7 +24,18 @@
       "crosextra/LICENSE.txt": "Carlito (SIL OFL 1.1)",
       "caladea/LICENSE.txt": "Caladea (SIL OFL 1.1)",
       "opensans/LICENSE.txt": "Open Sans (Apache-2.0)",
-      "dejavu/LICENSE.txt": "DejaVu Sans (Bitstream Vera license; DejaVu changes public domain)"
+      "dejavu/LICENSE.txt": "DejaVu Sans (Bitstream Vera license; DejaVu changes public domain)",
+      "openoffice/LICENSE.txt": "OpenSymbol (SIL OFL 1.0)"
+    },
+    "archives": {
+      "liberation": {
+        "url": "https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz",
+        "sha256": "7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0",
+        "root": "liberation-fonts-ttf-2.1.5",
+        "release": "https://github.com/liberationfonts/liberation-fonts/releases/tag/2.1.5",
+        "license": "LICENSE",
+        "note": "Liberation 2.1.5 (SIL OFL 1.1). Replaces core-fonts' Liberation 1.x, which ships without a license file."
+      }
     }
   }
 }

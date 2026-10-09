@@ -3,13 +3,13 @@
 Lucid Sentence opens and saves `.docx` files with the ONLYOFFICE document
 engine, running entirely on the device, with no document server:
 
-| Piece  | What it does                                             | Where it comes from                                                                                    |
-| ------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| sdkjs  | Document model, layout, editing, canvas rendering        | Built from source: `ONLYOFFICE/sdkjs` branch `release/v9.4.0` at the commit pinned in `manifest.json`  |
-| x2t    | Converts `.docx` ⇄ the editor's binary format            | ONLYOFFICE `core`, compiled to WebAssembly by CryptPad (`cryptpad/onlyoffice-x2t-wasm`), sha512-pinned |
-| fonts  | Metric-compatible fonts for layout (Carlito, Caladea, …) | `ONLYOFFICE/core-fonts` at a pinned commit, each file sha256-pinned in `fonts/fonts.json`              |
-| bridge | Small addon compiled into sdkjs (`sdkjs-addon/`)         | Ours: offline open, binary export, saved-state reset                                                   |
-| host   | The page sdkjs runs in, plus the x2t worker (`host/`)    | Ours                                                                                                   |
+| Piece  | What it does                                                           | Where it comes from                                                                                                         |
+| ------ | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| sdkjs  | Document model, layout, editing, canvas rendering                      | Built from source: `ONLYOFFICE/sdkjs` branch `release/v9.4.0` at the commit pinned in `manifest.json`                       |
+| x2t    | Converts `.docx` ⇄ the editor's binary format                          | ONLYOFFICE `core`, compiled to WebAssembly by CryptPad (`cryptpad/onlyoffice-x2t-wasm`), sha512-pinned                      |
+| fonts  | Metric-compatible fonts for layout (Carlito, Caladea, Liberation 2, …) | `ONLYOFFICE/core-fonts` at a pinned commit plus the Liberation 2.1.5 release; each file sha256-pinned in `fonts/fonts.json` |
+| bridge | Small addon compiled into sdkjs (`sdkjs-addon/`)                       | Ours: offline open, binary export, saved-state reset                                                                        |
+| host   | The page sdkjs runs in, plus the x2t worker (`host/`)                  | Ours                                                                                                                        |
 
 We do not use ONLYOFFICE `web-apps` (their editor UI). Our own ribbon drives
 sdkjs through its public `asc_docs_api` methods.
@@ -23,7 +23,7 @@ pnpm engine:build --check  # exit 1 if engine/dist is missing or stale
 
 Needs git, python3, unzip and network access the first time; the downloads
 are cached in `engine/.cache`, and each one is checked against the hashes in
-`manifest.json` / `fonts/fonts.json`. `engine/dist` is about 85 MB and is not
+`manifest.json` / `fonts/fonts.json`. `engine/dist` is about 88 MB and is not
 committed. `apps/demo` serves and bundles it under `engine/`, and
 `engine/dist/SOURCES.json` records exactly which sources went into it.
 
@@ -33,7 +33,7 @@ Layout of `engine/dist` (sdkjs loads its siblings by relative path):
 sdkjs/word/sdk-all-min.js, sdk-all.js   the word editor
 sdkjs/common/…                          font engine, zlib, images, chart styles
 sdkjs/vendor/…                          jQuery, XRegExp (MIT)
-fonts/000…024                           fonts in sdkjs's web font format
+fonts/000…025                           fonts in sdkjs's web font format
 lucid/apps/word/main/index.html         the host page the app loads in an iframe
 x2t/x2t.js, x2t.wasm, worker.js         the converter and its worker
 licenses/…                              upstream license texts
@@ -67,3 +67,19 @@ licenses/…                              upstream license texts
   Ascensio System SIA. See [`/legal/MODIFICATIONS.md`](../legal/MODIFICATIONS.md).
 - ONLYOFFICE is a trademark of Ascensio System SIA. We use no ONLYOFFICE logo
   or name in Lucid Sentence branding.
+
+## Regenerating `fonts/AllFonts.js`
+
+`fonts/AllFonts.js` (font list, Unicode ranges and the font picker's
+`g_fonts_selection_bin`) comes from ONLYOFFICE's `allfontsgen` tool, run once
+over the TTFs listed in `fonts/fonts.json`, in that order:
+
+```sh
+allfontsgen --input=<dir with the TTFs> --use-system=false \
+  --allfonts-web=AllFonts.js --allfonts=AllFonts.native.js \
+  --selection=font_selection.bin --images=images --output-web=web
+```
+
+`allfontsgen` ships in the ONLYOFFICE DocumentServer package
+(`server/tools/`). Re-run it whenever a font is added, removed, or replaced,
+then check that `web/NNN` matches `engine/dist/fonts/NNN` byte for byte.

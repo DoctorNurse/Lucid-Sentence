@@ -468,7 +468,6 @@ lucid-sentence/      # GitHub: lucid-sentence (AGPL-3.0)
   - Print and PDF export.
   - Spell-check dictionaries.
   - x2t 9.4 build (we use 9.3.2).
-  - Replace the Liberation 1.x fonts with 2.x (OFL).
   - Test on Android and desktop devices.
   - Real-world (Word-authored) corpus.
 
