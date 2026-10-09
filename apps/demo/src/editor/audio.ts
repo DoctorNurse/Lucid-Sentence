@@ -55,6 +55,44 @@ export async function listRecordings(): Promise<Recording[]> {
   });
 }
 
+/** The first recording format this WebView supports (Android/Chrome: webm/opus; Safari: mp4). */
+export function pickMime(
+  supported: (t: string) => boolean = (t) =>
+    typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t),
+): string | undefined {
+  return ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].find(
+    (t) => {
+      try {
+        return supported(t);
+      } catch {
+        return false;
+      }
+    },
+  );
+}
+
+/** A plain-language reason the microphone couldn't start. */
+export function micError(e: unknown): string {
+  const name = (e as { name?: string } | null)?.name ?? '';
+  if (name === 'NotAllowedError' || name === 'SecurityError' || name === 'PermissionDeniedError') {
+    return 'Microphone permission is off. Allow it when asked, or turn it on in Settings → Apps → Lucid Sentence → Permissions → Microphone, then tap Record again.';
+  }
+  if (
+    name === 'NotFoundError' ||
+    name === 'DevicesNotFoundError' ||
+    name === 'OverconstrainedError'
+  ) {
+    return 'No microphone was found on this device.';
+  }
+  if (name === 'NotReadableError' || name === 'TrackStartError' || name === 'AbortError') {
+    return 'The microphone is busy (another app may be using it). Close that app and try again.';
+  }
+  if (name === 'NotSupportedError' || name === 'TypeError') {
+    return "Audio recording isn't supported in this browser.";
+  }
+  return "The microphone couldn't start. Check the app's microphone permission and try again.";
+}
+
 export class AudioNotes {
   current: { id: string; startedAt: number } | null = null;
   recordings: Recording[] = [];
@@ -93,8 +131,23 @@ export class AudioNotes {
 
   async start(): Promise<void> {
     if (this.#rec) return;
+    if (!('mediaDevices' in navigator) || typeof MediaRecorder === 'undefined') {
+      throw new DOMException('Recording is not supported here', 'NotSupportedError');
+    }
     this.#stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const rec = new MediaRecorder(this.#stream);
+    const mimeType = pickMime();
+    let rec: MediaRecorder;
+    try {
+      rec = mimeType
+        ? new MediaRecorder(this.#stream, { mimeType })
+        : new MediaRecorder(this.#stream);
+    } catch (e) {
+      this.#stream.getTracks().forEach((t) => {
+        t.stop();
+      });
+      this.#stream = null;
+      throw e;
+    }
     this.#chunks = [];
     rec.addEventListener('dataavailable', (e) => {
       if (e.data.size > 0) this.#chunks.push(e.data);
@@ -151,6 +204,7 @@ export class AudioNotes {
       this.#url = URL.createObjectURL(r.blob);
       this.audio.src = this.#url;
       this.playing = r;
+      await this.#seekable();
     }
     this.audio.currentTime = t / 1000;
     try {
@@ -159,6 +213,33 @@ export class AudioNotes {
       /* autoplay or codec: position is still set */
     }
     this.onChange();
+  }
+
+  /**
+   * Recordings from MediaRecorder (webm) carry no duration, and Chrome won't seek in them
+   * until it has scanned to the end once. Do that quietly before the first seek.
+   */
+  async #seekable(): Promise<void> {
+    const a = this.audio;
+    const once = (events: string[], ms: number): Promise<void> =>
+      new Promise((resolve) => {
+        const done = (): void => {
+          clearTimeout(timer);
+          for (const ev of events) a.removeEventListener(ev, done);
+          resolve();
+        };
+        const timer = setTimeout(done, ms);
+        for (const ev of events) a.addEventListener(ev, done);
+      });
+    if (a.readyState < 1) await once(['loadedmetadata', 'error'], 1500);
+    // Infinity: a MediaRecorder file without a duration. (NaN: not loaded; leave it.)
+    if (a.duration !== Infinity) return;
+    const muted = a.muted;
+    a.muted = true;
+    a.currentTime = 1e7;
+    await once(['durationchange', 'error'], 1500);
+    a.currentTime = 0;
+    a.muted = muted;
   }
 
   pause(): void {

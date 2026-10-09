@@ -1,7 +1,7 @@
 /** Comments: anchors in the text, balloons beside the page (Insert/Review → Comment). */
 import { Trash } from 'lucide';
 import type { EditorSurface } from './surface.js';
-import { el, icon, toast } from './ui.js';
+import { el, icon, tap, toast } from './ui.js';
 
 export interface Comment {
   id: string;
@@ -140,7 +140,7 @@ export class Comments {
         'aria-label': 'Delete comment',
       });
       del.append(icon(Trash, 14));
-      del.addEventListener('click', () => {
+      tap(del, () => {
         this.remove(c.id);
       });
       const text = el('textarea', {

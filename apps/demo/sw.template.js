@@ -36,6 +36,22 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
+  // Handwriting recognition files: cached the first time they're used.
+  if (url.pathname.includes('/ocr/')) {
+    event.respondWith(
+      caches.open(CACHE).then((cache) =>
+        cache.match(request).then(
+          (hit) =>
+            hit ??
+            fetch(request).then((res) => {
+              if (res.ok) void cache.put(request, res.clone());
+              return res;
+            }),
+        ),
+      ),
+    );
+    return;
+  }
   // Built assets are content-hashed: cache first.
   event.respondWith(caches.match(request).then((r) => r ?? fetch(request)));
 });

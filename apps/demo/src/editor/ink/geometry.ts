@@ -75,11 +75,24 @@ export function drawSize(
 }
 
 export function strokeOptions(
-  s: Pick<Stroke, 'tool' | 'size' | 'points' | 'pressure'>,
+  s: Pick<Stroke, 'tool' | 'size' | 'points' | 'pressure' | 'shape'>,
   last: boolean,
   leanOverride?: number,
 ): StrokeOptions {
   const tool: StrokeTool = s.tool;
+  if (s.shape && s.shape !== 'line') {
+    // Converted shapes (Ink to Shape): even width, sharp corners, no smoothing.
+    return {
+      size: drawSize(s, leanOverride),
+      thinning: 0,
+      smoothing: 0,
+      streamline: 0,
+      simulatePressure: false,
+      last,
+      start: { cap: true, taper: 0 },
+      end: { cap: true, taper: 0 },
+    };
+  }
   return {
     size: drawSize(s, leanOverride),
     thinning: tool === 'highlighter' ? 0 : tool === 'pencil' ? 0.75 : 0.6,
@@ -94,7 +107,7 @@ export function strokeOptions(
 
 /** Outline polygon for a whole stroke. */
 export function outline(
-  s: Pick<Stroke, 'tool' | 'size' | 'points' | 'pressure'>,
+  s: Pick<Stroke, 'tool' | 'size' | 'points' | 'pressure' | 'shape'>,
   last = true,
 ): number[][] {
   const pts = s.points.length === 1 ? [s.points[0]!, nudge(s.points[0]!)] : s.points;

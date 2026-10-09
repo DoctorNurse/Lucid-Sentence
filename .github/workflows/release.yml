@@ -256,11 +256,13 @@ jobs:
         with:
           workspaces: apps/shell/src-tauri -> target
       - run: pnpm install --frozen-lockfile
-      - name: Generate the Android project and apply the brand icons
+      - name: Generate the Android project, apply the brand icons and permissions
         run: |
           pnpm --filter @lucid-sentence/shell exec tauri android init --ci
           RES=apps/shell/src-tauri/gen/android/app/src/main/res
           cp -R apps/mobile/android-res/mipmap-* "$RES/"
+          # Audio notes: the microphone permission the WebView asks for at runtime.
+          node scripts/android-permissions.mjs apps/shell/src-tauri/gen/android/app/src/main/AndroidManifest.xml
       - name: Build the APK
         run: pnpm --filter @lucid-sentence/shell exec tauri android build --apk
       - name: Sign the APK

@@ -9,9 +9,12 @@ import {
   ArrowUpToLine,
   Columns2,
   FileText,
+  Highlighter,
   Minus,
   PanelBottom,
   PanelTop,
+  PenLine,
+  Pencil,
   RectangleHorizontal,
   RectangleVertical,
   Square,
@@ -43,6 +46,7 @@ import {
   menu,
   openPopover,
   tableGrid,
+  tap,
   toast,
 } from './ui.js';
 
@@ -720,7 +724,7 @@ export const handlers: Record<string, Handler> = {
       b.addEventListener('pointerdown', (e) => {
         e.preventDefault();
       });
-      b.addEventListener('click', () => {
+      tap(b, () => {
         a.surface.insertText(s);
       });
       g.append(b);
@@ -798,28 +802,51 @@ export const handlers: Record<string, Handler> = {
     );
   },
   'draw.drawing-tools.add-pen': (a, d) => {
+    // Adds a pen to the pen toolbar's favorites (up to four), then selects it.
+    const add = (tool: InkTool, color: string, size: number, label: string): void => {
+      a.ink.color = color;
+      a.ink.size = size;
+      a.setDraw(true, tool);
+      a.pen.show(true);
+      a.pen.addFavorite({ tool, color, size });
+      toast(`${label} added to your pens (the pen toolbar keeps the last four).`);
+    };
+    const cur = a.ink;
+    const stroke = cur.tool === 'pen' || cur.tool === 'pencil' || cur.tool === 'highlighter';
     pop(
       d,
       menu([
+        ...(stroke
+          ? [
+              {
+                label: 'Current pen',
+                detail: `${cur.tool}, width ${cur.size}`,
+                run: () => {
+                  add(cur.tool, cur.color, cur.size, 'Current pen');
+                },
+              },
+              'sep' as const,
+            ]
+          : []),
         {
           label: 'Pen',
+          icon: PenLine,
           run: () => {
-            a.setDraw(true, 'pen');
-            a.pen.show(true);
+            add('pen', cur.color === '#ffd400' ? '#1a1916' : cur.color, 3, 'Pen');
           },
         },
         {
           label: 'Pencil',
+          icon: Pencil,
           run: () => {
-            a.setDraw(true, 'pencil');
-            a.pen.show(true);
+            add('pencil', '#404040', 3, 'Pencil');
           },
         },
         {
           label: 'Highlighter',
+          icon: Highlighter,
           run: () => {
-            a.setDraw(true, 'highlighter');
-            a.pen.show(true);
+            add('highlighter', '#ffd400', 7, 'Highlighter');
           },
         },
       ]),
@@ -839,7 +866,84 @@ export const handlers: Record<string, Handler> = {
     a.refresh();
   },
   'draw.replay.ink-replay': (a) => {
-    a.ink.replay();
+    if (a.ink.replaying) {
+      a.ink.replay();
+      toast('Replay stopped');
+      return;
+    }
+    const started = a.ink.replay(() => {
+      a.refresh();
+    });
+    toast(
+      started
+        ? 'Replaying your ink stroke by stroke. Tap Ink Replay again to stop.'
+        : 'Nothing to replay yet: draw something first.',
+    );
+    a.refresh();
+  },
+  'draw.convert.ink-to-shape': (a) => {
+    a.ink.shapeMode = !a.ink.shapeMode;
+    localStorage.setItem('lucid-sentence:ink-to-shape', a.ink.shapeMode ? 'on' : 'off');
+    if (a.ink.shapeMode) {
+      const sel = [...a.ink.selected];
+      const n = sel.length ? a.ink.convertToShapes(sel) : 0;
+      if (!a.view.draw || !['pen', 'pencil', 'highlighter'].includes(a.ink.tool))
+        a.setDraw(true, 'pen');
+      toast(
+        n
+          ? `Ink to Shape on: ${n} selected stroke${n === 1 ? '' : 's'} converted. New circles, boxes, triangles, and lines snap too.`
+          : sel.length
+            ? 'Ink to Shape on: the selected strokes don’t look like shapes. New circles, boxes, triangles, and lines will snap.'
+            : 'Ink to Shape on: draw a circle, rectangle, triangle, or line and it snaps to a clean shape.',
+        4200,
+      );
+    } else toast('Ink to Shape off: ink stays as you draw it.');
+    a.refresh();
+  },
+  'draw.convert.ink-to-math': (_a, d) => {
+    pop(
+      d,
+      el(
+        'div',
+        { class: 'pop__report' },
+        el('div', { class: 'pop__heading' }, 'Ink to Math is coming soon'),
+        el(
+          'p',
+          {},
+          'Turning handwritten math into an equation needs a math recognition model that runs on this device. This preview doesn’t include one yet, so nothing was changed.',
+        ),
+        el(
+          'p',
+          {},
+          'Your ink stays as it is. Convert to text (Notes mode) already reads handwritten words on this device.',
+        ),
+      ),
+      'Ink to Math',
+    );
+  },
+  'draw.insert.drawing-canvas': (a) => {
+    const root = a.surface.root;
+    const inDoc = a.surface.range();
+    if (!inDoc) {
+      const r = document.createRange();
+      r.selectNodeContents(root);
+      r.collapse(false);
+      root.focus({ preventScroll: true });
+      document.getSelection()?.removeAllRanges();
+      document.getSelection()?.addRange(r);
+    }
+    a.surface.insertHTML(
+      '<div class="drawing-canvas" contenteditable="false" data-ls="drawing-canvas" aria-label="Drawing canvas"></div><p><br></p>',
+    );
+    const blocks = root.querySelectorAll<HTMLElement>('.drawing-canvas');
+    const box = blocks[blocks.length - 1];
+    (document.activeElement as HTMLElement | null)?.blur();
+    box?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    a.setDraw(true, ['pen', 'pencil', 'highlighter'].includes(a.ink.tool) ? a.ink.tool : 'pen');
+    toast(
+      'Drawing canvas added: draw inside the frame. Select (Draw tab) goes back to typing.',
+      4200,
+    );
   },
 
   // ── Design
@@ -889,7 +993,7 @@ export const handlers: Record<string, Handler> = {
       },
       a.view.paperDark ? 'Dark page (view only): On' : 'Dark page (view only)',
     );
-    dark.addEventListener('click', () => {
+    tap(dark, () => {
       a.view.paperDark = !a.view.paperDark;
       a.applyView();
       dark.textContent = a.view.paperDark ? 'Dark page (view only): On' : 'Dark page (view only)';
@@ -1585,6 +1689,34 @@ export const handlers: Record<string, Handler> = {
     a.openBackstage('file.settings.options');
   },
 };
+
+/**
+ * Commands that act on a picture or a table cell. Without one they used to return
+ * silently, which reads as broken; now they say what they need.
+ */
+const NEEDS: [RegExp, (a: App) => boolean, string][] = [
+  [
+    /^picture-format\.(?!adjust\.change-picture)/,
+    (a) => !!a.surface.selectedImage,
+    'Tap a picture first, then try again.',
+  ],
+  [
+    /^table-(layout|design)\.(rows-columns|table\.select|alignment|table-styles)/,
+    (a) => !!a.surface.cell(),
+    'Put the cursor in a table first, then try again.',
+  ],
+];
+for (const [id, h] of Object.entries(handlers)) {
+  const need = NEEDS.find(([re]) => re.test(id));
+  if (!need) continue;
+  handlers[id] = (a, d) => {
+    if (!need[1](a)) {
+      toast(need[2]);
+      return;
+    }
+    h(a, d);
+  };
+}
 
 /** Ids the demo can run today. */
 export const WIRED: ReadonlySet<string> = new Set(Object.keys(handlers));

@@ -1,7 +1,7 @@
 /** "Tell me" command palette (Alt+Q, Ctrl+K outside the document) over the registry. */
 import { allCommands, type CommandRef } from '@lucid-sentence/commands';
 import { displayShortcut, iconFor, svgIcon } from '@lucid-sentence/ribbon-ui';
-import { el } from './ui.js';
+import { el, tap } from './ui.js';
 
 export interface PaletteOptions {
   isWired: (id: string) => boolean;
@@ -147,7 +147,7 @@ export class Palette {
       item.addEventListener('pointerdown', (e) => {
         e.preventDefault();
       });
-      item.addEventListener('click', () => {
+      tap(item, () => {
         this.#run(r.command.id);
       });
       this.#list.append(item);

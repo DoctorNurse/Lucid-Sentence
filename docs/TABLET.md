@@ -234,16 +234,42 @@ In the web demo today:
 - **Floating pen toolbar**: pen, pencil, highlighter, eraser, lasso; seven colors;
   three sizes; save the current pen as a favorite (stored on this device). Drag the
   handle to move it.
-- **Magnifier**: a strip that shows a zoomed copy of part of the page. Writing in
-  the strip draws on the page at the normal size, for small handwriting.
-- **Audio**: Record uses the microphone (`getUserMedia` + `MediaRecorder`). While
-  recording, every new stroke and every paragraph you type is stamped with the
-  recording time. The timeline under the page shows a mark for each. Tapping a
-  stroke, a typed paragraph, or a timeline mark plays the recording from just before
-  that moment. Recordings are stored only in this browser (IndexedDB); nothing is
-  uploaded.
-- **Stubs**: "Convert to text" and "Search ink" show a message; recognition is not
-  built yet (see section 7).
+- **Magnifier**: a strip just above the Notes bar shows a zoomed (2.5×) copy of a
+  framed box on the page. Writing in the strip draws in that box at the normal size,
+  for small handwriting; ↵ moves the box to the next line, and double-tapping the
+  page moves it there. The strip sits in the layout, so it never covers the bar.
+- **Audio**: Record uses the microphone (`getUserMedia` + `MediaRecorder`, webm/opus
+  where supported, else mp4). While recording, every new stroke and every paragraph
+  you type is stamped with the recording time. The timeline under the page shows a
+  mark for each; drag along it to scrub. Tapping a stroke, a typed paragraph, or a
+  timeline mark plays the recording from just before that moment. Recordings are
+  stored only on this device (IndexedDB); nothing is uploaded. If the microphone
+  can't start, a message says why (permission off, no microphone, busy).
+  Android: the release build adds `RECORD_AUDIO` and `MODIFY_AUDIO_SETTINGS` to the
+  generated manifest (`scripts/android-permissions.mjs`), so the WebView can ask
+  for the microphone the first time you tap Record.
+- **Convert to text** and **Search ink**: handwriting recognition on the device
+  (section 7). Convert to text reads the selected ink (or all of it), shows the text
+  to check and edit, then inserts it under the ink, replaces the ink, or copies it.
+  Search ink finds words in your handwriting, selects the matching lines, and
+  scrolls to them; one misread letter is tolerated in longer words.
+- **Short screens** (a tablet in landscape, about 640 px tall): the ribbon collapses
+  to its tab row while Notes mode is on and comes back when you leave it. The Notes
+  bar is a single row that scrolls sideways, with Exit always visible.
+
+Draw tab extras: **Ink to Shape** (a toggle) turns lines, triangles, rectangles,
+other quadrilaterals, polygons up to 12 corners (stars included), circles, and
+ellipses into clean shapes as you draw them, and converts selected strokes when you
+turn it on. **Ink Replay** redraws the ink stroke by stroke (tap again to stop).
+**Drawing Canvas** adds a framed space to the document and switches to the pen.
+**Add Pen** saves a pen, pencil, or highlighter to the pen toolbar's favorites.
+**Ink to Math** is not built yet and says so: it needs an on-device math model.
+
+Taps on tablets: Android WebView sometimes drops the click after a touch or pen
+press (after a fling, or when the pressed button was re-rendered). Every Notes,
+pen-toolbar, timeline, status-bar, and header control now acts on the pointer
+release itself (`tap()` in `apps/demo/src/editor/ui.ts`), and those bars update in
+place instead of rebuilding under the finger.
 
 Saving in the demo: Ctrl+S stores the page and its strokes in this browser's
 `localStorage`. `.docx` save comes with the engine, using the plan below.
@@ -319,11 +345,20 @@ Plan:
   ink search index. Downloading a language model is an explicit, user-started
   action. It is the one network call, and it is shown to the user before it happens.
 - iPadOS text input: Scribble (system feature) for writing into text fields.
-- Desktop and web: no recognizer is bundled yet. Options to evaluate are a local
-  model in WebAssembly or the native shell's recognizer. Until then the buttons stay
-  stubs.
+- Now (all platforms, 0.1.3-preview): the browser's own recognizer where it has one
+  (the Handwriting Recognition API, `navigator.createHandwritingRecognizer`; mostly
+  ChromeOS today), otherwise Tesseract compiled to WebAssembly (tesseract.js,
+  Apache-2.0) with the English `best_int` model. All of it ships inside the app
+  under `ocr/` (about 11 MB: worker, a SIMD and a plain engine, the 3 MB model) and
+  loads on first use, so nothing is downloaded from another site and no ink leaves
+  the device. Each line of ink is drawn black on white and read as one text line.
+  The web app caches these files the first time they're used instead of at install.
+  Quality: good on clear print and neat handwriting, weaker on fast cursive (it is
+  an OCR model, not a stroke model). English only. When nothing can be read, the
+  app says so and leaves the ink alone.
 - Audio transcription is not planned for v1.
 
-Unverified: recognition quality on mixed text and drawings, latency on low-end
-tablets, and model sizes for every language we would ship. These are measured
-before the feature leaves the stub state.
+Unverified: recognition quality on real handwriting from a Galaxy Tab or iPad (tests
+use block letters drawn through the pen API), latency on low-end tablets, and the
+other languages we would ship. ML Kit (above) remains the plan for better accuracy
+on Android and iOS.

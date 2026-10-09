@@ -27,6 +27,7 @@ import { backstagePage } from './editor/backstage.js';
 import { WIRED, handlers, type App, type ViewState } from './editor/commands.js';
 import { Comments } from './editor/comments.js';
 import { FindPanel } from './editor/find.js';
+import { HandwritingTools } from './editor/handwriting.js';
 import { History } from './editor/history.js';
 import { InkLayer, type InkTool } from './editor/ink.js';
 import {
@@ -47,7 +48,7 @@ import {
 } from './editor/notes.js';
 import { Palette } from './editor/palette.js';
 import { EditorSurface } from './editor/surface.js';
-import { closePopover, el, popoverOpen, toast } from './editor/ui.js';
+import { closePopover, el, popoverOpen, tap, toast } from './editor/ui.js';
 import { initPlatform } from './native.js';
 import { drawRulers, geometry, type PageSetup } from './page.js';
 
@@ -168,6 +169,7 @@ const ink = new InkLayer(document.querySelector<SVGSVGElement>('#ink')!, pageEl,
   },
 });
 ink.drawWithTouch = settings.drawWithTouch;
+ink.shapeMode = localStorage.getItem('lucid-sentence:ink-to-shape') === 'on';
 ink.touchAuto = touchChoice === null && phoneLike;
 ink.autoSwitch = settings.autoSwitch;
 const history = new History(doc, ink, () => {
@@ -183,6 +185,8 @@ const pen = new PenToolbar($('#pentool'), ink, () => {
   else setDraw(false);
 });
 const strip = new WritingStrip(pageEl, ink);
+// In the layout, just above the Notes bar: it never covers the controls or the page.
+stage.insertBefore(strip.root, $('#notesbar'));
 const timeline = new Timeline(audio, ink, doc);
 stage.insertBefore(timeline.root, $('.status'));
 
@@ -207,7 +211,7 @@ function setDraw(on: boolean, tool?: InkTool): void {
     : document.body.classList.contains('notes')
       ? 'Notes mode'
       : '';
-  if (document.body.classList.contains('notes')) renderNotesbar();
+  if (document.body.classList.contains('notes')) syncNotesbar();
   if (on && ribbon.activeTab !== 'draw' && !document.body.classList.contains('notes'))
     ribbon.activeTab = 'draw';
   refresh();
@@ -395,7 +399,7 @@ function renderNav(): void {
         { type: 'button', class: `navpane__item navpane__item--${h.tagName.toLowerCase()}` },
         h.textContent.trim() || '(Empty heading)',
       );
-      b.addEventListener('click', () => {
+      tap(b, () => {
         h.scrollIntoView({ block: 'start', behavior: 'smooth' });
         const r = document.createRange();
         r.setStart(h, 0);
@@ -441,6 +445,8 @@ function refresh(): void {
   on('draw.drawing-tools.select', !view.draw);
   on('draw.drawing-tools.lasso', view.draw && ink.tool === 'lasso');
   on('draw.drawing-tools.draw-with-touch', settings.drawWithTouch);
+  on('draw.convert.ink-to-shape', ink.shapeMode);
+  on('draw.replay.ink-replay', ink.replaying);
   on('table-design.style-options.header-row', view.headerRow);
   on('table-design.style-options.banded-rows', view.bandedRows);
   on('table-design.style-options.first-column', view.firstColumn);
@@ -535,10 +541,19 @@ ribbon.addEventListener('ls-command', (e) => {
   status(label);
   refresh();
 });
+/** What to tell the user about a command that can't run here (never fail silently). */
+function unavailable(id: string): string {
+  const ref = allCommands().find((r) => r.command.id === id);
+  const label = ref?.command.label ?? id;
+  return ref?.command.stub
+    ? `${label} isn't available in Lucid Sentence.`
+    : `${label} arrives with the document engine. It isn't in this preview yet.`;
+}
 ribbon.addEventListener('ls-command-pending', (e) => {
   const { id } = (e as CustomEvent<{ id: string }>).detail;
-  const label = allCommands().find((r) => r.command.id === id)?.command.label ?? id;
-  status(`${label}: coming with the engine`);
+  const msg = unavailable(id);
+  status(msg);
+  toast(msg);
 });
 ribbon.addEventListener('ls-tab-change', (e) => {
   const { tab } = (e as CustomEvent<{ tab: TabId }>).detail;
@@ -549,12 +564,7 @@ ribbon.addEventListener('ls-tab-change', (e) => {
 function run(id: string): void {
   if (handlers[id] && ribbon.invoke(id)) return;
   if (!WIRED.has(id)) {
-    const ref = allCommands().find((r) => r.command.id === id);
-    toast(
-      ref?.command.stub
-        ? `${ref.command.label} is not available in Lucid Sentence`
-        : `${ref?.command.label ?? id} is coming with the engine`,
-    );
+    toast(unavailable(id));
     return;
   }
   handlers[id]?.(app, { id, kind: 'button', layout: ribbon.layout });
@@ -734,7 +744,7 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('[data-qat]')) {
   b.addEventListener('pointerdown', (e) => {
     e.preventDefault();
   });
-  b.addEventListener('click', () => {
+  tap(b, () => {
     const q = b.dataset['qat'];
     if (q === 'qat.save') save();
     else if (q === 'qat.undo') history.undo();
@@ -761,7 +771,7 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('.status [data-cmd]
     b.append(svgIcon(document, node, 16));
     b.title = b.getAttribute('aria-label') ?? '';
   }
-  b.addEventListener('click', (e) => {
+  tap(b, (e) => {
     const id = b.dataset['cmd']!;
     const r = b.getBoundingClientRect();
     handlers[id]?.(app, {
@@ -776,10 +786,10 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('.status [data-cmd]
 }
 $('#zoom-out').append(svgIcon(document, Minus, 16));
 $('#zoom-in').append(svgIcon(document, Plus, 16));
-$('#zoom-out').addEventListener('click', () => {
+tap($('#zoom-out'), () => {
   setZoom(Math.max(50, view.zoom - 10));
 });
-$('#zoom-in').addEventListener('click', () => {
+tap($('#zoom-in'), () => {
   setZoom(Math.min(200, view.zoom + 10));
 });
 ($('#zoom-range') as HTMLInputElement).addEventListener('input', (e) => {
@@ -788,7 +798,7 @@ $('#zoom-in').addEventListener('click', () => {
 
 // ── Palette
 const palette = new Palette({ isWired: (id) => WIRED.has(id), run });
-$('#open-palette').addEventListener('click', () => {
+tap($('#open-palette'), () => {
   palette.open();
 });
 
@@ -796,33 +806,41 @@ $('#open-palette').addEventListener('click', () => {
 const notesbar = $('#notesbar');
 let paper: Paper = 'lined';
 let paperColor = 'white';
-function renderNotesbar(): void {
+const handwriting = new HandwritingTools({ ink, surface, page: pageEl, scroller: canvas });
+/**
+ * Built once and updated in place (syncNotesbar). Rebuilding it on every state change
+ * replaced the buttons under the user's finger, and Android WebView then dropped the tap.
+ */
+function buildNotesbar(): void {
   const seg = (
     name: string,
     items: { id: string; label: string }[],
-    cur: string,
     onPick: (v: string) => void,
   ): HTMLElement => {
     const track = el('span', { class: 'seg__track', role: 'radiogroup', 'aria-label': name });
     for (const it of items) {
       const b = el(
         'button',
-        {
-          type: 'button',
-          role: 'radio',
-          class: 'seg__btn',
-          'aria-checked': String(it.id === cur),
-          'data-value': it.id,
-        },
+        { type: 'button', role: 'radio', class: 'seg__btn', 'data-value': it.id },
         it.label,
       );
-      b.addEventListener('click', () => {
+      // Keep focus where it is (Type puts it in the document; a focused button would
+      // take it back on touch devices).
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+      });
+      tap(b, () => {
         onPick(it.id);
-        renderNotesbar();
+        syncNotesbar();
       });
       track.append(b);
     }
-    return el('span', { class: 'seg' }, el('span', { class: 'seg__label' }, name), track);
+    return el(
+      'span',
+      { class: 'seg', 'data-seg': name },
+      el('span', { class: 'seg__label' }, name),
+      track,
+    );
   };
   const colors = el('span', {
     class: 'notes__colors',
@@ -836,38 +854,40 @@ function renderNotesbar(): void {
       class: 'notes__swatch',
       style: `--sw:${c.color}`,
       'aria-label': `${c.label} paper`,
-      'aria-checked': String(c.id === paperColor),
+      'data-paper-color': c.id,
     });
-    b.addEventListener('click', () => {
+    tap(b, () => {
       paperColor = c.id;
+      localStorage.setItem('lucid-sentence:paper-color', paperColor);
       applyPaper();
-      renderNotesbar();
+      syncNotesbar();
     });
     colors.append(b);
   }
-  const btn = (label: string, run: () => void, pressed?: boolean): HTMLButtonElement => {
-    const b = el(
-      'button',
-      {
-        type: 'button',
-        class: 'btn btn--chip',
-        'aria-pressed': pressed === undefined ? undefined : String(pressed),
-      },
-      label,
-    );
-    b.addEventListener('click', run);
+  const chip = (
+    label: string,
+    id: string,
+    run: (b: HTMLButtonElement) => void,
+  ): HTMLButtonElement => {
+    const b = el('button', { type: 'button', class: 'btn btn--chip', 'data-notes': id }, label);
+    tap(b, () => {
+      run(b);
+    });
     return b;
   };
   const close = el('button', {
     type: 'button',
     class: 'notes__close',
     'aria-label': 'Exit Notes mode',
+    title: 'Exit Notes mode',
   });
-  close.append(svgIcon(document, X, 16));
-  close.addEventListener('click', () => {
+  close.append(svgIcon(document, X, 18));
+  tap(close, () => {
     setNotes(false);
   });
-  notesbar.replaceChildren(
+  const scroll = el(
+    'div',
+    { class: 'notesbar__scroll' },
     el('span', { class: 'notes__title' }, 'Notes'),
     seg(
       'Input',
@@ -875,36 +895,72 @@ function renderNotesbar(): void {
         { id: 'write', label: 'Write' },
         { id: 'type', label: 'Type' },
       ],
-      view.draw ? 'write' : 'type',
       (v) => {
-        setDraw(v === 'write');
+        if (v === 'write') {
+          setDraw(true, ['pen', 'pencil', 'highlighter'].includes(ink.tool) ? ink.tool : 'pen');
+          toast('Write: the pen draws on the page.');
+        } else {
+          setDraw(false);
+          strip.toggle(false);
+          // Put the caret in the document so the keyboard comes up.
+          surface.focus();
+          if (!surface.range()) {
+            const r = document.createRange();
+            r.selectNodeContents(doc);
+            r.collapse(false);
+            document.getSelection()?.removeAllRanges();
+            document.getSelection()?.addRange(r);
+          }
+          toast('Type: tap where you want to type. The pen still writes when you use it.');
+        }
       },
     ),
-    seg('Paper', PAPERS, paper, (v) => {
+    seg('Paper', PAPERS, (v) => {
       paper = v as Paper;
+      localStorage.setItem('lucid-sentence:paper', paper);
       applyPaper();
     }),
     colors,
-    btn(
-      'Magnifier',
-      () => {
-        strip.toggle();
-        renderNotesbar();
-      },
-      strip.open,
-    ),
-    btn('Convert to text', () => {
-      toast(
-        'Handwriting to text is planned to run on-device in the native apps (see docs/TABLET.md).',
-      );
+    chip('Magnifier', 'magnifier', () => {
+      const on = !strip.open;
+      if (on && !view.draw) setDraw(true, 'pen');
+      strip.toggle(on);
+      syncNotesbar();
+      scheduleLayout();
+      if (on)
+        toast(
+          'Magnifier: write large in the strip; it lands small in the box on the page. ↵ moves to the next line.',
+          4200,
+        );
     }),
-    btn('Search ink', () => {
-      toast('Handwriting search is planned with on-device recognition (see docs/TABLET.md).');
+    chip('Convert to text', 'convert', (b) => {
+      void handwriting.convert(b);
     }),
-    el('span', { class: 'spacer' }),
-    close,
+    chip('Search ink', 'search', (b) => {
+      handwriting.search(b);
+    }),
   );
+  notesbar.replaceChildren(scroll, close);
 }
+function syncNotesbar(): void {
+  const input = view.draw ? 'write' : 'type';
+  for (const b of notesbar.querySelectorAll<HTMLElement>('[data-seg="Input"] .seg__btn'))
+    b.setAttribute('aria-checked', String(b.dataset['value'] === input));
+  for (const b of notesbar.querySelectorAll<HTMLElement>('[data-seg="Paper"] .seg__btn'))
+    b.setAttribute('aria-checked', String(b.dataset['value'] === paper));
+  for (const b of notesbar.querySelectorAll<HTMLElement>('[data-paper-color]'))
+    b.setAttribute('aria-checked', String(b.dataset['paperColor'] === paperColor));
+  notesbar
+    .querySelector('[data-notes="magnifier"]')
+    ?.setAttribute('aria-pressed', String(strip.open));
+}
+{
+  const savedPaper = localStorage.getItem('lucid-sentence:paper');
+  if (savedPaper && PAPERS.some((p) => p.id === savedPaper)) paper = savedPaper as Paper;
+  const savedColor = localStorage.getItem('lucid-sentence:paper-color');
+  if (savedColor && PAPER_COLORS.some((c) => c.id === savedColor)) paperColor = savedColor;
+}
+buildNotesbar();
 function applyPaper(): void {
   const on = document.body.classList.contains('notes');
   pageEl.dataset['paper'] = on ? paper : '';
@@ -912,23 +968,37 @@ function applyPaper(): void {
   if (on && c && c.id !== 'white') pageEl.style.setProperty('--note-paper', c.color);
   else pageEl.style.removeProperty('--note-paper');
   pageEl.classList.toggle('paper-night', on && paperColor === 'night');
+  strip.root.style.setProperty('--note-paper', on && c ? c.color : '#fff');
+  strip.root.classList.toggle('strip--night', on && paperColor === 'night');
 }
+/** Notes mode collapsed the ribbon (short screens) and should restore it on exit. */
+let notesCollapsedRibbon = false;
 function setNotes(on: boolean): void {
   document.body.classList.toggle('notes', on);
   $('#notes-toggle').setAttribute('aria-pressed', String(on));
   notesbar.hidden = !on;
   timeline.show(on);
+  // Tablets in landscape (~640 px tall): the ribbon, notes bar, and timeline would leave
+  // a sliver of page. Collapse the ribbon to its tab row while taking notes.
+  if (on && !ribbon.collapsed && ribbon.layout !== 'phone' && window.innerHeight < 900) {
+    ribbon.toggleCollapsed(true);
+    notesCollapsedRibbon = true;
+  } else if (!on && notesCollapsedRibbon) {
+    if (ribbon.collapsed) ribbon.toggleCollapsed(false);
+    notesCollapsedRibbon = false;
+  }
   if (on) {
-    renderNotesbar();
     setDraw(true, ink.tool === 'lasso' || ink.tool.includes('eraser') ? 'pen' : ink.tool);
   } else {
     strip.toggle(false);
     setDraw(false);
   }
   applyPaper();
+  syncNotesbar();
   $('#mode').textContent = on ? 'Notes mode' : '';
+  scheduleLayout();
 }
-$('#notes-toggle').addEventListener('click', () => {
+tap($('#notes-toggle'), () => {
   setNotes(!document.body.classList.contains('notes'));
 });
 
@@ -1092,5 +1162,20 @@ const inkDocx = inkDocxEnabled()
 
 // Test hooks (used by Playwright e2e tests; harmless in production builds).
 Object.assign(window, {
-  __ls: { app, ink, audio, timeline, history, ribbon, palette, run, setNotes, toast, inkDocx },
+  __ls: {
+    app,
+    ink,
+    audio,
+    timeline,
+    history,
+    ribbon,
+    palette,
+    run,
+    setNotes,
+    toast,
+    inkDocx,
+    strip,
+    pen,
+    handwriting,
+  },
 });
