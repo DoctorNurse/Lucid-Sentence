@@ -107,6 +107,7 @@ export default defineConfig({
   resolve: {
     // Use workspace sources directly for instant reloads while developing.
     alias: {
+      '@lucid-sentence/ai': src('ai'),
       '@lucid-sentence/commands': src('commands'),
       '@lucid-sentence/ribbon-ui': src('ribbon-ui'),
       '@lucid-sentence/splash': src('splash'),
