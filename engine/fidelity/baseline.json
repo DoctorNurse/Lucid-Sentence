@@ -298,5 +298,425 @@
       "comments": true,
       "pageBreaks": true
     }
+  },
+  "word-pd-comments-rich-para.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": false,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-pd-doc-odd-even-hdrs.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-pd-having-images.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-pd-hdr-header-footer.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-pd-num-having-numbering-part.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-pd-par-hyperlinks.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-pd-sct-section-props.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-pd-tbl-having-applied-style.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-pd-txt-font-props.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-poi-EmbeddedDocument.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-poi-Numbering.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-poi-SampleDoc.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-poi-TestDocument.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
+  },
+  "word-poi-heading123.docx": {
+    "x2t": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    },
+    "sdkjs": {
+      "text": true,
+      "styles": true,
+      "lists": true,
+      "alignment": true,
+      "runs": true,
+      "tables": true,
+      "pictures": true,
+      "sections": true,
+      "headers": true,
+      "links": true,
+      "comments": true,
+      "pageBreaks": true
+    }
   }
 }

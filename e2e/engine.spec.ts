@@ -289,3 +289,11 @@ test('Spelling finds misspelled words and replaces them with a suggestion', asyn
   await expect.poll(count).toBe(1);
   expect((await paragraphs(page))[1]?.text).toContain('This sentnce');
 });
+
+test('opens a document saved by Microsoft Word, with its pages and fonts', async ({ page }) => {
+  // Apache POI test document (Word 2007): page 1 in Calibri, page 2 in blue Arial Black.
+  await openDocx(page, 'word-poi-SampleDoc.docx');
+  const ps = await paragraphs(page);
+  expect(ps.map((p) => p.text)).toContain('I am a test document');
+  await expect(page.locator('#pageinfo')).toHaveText(/of 2/);
+});
