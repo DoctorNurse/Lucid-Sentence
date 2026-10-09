@@ -31,7 +31,8 @@ function serviceWorker(): Plugin {
       files.sort();
       // Handwriting recognition files (~11 MB) and the document engine (~97 MB) load
       // on first use and are cached then, so installing the web app stays small.
-      const lazy = (f: string): boolean => /^(ocr|engine)[\\/]/.test(relative(outDir, f));
+      // The on-device AI runtime (ai/, ~25 MB) is cached when the user downloads a model.
+      const lazy = (f: string): boolean => /^(ocr|engine|ai)[\\/]/.test(relative(outDir, f));
       const url = (f: string): string => `./${relative(outDir, f).split(sep).join('/')}`;
       const precache = files.filter((f) => !lazy(f));
       const engineFiles = files.filter((f) => relative(outDir, f).startsWith(`engine${sep}`));
@@ -49,6 +50,7 @@ function serviceWorker(): Plugin {
         join(outDir, 'sw.js'),
         template
           .replace('__VERSION__', hash.digest('hex').slice(0, 12))
+          .replace('__AI_VERSION__', aiVersion())
           .replace('[/* __FILES__ */]', JSON.stringify(urls))
           .replace('[/* __ENGINE__ */]', JSON.stringify(engineFiles.map(url))),
       );
@@ -95,6 +97,59 @@ function ocrAssets(): Plugin {
     generateBundle() {
       for (const [name, file] of Object.entries(ocrFiles())) {
         this.emitFile({ type: 'asset', fileName: `ocr/${name}`, source: readFileSync(file) });
+      }
+    },
+  };
+}
+
+/**
+ * On-device AI web runtime (wllama, MIT): llama.cpp compiled to WebAssembly, served from
+ * our own origin under ai/ (never a CDN). The fast build needs JSPI + Memory64
+ * (Chromium); the compat build covers Safari/iOS and Firefox. Cached on first use (the
+ * app fetches them right after a model download), not precached. The desktop and
+ * Android apps run llama.cpp natively, so Tauri builds leave these out.
+ */
+function aiFiles(): Record<string, string> {
+  const ai = fileURLToPath(new URL('../../packages/ai/package.json', import.meta.url));
+  const wllama = dirname(require.resolve('@wllama/wllama/package.json', { paths: [dirname(ai)] }));
+  const compat = dirname(require.resolve('@wllama/wllama-compat/package.json'));
+  return {
+    'wllama.wasm': join(wllama, 'esm', 'wasm', 'wllama.wasm'),
+    'wllama-compat.js': join(compat, 'wasm', 'wllama.js'),
+    'wllama-compat.wasm': join(compat, 'wasm', 'wllama.wasm'),
+  };
+}
+/** Names the AI runtime cache, so it survives app updates until wllama changes. */
+function aiVersion(): string {
+  const files = aiFiles();
+  const hash = createHash('sha256');
+  for (const f of Object.values(files)) hash.update(readFileSync(f));
+  return hash.digest('hex').slice(0, 12);
+}
+const forApp = Boolean(process.env['TAURI_ENV_PLATFORM']);
+function aiAssets(): Plugin {
+  return {
+    name: 'lucid-sentence-ai',
+    configureServer(server) {
+      const files = aiFiles();
+      server.middlewares.use((req, res, next) => {
+        const m = /\/ai\/([^/?#]+)/.exec(req.url ?? '');
+        const file = m ? files[m[1]!] : undefined;
+        if (!file) {
+          next();
+          return;
+        }
+        res.setHeader(
+          'Content-Type',
+          file.endsWith('.js') ? 'text/javascript' : 'application/wasm',
+        );
+        res.end(readFileSync(file));
+      });
+    },
+    generateBundle() {
+      if (forApp) return;
+      for (const [name, file] of Object.entries(aiFiles())) {
+        this.emitFile({ type: 'asset', fileName: `ai/${name}`, source: readFileSync(file) });
       }
     },
   };
@@ -161,7 +216,7 @@ const src = (pkg: string): string =>
   fileURLToPath(new URL(`../../packages/${pkg}/src/index.ts`, import.meta.url));
 
 export default defineConfig({
-  plugins: [engineAssets(), ocrAssets(), serviceWorker()],
+  plugins: [engineAssets(), ocrAssets(), aiAssets(), serviceWorker()],
   // Promo flag: LUCID_PROMOS=off pnpm build  -> no promo card in this build.
   define: {
     __LUCID_PROMOS__: JSON.stringify(process.env['LUCID_PROMOS'] !== 'off'),
@@ -171,6 +226,7 @@ export default defineConfig({
   resolve: {
     // Use workspace sources directly for instant reloads while developing.
     alias: {
+      '@lucid-sentence/ai': src('ai'),
       '@lucid-sentence/commands': src('commands'),
       '@lucid-sentence/ribbon-ui': src('ribbon-ui'),
       '@lucid-sentence/splash': src('splash'),

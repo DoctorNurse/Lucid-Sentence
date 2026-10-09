@@ -12,6 +12,9 @@
     },
     {
       "path": "packages/splash"
+    },
+    {
+      "path": "packages/ai"
     }
   ]
 }

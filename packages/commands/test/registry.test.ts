@@ -126,6 +126,8 @@ describe('command registry: ribbon map (plan §4.2)', () => {
       'review',
       [
         'Proofing',
+        // Lucid addition (plan §9): the on-device Assistant sits next to Proofing.
+        'Assistant',
         'Speech',
         'Accessibility',
         'Language',

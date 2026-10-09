@@ -1,0 +1,108 @@
+{
+  "device": {
+    "arch": "x86_64",
+    "availableRamBytes": 11103686656,
+    "cpuThreads": 8,
+    "nativeRuntime": true,
+    "os": "linux",
+    "totalRamBytes": 16791158784
+  },
+  "loadMs": 841.4,
+  "model": "Qwen3.5-0.8B-Q4_K_M.gguf",
+  "modelFileMB": 507.8,
+  "nCtx": 4096,
+  "peakRssMB": 899.0,
+  "results": [
+    {
+      "completionTokens": 122,
+      "decodeTokPerSec": 36.0,
+      "output": "Lucid Sentence is a free, open-source word processor designed for .docx files. It preserves Word's familiar ribbon interface, enabling users familiar with the application to locate every command efficiently. The interface features a refined aesthetic with careful typography. The application runs on desktop, Android, and as a home-screen web app on iPhone and iPad. Optional on-device AI capabilities allow for the rewriting of selections, grammar correction, summarization, and conversion of plain-language requests into ribbon commands. All AI edits are presented as suggestions that the user accepts or rejects; consequently, the document remains unchanged behind the writer's back.",
+      "promptTokPerSec": 296.3,
+      "promptTokens": 157,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "rewrite-formal",
+      "ttftMs": 529.8
+    },
+    {
+      "completionTokens": 23,
+      "decodeTokPerSec": 29.7,
+      "output": "The team has gone to the meeting yesterday and they were very happy with their results, which is a good outcome.",
+      "promptTokPerSec": 186.0,
+      "promptTokens": 57,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "fix-grammar",
+      "ttftMs": 306.5
+    },
+    {
+      "completionTokens": 45,
+      "decodeTokPerSec": 14.8,
+      "output": "Lucid Sentence is a free, open-source word processor that offers a familiar ribbon interface and a modern look, running on desktop, Android, and web, with optional AI features that rewrite and fix text without altering the document.",
+      "promptTokPerSec": 256.9,
+      "promptTokens": 157,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "summarize",
+      "ttftMs": 611.2
+    },
+    {
+      "completionTokens": 12,
+      "decodeTokPerSec": 4.5,
+      "output": "{\"command\":\"review.tracking.track-changes\"}",
+      "promptTokPerSec": 58.0,
+      "promptTokens": 62,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "tell-lucid (grammar)",
+      "ttftMs": 1069.5
+    },
+    {
+      "completionTokens": 122,
+      "decodeTokPerSec": 33.8,
+      "output": "Lucid Sentence is a free, open-source word processor designed for .docx files. It preserves Word's familiar ribbon interface, enabling users familiar with the application to locate every command efficiently. The interface features a refined aesthetic with careful typography. The application runs on desktop, Android, and as a home-screen web app on iPhone and iPad. Optional on-device AI capabilities allow for the rewriting of selections, grammar correction, summarization, and conversion of plain-language requests into ribbon commands. All AI edits are presented as suggestions that the user accepts or rejects; consequently, the document remains unchanged behind the writer's back.",
+      "promptTokPerSec": 254.9,
+      "promptTokens": 157,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "rewrite-formal",
+      "ttftMs": 616.0
+    },
+    {
+      "completionTokens": 23,
+      "decodeTokPerSec": 29.7,
+      "output": "The team has gone to the meeting yesterday and they were very happy with their results, which is a good outcome.",
+      "promptTokPerSec": 180.1,
+      "promptTokens": 57,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "fix-grammar",
+      "ttftMs": 316.5
+    },
+    {
+      "completionTokens": 45,
+      "decodeTokPerSec": 5.8,
+      "output": "Lucid Sentence is a free, open-source word processor that offers a familiar ribbon interface and a modern look, running on desktop, Android, and web, with optional AI features that rewrite and fix text without altering the document.",
+      "promptTokPerSec": 255.2,
+      "promptTokens": 157,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "summarize",
+      "ttftMs": 615.3
+    },
+    {
+      "completionTokens": 12,
+      "decodeTokPerSec": 3.7,
+      "output": "{\"command\":\"review.tracking.track-changes\"}",
+      "promptTokPerSec": 66.8,
+      "promptTokens": 62,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "tell-lucid (grammar)",
+      "ttftMs": 927.9
+    }
+  ],
+  "rssAfterLoadMB": 745.6,
+  "rssBeforeLoadMB": 4.9,
+  "threads": 8
+}

@@ -5,6 +5,10 @@ const FILES = [/* __FILES__ */];
 // The document engine (~97 MB): not precached at install. The app asks for it
 // ('cache-engine') once a .docx has opened, so later opens work offline.
 const ENGINE = [/* __ENGINE__ */];
+// On-device AI runtime files (ai/): kept across app updates in their own cache, which
+// is renamed only when the runtime version changes. Model files live in OPFS, not here.
+const AI_CACHE = 'lucid-sentence-ai-__AI_VERSION__';
+const AI_BASE = new URL('ai/', self.registration.scope).pathname;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)));
@@ -28,7 +32,9 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k !== CACHE && k !== AI_CACHE).map((k) => caches.delete(k))),
+      )
       .then(() => self.clients.claim()),
   );
 });
@@ -39,11 +45,13 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
   // The desktop update feed is never cached.
   if (url.pathname.includes('/updates/')) return;
-  // Handwriting recognition and document engine files: cached the first time
-  // they're used (this includes the engine's host page, an iframe navigation).
-  if (url.pathname.includes('/ocr/') || url.pathname.includes('/engine/')) {
+  // Handwriting recognition, document engine and on-device AI runtime files: cached
+  // the first time they're used (this includes the engine's host page, an iframe
+  // navigation, so this comes before the page rule below).
+  const ai = url.pathname.startsWith(AI_BASE);
+  if (ai || url.pathname.includes('/ocr/') || url.pathname.includes('/engine/')) {
     event.respondWith(
-      caches.open(CACHE).then((cache) =>
+      caches.open(ai ? AI_CACHE : CACHE).then((cache) =>
         cache.match(request, { ignoreSearch: true }).then(
           (hit) =>
             hit ??

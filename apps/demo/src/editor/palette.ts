@@ -6,6 +6,8 @@ import { el, tap } from './ui.js';
 export interface PaletteOptions {
   isWired: (id: string) => boolean;
   run: (id: string) => void;
+  /** Hand a plain-language request to Tell Lucid (shown as the last result). */
+  ask?: (query: string) => void;
 }
 
 /** Rank registry commands for a query (label first, then group/tab words). */
@@ -67,13 +69,14 @@ export class Palette {
     this.#input.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
-        const n = this.#results.length;
+        const n = this.#results.length + (this.#askable() ? 1 : 0);
         if (n) this.#i = (this.#i + (e.key === 'ArrowDown' ? 1 : n - 1)) % n;
         this.#paint();
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const r = this.#results[this.#i];
         if (r) this.#run(r.command.id);
+        else if (this.#i === this.#results.length && this.#askable()) this.#ask();
       }
     });
     this.root.addEventListener('click', (e) => {
@@ -101,6 +104,17 @@ export class Palette {
     this.opts.run(id);
   }
 
+  /** Longer requests can go to Tell Lucid. */
+  #askable(): boolean {
+    return !!this.opts.ask && this.#input.value.trim().split(/\s+/).length >= 2;
+  }
+
+  #ask(): void {
+    const q = this.#input.value.trim();
+    this.close();
+    this.opts.ask?.(q);
+  }
+
   #update(): void {
     const q = this.#input.value.trim();
     this.#results = q
@@ -114,7 +128,7 @@ export class Palette {
 
   #paint(): void {
     this.#list.replaceChildren();
-    if (this.#results.length === 0) {
+    if (this.#results.length === 0 && !this.#askable()) {
       this.#list.append(el('div', { class: 'palette__empty' }, 'No matching commands'));
       return;
     }
@@ -152,6 +166,29 @@ export class Palette {
       });
       this.#list.append(item);
     });
+    if (this.#askable()) {
+      const i = this.#results.length;
+      const item = el(
+        'div',
+        {
+          class: 'palette__item palette__ask',
+          role: 'option',
+          id: `pal-${i}`,
+          'aria-selected': String(i === this.#i),
+          'data-testid': 'palette-ask',
+        },
+        el('span', { class: 'palette__icon' }, '✦'),
+        el('span', { class: 'palette__label' }, `Ask Lucid: “${this.#input.value.trim()}”`),
+        el('span', { class: 'palette__where' }, 'Review › Assistant'),
+      );
+      item.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+      });
+      tap(item, () => {
+        this.#ask();
+      });
+      this.#list.append(item);
+    }
     this.#input.setAttribute('aria-activedescendant', `pal-${this.#i}`);
     this.#list.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
   }

@@ -556,7 +556,8 @@ export const ENGINE_WIRED: ReadonlySet<string> = new Set(Object.keys(engineHandl
  * touch the document: the File backstage, Help, and the command palette.
  */
 export function appLevel(id: string): boolean {
-  return id.startsWith('file.') || id.startsWith('help.');
+  // AI Models manages on-device models and settings; it doesn't touch the document.
+  return id.startsWith('file.') || id.startsWith('help.') || id === 'review.assistant.ai-models';
 }
 
 /** Pressed toggles for the ribbon, from the engine's selection state. */

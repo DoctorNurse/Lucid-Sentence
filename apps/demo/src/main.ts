@@ -22,6 +22,7 @@ import {
   Undo2,
   X,
 } from 'lucide';
+import { initAssistant } from './ai/index.js';
 import { AudioNotes } from './editor/audio.js';
 import { backstagePage } from './editor/backstage.js';
 import { WIRED, handlers, type App, type ViewState } from './editor/commands.js';
@@ -1140,7 +1141,12 @@ tap($('#zoom-in'), () => {
 });
 
 // ── Palette
-const palette = new Palette({ isWired: (id) => WIRED.has(id), run });
+const assistant = initAssistant({ app, run, isWired: (id) => WIRED.has(id) });
+const palette = new Palette({
+  isWired: (id) => WIRED.has(id),
+  run,
+  ask: (q) => void assistant.tellLucid(undefined, q),
+});
 tap($('#open-palette'), () => {
   palette.open();
 });

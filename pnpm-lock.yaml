@@ -44,6 +44,9 @@ importers:
 
   apps/demo:
     dependencies:
+      '@lucid-sentence/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@lucid-sentence/commands':
         specifier: workspace:*
         version: link:../../packages/commands
@@ -77,6 +80,9 @@ importers:
       '@tesseract.js-data/eng':
         specifier: 1.0.0
         version: 1.0.0
+      '@wllama/wllama-compat':
+        specifier: 3.8.1
+        version: 3.8.1
       lucide:
         specifier: 1.53.0
         version: 1.53.0
@@ -96,6 +102,15 @@ importers:
       '@tauri-apps/cli':
         specifier: 2.12.1
         version: 2.12.1
+
+  packages/ai:
+    dependencies:
+      '@lucid-sentence/commands':
+        specifier: workspace:*
+        version: link:../commands
+      '@wllama/wllama':
+        specifier: 3.8.1
+        version: 3.8.1
 
   packages/commands: {}
 
@@ -585,6 +600,12 @@ packages:
 
   '@vitest/spy@5.0.3':
     resolution: {integrity: sha512-XhFysQTB8AZ+P4gMi+Lpo99vg2AZi0qKpaB9yXQl37+CaMEAPO3iH/wGVnSyL5MPERiLezpqTVtrR6UZH5GCXg==}
+
+  '@wllama/wllama-compat@3.8.1':
+    resolution: {integrity: sha512-IvmjrJ+JzDbt3w1FQq1yAmnFEiLGCceowK2Q80zW+k9ChFkPBM1ByX/9xm2xVxyd8MHC50VpuDo6SDE83k9kIQ==}
+
+  '@wllama/wllama@3.8.1':
+    resolution: {integrity: sha512-Pl7BEJhPU8OHnV/yhn3DFZYhLLOdSHh+4TND79WCftHnlUAdQPAsyc/CfIOY+4mVxvf5VW3Xw3Uf7BBfotS1gw==}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -1575,6 +1596,10 @@ snapshots:
       vite: 8.3.4(@types/node@26.6.4)
 
   '@vitest/spy@5.0.3': {}
+
+  '@wllama/wllama-compat@3.8.1': {}
+
+  '@wllama/wllama@3.8.1': {}
 
   acorn-jsx@5.3.2(acorn@8.19.0):
     dependencies:

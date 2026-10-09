@@ -1,0 +1,14 @@
+# Share the Tauri shell's target directory (already ignored by git, eslint, and prettier),
+# so the shell and this crate reuse one llama.cpp build.
+[build]
+target-dir = "../../../apps/shell/src-tauri/target"
+
+# ggml CPU kernels for x86_64 builds (see docs/AI.md). Only ggml is compiled with these;
+# Rust code keeps the baseline target, and `engine::cpu_supported()` refuses to start the
+# runtime on CPUs without them. Keep in sync with apps/shell/src-tauri/.cargo/config.toml.
+[env]
+GGML_AVX = "ON"
+GGML_AVX2 = "ON"
+GGML_FMA = "ON"
+GGML_F16C = "ON"
+GGML_BMI2 = "ON"

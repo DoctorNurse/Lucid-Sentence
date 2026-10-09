@@ -1,0 +1,26 @@
+{
+  "name": "@lucid-sentence/ai",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Optional on-device AI for Lucid Sentence: model manager, runtimes (llama.cpp native, wllama web), writing tasks, and Tell Lucid. Off by default; nothing leaves the device.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@lucid-sentence/commands": "workspace:*",
+    "@wllama/wllama": "3.8.1"
+  }
+}

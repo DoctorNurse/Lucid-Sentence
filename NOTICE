@@ -147,10 +147,23 @@ Bundled third-party code
                                  and contributors). Shipped under ocr/.
   @tesseract.js-data/eng 1.0.0   MIT (package); the English model is from
                                  tessdata_best, Apache-2.0, Google LLC.
+  @wllama/wllama 3.8.1, @wllama/wllama-compat 3.8.1
+                                 MIT License, Copyright (c) 2024 Xuan Son NGUYEN.
+                                 On-device AI web runtime (llama.cpp built for
+                                 WebAssembly). Shipped under ai/ in the web app.
+  llama.cpp / ggml               MIT License, Copyright (c) 2023-2026 The ggml
+                                 authors. Compiled into the desktop and Android
+                                 apps via llama-cpp-2 0.1.159 (MIT OR
+                                 Apache-2.0) and into the wllama build.
   @tauri-apps/api, @tauri-apps/plugin-opener, @tauri-apps/plugin-updater,
   @tauri-apps/plugin-process, @tauri-apps/plugin-dialog, @tauri-apps/plugin-fs
                                  Apache-2.0 OR MIT, Copyright (c) the Tauri
                                  Programme within The Commons Conservancy.
+
+On-device AI models are not bundled. When a user opts in, the app downloads a
+pinned GGUF file from Hugging Face: Qwen3.5 2B or Qwen3.5 0.8B (Apache-2.0,
+Copyright Alibaba Cloud / the Qwen team; GGUF conversion by Unsloth). See
+docs/AI.md for the exact files and checksums.
 
 The installable preview (apps/shell) is built with Tauri 2 and its Rust crates
 (mostly MIT and/or Apache-2.0). A complete list of the licenses of crates
