@@ -444,6 +444,34 @@ lucid-sentence/      # GitHub: lucid-sentence (AGPL-3.0)
 | **Beta 2: Release candidate** (public beta) | Performance hardening (re-run the §3.4 targets on the full feature set), accessibility, localization, crash-free sessions, store submissions or alternative channels, documentation. | Release criteria below are met. |
 | **v1.0** | Single release on four platforms | Fidelity gate, §3.4 performance targets, zero known data-loss bugs, legal sign-off |
 
+#### M1 status: document engine spike (branch `feat/m1-engine`)
+
+- **Engine:** ONLYOFFICE sdkjs `release/v9.4.0` (pinned commit), built with its own `build.py` plus our bridge addon (`engine/sdkjs-addon`). x2t WASM comes from CryptPad's 9.3.2 build. Fonts come from ONLYOFFICE core-fonts. `pnpm engine:build` writes `engine/dist`, and the app serves it offline from `/engine/` (the service worker caches it on first use).
+- **Works (web/PWA, verified by e2e):**
+  - Open a .docx (File System Access API or `<input>`).
+  - Edit it with the ribbon slice:
+    - clipboard
+    - font family and size, grow/shrink, clear formatting
+    - bold, italic, underline, strike, subscript, superscript
+    - bullets, numbering, indents, alignment, formatting marks
+    - the Styles gallery
+    - select all, page break
+    - zoom
+  - Undo/redo from the Quick Access Toolbar and the keyboard.
+  - New blank document.
+  - Save (back to the same file handle), Save As (picker), and download fallback.
+  - Ink and Notes mode are unchanged on notes pages.
+- **Desktop/Android (Tauri):** File > Open/Save As use the native dialogs (`tauri-plugin-dialog`), and the Android document picker comes through the same plugin. Files go through `tauri-plugin-fs`. Files the OS opens with the app load in the engine. Code builds and passes clippy and the tests; not yet run on a device.
+- **Fidelity eval:** `pnpm fidelity` round-trips a 10-file corpus through x2t alone and through x2t plus sdkjs in Chromium. 240 of 240 checks pass, with a baseline in CI.
+- **Open items:**
+  - Wire the remaining registry commands (tables, images, headers/footers, review).
+  - Print and PDF export.
+  - Spell-check dictionaries.
+  - x2t 9.4 build (we use 9.3.2).
+  - Replace the Liberation 1.x fonts with 2.x (OFL).
+  - Test on Android and desktop devices.
+  - Real-world (Word-authored) corpus.
+
 ### 7.2 Post-v1 phases
 
 | Phase | Scope |
