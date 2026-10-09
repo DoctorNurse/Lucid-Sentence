@@ -1,7 +1,12 @@
 //! Lucid Sentence installable preview: a Tauri 2 shell around the web app in
-//! `apps/demo`. The shell only hosts the UI; documents are not read or written
+//! `apps/demo`. The shell hosts the UI and the optional on-device AI (`ai`, and the
+//! desktop-only local MCP server in `mcp`); documents are not read or written
 //! here yet. When the ONLYOFFICE engine lands, it replaces the bundled web app
 //! (see apps/shell/README.md).
+
+mod ai;
+#[cfg(desktop)]
+mod mcp;
 
 use std::path::Path;
 use std::sync::Mutex;
@@ -48,9 +53,47 @@ pub fn run() {
     let builder = builder
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init());
-    let app = builder
+    let builder = builder
         .manage(OpenedFiles(Mutex::new(names_from_args())))
-        .invoke_handler(tauri::generate_handler![take_opened_files])
+        .manage(ai::AiState::default());
+    // The local MCP server is desktop only (plan §9.7) and off until the user enables it.
+    #[cfg(desktop)]
+    let builder =
+        builder
+            .manage(mcp::McpState::default())
+            .invoke_handler(tauri::generate_handler![
+                take_opened_files,
+                ai::ai_device_info,
+                ai::ai_model_status,
+                ai::ai_download,
+                ai::ai_download_cancel,
+                ai::ai_delete,
+                ai::ai_load,
+                ai::ai_unload,
+                ai::ai_generate,
+                ai::ai_cancel,
+                mcp::mcp_status,
+                mcp::mcp_set_enabled,
+                mcp::mcp_create_key,
+                mcp::mcp_revoke,
+                mcp::mcp_revoke_all,
+                mcp::mcp_reply,
+                mcp::mcp_audit,
+            ]);
+    #[cfg(mobile)]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        take_opened_files,
+        ai::ai_device_info,
+        ai::ai_model_status,
+        ai::ai_download,
+        ai::ai_download_cancel,
+        ai::ai_delete,
+        ai::ai_load,
+        ai::ai_unload,
+        ai::ai_generate,
+        ai::ai_cancel,
+    ]);
+    let app = builder
         .build(tauri::generate_context!())
         .expect("failed to start Lucid Sentence");
 

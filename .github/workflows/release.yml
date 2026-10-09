@@ -229,6 +229,10 @@ jobs:
       HAS_ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' }}
       NDK_VERSION: 27.2.12479018
       BUILD_TOOLS: 35.0.0
+      # On-device AI (llama.cpp): build the 64-bit Arm kernels with the int8 dot-product
+      # instructions (every 8 GB-class phone has them; Q4 models run several times faster).
+      # 32-bit Arm skips llama.cpp entirely (apps/shell/src-tauri/Cargo.toml).
+      GGML_CPU_ARM_ARCH: armv8.2-a+dotprod
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

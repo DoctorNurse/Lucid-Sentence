@@ -1,0 +1,10 @@
+# ggml CPU kernels for x86_64 builds of the on-device AI (packages/ai/native). Only the
+# ggml C/C++ code is compiled with these; Rust code keeps the baseline target, and the
+# runtime refuses to start on CPUs without AVX2/FMA/F16C (lucid_ai::engine::cpu_supported).
+# Keep in sync with packages/ai/native/.cargo/config.toml.
+[env]
+GGML_AVX = "ON"
+GGML_AVX2 = "ON"
+GGML_FMA = "ON"
+GGML_F16C = "ON"
+GGML_BMI2 = "ON"
