@@ -5,7 +5,8 @@ pens (Apple Pencil, S Pen, other active styluses), and Notes mode.
 
 Status, October 2026: everything under **"In the web demo today"** runs in
 `apps/demo` and is covered by Playwright tests (`e2e/pen.spec.ts`,
-`e2e/notes.spec.ts`). Everything under **"Native plan"** is design work for the
+`e2e/stylus.spec.ts`, `e2e/notes.spec.ts`) and Vitest unit tests
+(`apps/demo/test/ink-*.test.ts`). Everything under **"Native plan"** is design work for the
 mobile shell (`apps/mobile`) and has **not** been built yet.
 
 Platform facts are tagged:
@@ -40,30 +41,107 @@ Screenshots: `tablet-portrait.png` (iPad 11" portrait, 834 × 1194 pt at 2×) an
 
 ## 2. Pen input in the web demo
 
-Source: `apps/demo/src/editor/ink.ts`. It is built on Pointer Events, so the same
-code handles Apple Pencil in Safari, S Pen in Chrome on Android, and Windows pens.
+Source: `apps/demo/src/editor/ink.ts` (the layer) and `apps/demo/src/editor/ink/`
+(model, input, palm rejection, geometry, rendering, InkML, Apple Pencil bridge). It is
+built on Pointer Events, so the same code handles Apple Pencil in Safari, S Pen in
+Chrome and the Android WebView, and Windows pens.
 
-| Behavior               | How it works                                                                                                                                                                                                                                                      |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pressure               | `PointerEvent.pressure` drives stroke width (perfect-freehand). Mouse and touch input simulate pressure from speed.                                                                                                                                               |
-| Tilt                   | `tiltX` / `tiltY` widen the pencil tool's line, like shading with a tilted pencil.                                                                                                                                                                                |
-| Smooth fast strokes    | `getCoalescedEvents()` adds the in-between samples the browser coalesced into one event.                                                                                                                                                                          |
-| Hover preview          | A pen `pointermove` with `buttons === 0` shows a dot (or an eraser ring) where the nib will land.                                                                                                                                                                 |
-| Barrel / eraser button | A pen held with `buttons & 2` (barrel) or `buttons & 32` (eraser end) erases while held, then returns to the previous tool. Verified: Pointer Events defines the eraser button as `buttons` bit 32 ([W3C Pointer Events](https://www.w3.org/TR/pointerevents3/)). |
-| Palm rejection         | Touches are ignored while a pen is in contact, hovering, or was used in the last 700 ms. Rejected touches are counted for diagnostics.                                                                                                                            |
-| Draw with Touch        | Draw → Draw with Touch lets a finger draw. When it is off, one finger scrolls and only a pen draws.                                                                                                                                                               |
-| Auto-switch            | Touching the page with a pen while not drawing switches to the last pen tool (setting: "Switch to drawing when a pen touches the page", on by default, stored on this device).                                                                                    |
-| Undo / redo            | Ink operations go into the same undo history as text (Ctrl+Z / Ctrl+Y and the Quick Access Toolbar).                                                                                                                                                              |
-| Tools                  | Pen, pencil, highlighter, stroke eraser, point eraser, lasso select (move, delete). A floating pen toolbar with favorites can be dragged anywhere.                                                                                                                |
+### Ink model
 
-Tests drive real pen events through the Chrome DevTools Protocol
-(`Input.dispatchMouseEvent` with `pointerType: "pen"`, force and tilt) and touch
-events for palm rejection; see `e2e/helpers.ts`.
+`ink/model.ts`. A stroke is `{ id, tool, color, size, points, pressure, source, shape,
+t, rec }`; each point is `[x, y, pressure, tiltX, tiltY, t]` in page px, degrees and
+milliseconds from the stroke's start. `pressure: true` means the device reported real
+pressure; otherwise the width is simulated from speed. Tilt is stored per point, so a
+pencil stroke keeps its width after undo, zoom, or reopening a draft.
 
-Unverified (needs real devices): whether iPadOS Safari reports Apple Pencil hover as
-pen `pointermove` events with `buttons === 0`, and which S Pen button bits Chrome
-on Android reports. The demo handles both cases but has only been tested through
-emulated events.
+For storage and interchange a stroke becomes `InkStroke` (brush, channel list
+`x y p tx ty t`, and a `Float32Array` of samples). Drafts store version 1: a JSON
+envelope with each stroke's samples as base64. Old drafts (version 0, `[x, y, p]`
+points) still load.
+
+### Input
+
+| Behavior               | How it works                                                                                                                                                                                                                                                                            |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pressure               | `PointerEvent.pressure` drives stroke width (perfect-freehand). Pressure 0 during contact (some Android WebViews) and the 0.5 default count as "no pressure"; when real pressure first arrives mid-stroke, earlier samples take it. Mouse and touch simulate pressure from speed.       |
+| Tilt                   | `tiltX` / `tiltY`, or `altitudeAngle` / `azimuthAngle` (Safari), normalized both ways with the Pointer Events 3 formulas. The pencil widens as the pen leans (up to 2× at 30° or flatter).                                                                                              |
+| Coalesced samples      | `getCoalescedEvents()` adds the samples the browser merged into one event, so fast strokes stay smooth.                                                                                                                                                                                 |
+| Predicted samples      | `getPredictedEvents()` extends the live stroke toward where the pen is going, to hide latency. Predicted samples are drawn but never stored.                                                                                                                                            |
+| Hover preview          | A pen `pointermove` with no contact shows a dot (or an eraser ring) where the nib will land.                                                                                                                                                                                            |
+| Barrel / eraser button | Tracked for the whole hover → contact → lift cycle. Hovering with the barrel (`buttons & 2`) or the eraser end (`buttons & 32`, or `button === 5` on down) switches to the eraser until released. Pressed mid-stroke, the ink drawn so far is kept and the rest of that contact erases. |
+| Straight lines         | Highlighter strokes that are nearly straight become exact lines (snapped to horizontal or vertical within 5°). Any pen or pencil stroke held still for 400 ms before lifting straightens too.                                                                                           |
+| Draw with Touch        | Draw → Draw with Touch lets a finger draw. When it is off, one finger scrolls and only a pen draws.                                                                                                                                                                                     |
+| Auto-switch            | Touching the page with a pen while not drawing switches to the last pen tool (setting, on by default, stored on this device).                                                                                                                                                           |
+| Undo / redo            | Ink operations go into the same undo history as text (Ctrl+Z / Ctrl+Y and the Quick Access Toolbar).                                                                                                                                                                                    |
+| Tools                  | Pen, pencil, highlighter, stroke eraser, point eraser, lasso select (move, delete). A floating pen toolbar with favorites.                                                                                                                                                              |
+
+Verified: Pointer Events defines the eraser button as `buttons` bit 32 and the
+tilt/angle conversions ([W3C Pointer Events](https://www.w3.org/TR/pointerevents3/)).
+
+### Palm rejection
+
+`ink/palm.ts`, in layers:
+
+1. On a touch-first device fingers draw by default; the first real pen switches that
+   off ("only the pen draws now").
+2. Touches are ignored while a pen is touching or hovering, and for 700 ms after.
+3. Once a pen has been seen, a touch with a contact larger than 48 px is a palm.
+4. A finger stroke that a second finger follows within 300 ms was the start of a
+   pinch: it is removed, and from the undo history too.
+5. `pointercancel` (the OS or WebView took the gesture, often a palm) discards the
+   stroke being drawn instead of keeping it.
+
+### Rendering
+
+`ink/render.ts`. Finished strokes are painted into canvases instead of one SVG path
+each, so long notes stay fast:
+
+- **Layers**, bottom to top: highlighters (under the text), the text, pen and pencil
+  ink, the stroke being drawn, then the SVG overlay for hover, lasso and selection.
+- **Tiles**: each layer is a column of 1024 px canvas tiles at the screen's pixel
+  density (capped at 2.5×). Only tiles near the visible part of the page hold a
+  bitmap; the rest are released.
+- **Live stroke**: drawn on its own low-latency (`desynchronized`) canvas. Its outline
+  is built incrementally: every 64 samples the head is frozen, and only the tail is
+  re-outlined per event, so the cost per event stays flat however long the stroke is.
+- **Highlighter**: each color has its own layer. Strokes are painted opaque inside it
+  and the layer is faded once (38%, multiply blend; screen on night paper), so
+  overlapping strokes of one color don't get darker, while different colors still mix.
+- A vector copy of the ink stays in the SVG (`#ink-strokes`) for the magnifier strip
+  and for tests.
+
+### Tests
+
+`e2e/stylus.spec.ts` runs at phone (412 × 915) and tablet (1024 × 1366) sizes. Pressure
+and tilt come from Chrome DevTools Protocol pen input (`Input.dispatchMouseEvent` with
+`pointerType: "pen"`, force and tilt). What CDP can't express (eraser bit 32,
+`pointercancel`, coalesced and predicted lists, contact size, multi-finger timing) is
+sent as synthetic `PointerEvent`s. Unit tests cover the conversions, button tracking,
+palm rules, straight-line detection, the storage format, and InkML.
+
+### Unverified on real devices
+
+The engine has only been exercised with emulated events. To check on hardware:
+
+- **S Pen (Galaxy S26, Tab S-series)**: which `buttons` bits the side button reports in
+  Chrome and the Android WebView, during hover and contact; whether Air Command or
+  the WebView's own handwriting takes the pen first; whether `pointercancel` arrives
+  during normal pen strokes. If it does, strokes would now vanish (they used to be
+  kept), so this is the first thing to test.
+- **Apple Pencil (iPadOS Safari and WKWebView)**: hover as pen `pointermove` with no
+  buttons; `altitudeAngle`/`azimuthAngle` values; `getPredictedEvents()` (Safari
+  18.2+); whether Scribble takes strokes made over the text.
+- **Latency**: the `desynchronized` canvas hint and prediction on real panels.
+- **Palm size**: the 48 px threshold; `width`/`height` vary a lot by device.
+
+### Credit
+
+The palm-rejection layers, button tracking through the stroke, per-color highlighter
+layers, hold-to-straighten, and tiled rendering were inspired by
+[Saber](https://github.com/saber-notes/saber) (GPL-3.0), an open-source handwriting
+app. Lucid Sentence uses its ideas only; no Saber code was copied or translated.
+Stroke outlines use [perfect-freehand](https://github.com/steveruizok/perfect-freehand)
+(MIT).
 
 ## 3. Native plan: Android (S Pen and other styluses)
 
@@ -124,6 +202,13 @@ Verified:
   non-text views writable
   ([UIScribbleInteraction](https://developer.apple.com/documentation/uikit/uiscribbleinteraction),
   [WWDC20: Meet Scribble for iPad](https://developer.apple.com/videos/play/wwdc2020/10106/)).
+
+Built (not compiled yet): a Capacitor plugin in
+`apps/mobile/plugins/pencil-interaction` attaches `UIPencilInteraction` to the web view
+and sends each double-tap and squeeze, with the user's preferred action, to
+`apps/demo/src/editor/ink/pencil.ts`, which switches to the eraser (and back), returns to
+the previous tool, or shows the pen toolbar. It has not been built with Xcode or tried
+on an iPad; the iOS shell doesn't exist yet.
 
 Plan: honor the user's double-tap and squeeze preferences (switch to eraser, show
 the pen toolbar at the hover position), show the hover preview, and turn Scribble
@@ -199,6 +284,16 @@ Plan:
    the document). Embedding is an option to evaluate later.
 5. **Test**: round-trip fixtures in the fidelity suite (`eval/`): Word → us → Word
    and us → Word → us, comparing stroke count, bounds, color and width.
+
+Built behind a flag (`?inkdocx=1`, or `inkdocx` in the `lucid-sentence:flags`
+setting): `apps/demo/src/editor/ink/inkml.ts` writes strokes as InkML (channels X, Y, F,
+OTx, OTy, T at 1000 per cm; highlighter as `rasterOp="maskPen"`, pencil as
+`inkEffects="pencil"`; our own fields such as tool and audio time in an `ls:` namespace)
+and reads InkML back, including Office's difference-encoded traces. `buildInkDocxParts`
+returns the ink part, its content type and relationship, and a run with an
+`mc:AlternateContent` anchor (`wpi` content part, VML polyline fallback). Unit tests
+round-trip strokes through InkML and the docx parts. Nothing calls it on save yet; that
+waits for the engine's `.docx` writer (M1).
 
 Unverified (must be checked against files saved by current Word builds during the
 M0 bake-off): the exact `mc:AlternateContent` wrapper and fallback Word writes

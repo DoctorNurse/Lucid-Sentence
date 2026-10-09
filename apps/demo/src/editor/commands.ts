@@ -1158,7 +1158,7 @@ export const handlers: Record<string, Handler> = {
     a.refresh();
   },
   'review.ink.hide-ink': (a) => {
-    a.ink.svg.classList.toggle('ink--hidden');
+    a.ink.setHidden(!a.ink.hidden);
     a.refresh();
   },
 

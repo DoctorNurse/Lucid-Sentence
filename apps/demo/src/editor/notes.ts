@@ -335,6 +335,8 @@ export class WritingStrip {
 
   toggle(on = !this.open): void {
     this.open = on;
+    // The strip shows the vector copy of the ink; include the stroke being drawn.
+    this.ink.mirrorLive = on;
     this.root.hidden = !on;
     this.frame.hidden = !on;
     this.update();

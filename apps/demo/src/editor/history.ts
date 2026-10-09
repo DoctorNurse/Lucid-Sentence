@@ -56,6 +56,15 @@ export class History {
     this.onChange();
   }
 
+  /** Drop an ink operation that was withdrawn right after it happened. */
+  retract(op: InkOp): void {
+    const last = this.#undo.at(-1);
+    if (last?.kind === 'ink' && last.op === op) {
+      this.#undo.pop();
+      this.onChange();
+    }
+  }
+
   get canUndo(): boolean {
     return this.#undo.length > 0;
   }

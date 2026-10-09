@@ -1,0 +1,20 @@
+{
+  "name": "@lucid-sentence/capacitor-pencil-interaction",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Apple Pencil double-tap and squeeze (UIPencilInteraction) for the Lucid Sentence iPad app.",
+  "license": "AGPL-3.0-only",
+  "files": [
+    "ios/Sources",
+    "Package.swift",
+    "README.md"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=7"
+  }
+}
