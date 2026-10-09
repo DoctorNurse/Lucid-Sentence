@@ -5,7 +5,7 @@
   --muted: #69716d;
   --page: #ffffff;
   --line: #e2e5e1;
-  --accent: #0e8a74;
+  --accent: #0b7488;
   font-family:
     Inter,
     ui-sans-serif,
@@ -23,7 +23,7 @@
     --muted: #9aa29e;
     --page: #1d211f;
     --line: #2f3532;
-    --accent: #3cc7a8;
+    --accent: #45c3d6;
   }
 }
 :root[data-theme='dark'] {
@@ -32,7 +32,7 @@
   --muted: #9aa29e;
   --page: #1d211f;
   --line: #2f3532;
-  --accent: #3cc7a8;
+  --accent: #45c3d6;
 }
 :root[data-theme='high-contrast'] {
   --bg: #000;
@@ -67,10 +67,9 @@ body {
   font-weight: 700;
 }
 .mark {
-  width: 16px;
-  height: 16px;
-  border-radius: 5px;
-  background: linear-gradient(135deg, var(--accent), #6ad6be);
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 .doc {
   color: var(--muted);

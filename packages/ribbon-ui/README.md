@@ -22,7 +22,7 @@ It emits `ls-command` events (`{ id, kind, layout, pressed? }`); engine wiring
 comes in M1.
 
 Theme tokens (`--ls-*` custom properties) provide Light, Dark, and
-High-contrast themes with a teal accent (not Word blue), 8–12 px radii, Inter
+High-contrast themes with a cyan accent matched to the app icon (not Word blue), 8–12 px radii, Inter
 type, and motion that honors `prefers-reduced-motion`. Glyphs are original
 placeholder line tiles; the final original icon set is tracked in the plan
 (§4.7). No Microsoft or ONLYOFFICE artwork is used.

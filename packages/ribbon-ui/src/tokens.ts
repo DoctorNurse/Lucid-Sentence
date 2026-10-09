@@ -17,7 +17,10 @@ export interface ThemeTokens {
   textMuted: string;
   border: string;
   hover: string;
-  /** Accent: "Lucid teal". User-selectable accents override this. */
+  /**
+   * Accent: "Lucid cyan", matched to the app icon (hue ~190°). Light: 5.4:1 with
+   * white text; dark: 7.8:1 on the dark surface. User-selectable accents override this.
+   */
   accent: string;
   accentText: string;
   accentSoft: string;
@@ -34,11 +37,11 @@ export const themes: Record<ThemeName, ThemeTokens> = {
     textMuted: '#69716d',
     border: '#e2e5e1',
     hover: '#eef2ef',
-    accent: '#0e8a74',
+    accent: '#0b7488',
     accentText: '#ffffff',
-    accentSoft: '#dcf1eb',
+    accentSoft: '#dbeff3',
     shadow: '0 1px 2px rgb(16 24 20 / 6%), 0 4px 16px rgb(16 24 20 / 6%)',
-    focus: '#0e8a74',
+    focus: '#0b7488',
   },
   dark: {
     chrome: '#141716',
@@ -48,11 +51,11 @@ export const themes: Record<ThemeName, ThemeTokens> = {
     textMuted: '#9aa29e',
     border: '#2f3532',
     hover: '#2a302d',
-    accent: '#3cc7a8',
-    accentText: '#06231c',
-    accentSoft: '#173a32',
+    accent: '#45c3d6',
+    accentText: '#06232a',
+    accentSoft: '#143840',
     shadow: '0 1px 2px rgb(0 0 0 / 40%), 0 6px 20px rgb(0 0 0 / 35%)',
-    focus: '#3cc7a8',
+    focus: '#45c3d6',
   },
   'high-contrast': {
     chrome: '#000000',
@@ -83,7 +86,7 @@ export const shape = {
 
 const KEBAB = (s: string): string => s.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
 
-/** CSS custom-property declarations for a theme, e.g. `--ls-accent: #0e8a74;`. */
+/** CSS custom-property declarations for a theme, e.g. `--ls-accent: #0b7488;`. */
 export function themeDeclarations(name: ThemeName, accent?: string): string {
   const t = { ...themes[name], ...(accent ? { accent, focus: accent } : {}) };
   return Object.entries(t)

@@ -190,7 +190,7 @@ describe('theme tokens', () => {
     // Word's brand blue is #2b579a / #185abd; the accent must be distinct.
     for (const t of Object.values(themes))
       expect(t.accent.toLowerCase()).not.toMatch(/2b579a|185abd/);
-    expect(themeDeclarations('dark')).toContain('--ls-accent: #3cc7a8;');
+    expect(themeDeclarations('dark')).toContain('--ls-accent: #45c3d6;');
     expect(themeDeclarations('light', '#7c3aed')).toContain('--ls-accent: #7c3aed;');
   });
 
