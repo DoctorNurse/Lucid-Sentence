@@ -1481,9 +1481,11 @@ engine.addEventListener('state', () => {
   refresh();
 });
 // Right-click in the document: spelling suggestions, then the usual edit commands.
-engine.addEventListener('contextmenu', (ev) => {
-  const { x, y } = (ev as CustomEvent<EngineContextMenu>).detail;
+// Suggestions come from the spell worker a moment later; the menu re-opens with them.
+let contextMenu: (EngineContextMenu & { waiting: string | null }) | null = null;
+function showEngineContextMenu(x: number, y: number): void {
   const s = engine.state;
+  contextMenu = { x, y, waiting: s.spell && !s.spell.variants ? s.spell.word : null };
   const entries: MenuEntry[] = [...spellingEntries(engineApp)];
   if (entries.length) entries.push('sep');
   const cmd = (label: string, id: string, shortcut?: string): MenuEntry => ({
@@ -1519,6 +1521,16 @@ engine.addEventListener('contextmenu', (ev) => {
     label: 'Context menu',
     role: 'menu',
   });
+}
+engine.addEventListener('contextmenu', (ev) => {
+  const { x, y } = (ev as CustomEvent<EngineContextMenu>).detail;
+  showEngineContextMenu(x, y);
+});
+engine.addEventListener('state', () => {
+  const m = contextMenu;
+  if (!m?.waiting || !popoverOpen()) return;
+  const spell = engine.state.spell;
+  if (spell?.word === m.waiting && spell.variants) showEngineContextMenu(m.x, m.y);
 });
 engine.addEventListener('key', (ev) => {
   const e = (ev as CustomEvent<KeyboardEvent>).detail;
