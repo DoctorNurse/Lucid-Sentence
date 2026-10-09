@@ -48,7 +48,8 @@ pnpm --filter @lucid-sentence/shell tauri android build --apk
 publishes a GitHub Release with auto-generated notes. Running the workflow by hand
 (or a pull request that touches `apps/shell` or `apps/demo`) builds everything and
 keeps the files as workflow artifacts without releasing. Assets have stable names
-so README links to `releases/latest/download/…` always work:
+(the README links to them under `releases/download/<tag>/…`; switch those links to
+`releases/latest/download/…` once a stable, non-pre-release version ships):
 
 `Lucid-Sentence-macOS.dmg`, `Lucid-Sentence-Windows-Setup.exe`,
 `Lucid-Sentence-Windows.msi`, `Lucid-Sentence-Linux.AppImage`,
@@ -60,8 +61,9 @@ Cut a release (after review):
 git tag v0.1.0-preview && git push origin v0.1.0-preview
 ```
 
-Release tags must be on a commit that contains this workflow. `releases/latest`
-skips releases marked as pre-release, so the workflow publishes a normal release.
+Release tags must be on a commit that contains this workflow. Tags with a
+pre-release part (for example `v0.1.0-preview`) are published as GitHub
+pre-releases; `releases/latest` skips those.
 
 ### Signing secrets (all optional)
 

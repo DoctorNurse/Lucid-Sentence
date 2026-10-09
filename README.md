@@ -12,12 +12,12 @@ A free, open-source word processor for **.docx** with Word’s familiar ribbon a
 
 > **Preview: .docx saving arrives with the engine.** This preview runs the full editor UI on a sample page so you can try the ribbon, pen, and Notes mode. It doesn't open or save your own `.docx` files yet. It works offline and collects nothing.
 
-[![Download for macOS](https://img.shields.io/badge/macOS-Download_.dmg-0a6a7c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/latest/download/Lucid-Sentence-macOS.dmg)
-[![Download for Windows](https://img.shields.io/badge/Windows-Download_installer-0a6a7c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/latest/download/Lucid-Sentence-Windows-Setup.exe)
-[![Download for Android](https://img.shields.io/badge/Android-Download_.apk-0a6a7c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/latest/download/Lucid-Sentence-Android.apk)
-[![Download for Linux](https://img.shields.io/badge/Linux-Download_AppImage-0a6a7c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/latest/download/Lucid-Sentence-Linux.AppImage)
+[![Download for macOS](https://img.shields.io/badge/macOS-Download_.dmg-0a6a7c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.0-preview/Lucid-Sentence-macOS.dmg)
+[![Download for Windows](https://img.shields.io/badge/Windows-Download_installer-0a6a7c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.0-preview/Lucid-Sentence-Windows-Setup.exe)
+[![Download for Android](https://img.shields.io/badge/Android-Download_.apk-0a6a7c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.0-preview/Lucid-Sentence-Android.apk)
+[![Download for Linux](https://img.shields.io/badge/Linux-Download_AppImage-0a6a7c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.0-preview/Lucid-Sentence-Linux.AppImage)
 
-All files, including the Windows `.msi`, the Linux `.deb`, and checksums, are on the [latest release](https://github.com/DoctorNurse/Lucid-Sentence/releases/latest) page.
+These are **unsigned testing builds** (version 0.1.0-preview). All files, including the Windows `.msi`, the Linux `.deb`, and checksums, are on the [Releases](https://github.com/DoctorNurse/Lucid-Sentence/releases) page.
 
 <details>
 <summary><b>Mac</b> (Apple silicon and Intel)</summary>
@@ -26,7 +26,7 @@ All files, including the Windows `.msi`, the Linux `.deb`, and checksums, are on
 2. Drag **Lucid Sentence** onto the **Applications** folder.
 3. Open it from Applications.
 
-If macOS says it can't check the app for malicious software (builds that aren't notarized yet):
+If macOS says it can't check the app for malicious software (this preview isn't notarized yet):
 
 - Right-click (or Control-click) **Lucid Sentence** in Applications, choose **Open**, then **Open** again; or
 - On macOS 15 and later: try to open it once, then go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to the message about Lucid Sentence. Confirm with your password.
