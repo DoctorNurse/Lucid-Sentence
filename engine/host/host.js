@@ -16,11 +16,21 @@
    *   images:   { "media/image1.png": "blob:..." } for the document's pictures
    *   title:    file name shown in sdkjs messages
    *   register: called with the api before loading, to attach callbacks
+   *   spellCheck: false to start with spell check off (default on)
    */
-  // No spelling dictionaries ship yet: don't start sdkjs's spell-check worker
-  // (it would request common/spell/spell/spell.js, which we don't stage).
-  // sdk-all-min.js has loaded synchronously above, so the prototype exists.
-  AscCommon.baseEditorsApi.prototype._coSpellCheckInit = function () {};
+  // Spell check runs in sdkjs's Hunspell worker with the dictionaries that
+  // ship in engine/dist/dictionaries (dictionaries/languages.js, loaded above,
+  // maps LCID -> folder). Offer only those languages, so the worker never asks
+  // for a dictionary that isn't there; text in other languages isn't checked.
+  var shipped = window.LucidDictionaries || {};
+  var allLanguages = AscCommon.spellcheckGetLanguages();
+  AscCommon.spellcheckGetLanguages = AscCommon['spellcheckGetLanguages'] = function () {
+    var out = {};
+    Object.keys(allLanguages).forEach(function (lcid) {
+      if (shipped[lcid] === allLanguages[lcid].name) out[lcid] = allLanguages[lcid];
+    });
+    return out;
+  };
 
   function boot(opts) {
     return new Promise(function (resolve, reject) {
@@ -36,8 +46,7 @@
       api.asc_registerCallback('asc_onDocumentContentReady', function () {
         if (settled) return;
         settled = true;
-        // No dictionaries ship offline yet.
-        api.asc_setSpellCheck(false);
+        api.asc_setSpellCheck(opts.spellCheck !== false);
         resolve(api);
       });
       api.asc_registerCallback('asc_onGetEditorPermissions', function () {

@@ -5,13 +5,17 @@
  * grows one command at a time (docs/PLAN.md, M1).
  */
 import type { CommandEventDetail } from '@lucid-sentence/ribbon-ui';
-import { gallery, el, menu, openPopover } from '../editor/ui.js';
+import { gallery, el, menu, openPopover, tableGrid, type MenuEntry } from '../editor/ui.js';
 import type { DocEngine } from './engine.js';
 
 export interface EngineApp {
   engine: DocEngine;
   save: () => void;
   saveAs: () => void;
+  /** Ask for picture files (native picker, File System Access, or <input>). */
+  insertPictures: () => void;
+  print: () => void;
+  toast: (msg: string) => void;
 }
 
 type Handler = (a: EngineApp, d: CommandEventDetail) => void;
@@ -76,6 +80,119 @@ const align =
       api.put_PrAlign(v);
     });
   };
+
+const call =
+  (fn: (api: Parameters<Parameters<DocEngine['run']>[0]>[0]) => void): Handler =>
+  (a) => {
+    a.engine.run(fn);
+  };
+
+/** Header or footer editing, from the Insert tab or the Header & Footer tab. */
+const editHeader =
+  (footer: boolean): Handler =>
+  (a) => {
+    const page = Math.max(0, a.engine.state.page - 1);
+    a.engine.run((api) => {
+      if (footer) api.GoToFooter(page);
+      else api.GoToHeader(page);
+    });
+  };
+
+const PAGE_NUMBER_SPOTS: { label: string; where: number; align: number }[] = [
+  { label: 'Top of Page, Left', where: 1, align: 1 },
+  { label: 'Top of Page, Center', where: 1, align: 2 },
+  { label: 'Top of Page, Right', where: 1, align: 0 },
+  { label: 'Bottom of Page, Left', where: 2, align: 1 },
+  { label: 'Bottom of Page, Center', where: 2, align: 2 },
+  { label: 'Bottom of Page, Right', where: 2, align: 0 },
+  { label: 'Current Position', where: -1, align: 0 },
+];
+const pageNumber: Handler = (a, d) => {
+  pop(
+    d,
+    menu(
+      PAGE_NUMBER_SPOTS.map((p) => ({
+        label: p.label,
+        run: () => {
+          a.engine.run((api) => {
+            api.put_PageNum(p.where, p.align);
+          });
+        },
+      })),
+    ),
+    'Page Number',
+  );
+};
+
+/** Suggestions and actions for the misspelled word at the cursor. */
+export function spellingEntries(a: EngineApp): MenuEntry[] {
+  const sp = a.engine.state.spell;
+  if (!sp) return [];
+  const out: MenuEntry[] = [{ heading: `“${sp.word}”` }];
+  if (sp.variants === null)
+    out.push({ label: 'Looking for suggestions…', disabled: true, run: () => {} });
+  else if (sp.variants.length === 0)
+    out.push({ label: 'No suggestions', disabled: true, run: () => {} });
+  for (const v of (sp.variants ?? []).slice(0, 6)) {
+    out.push({
+      label: v,
+      run: () => {
+        a.engine.replaceMisspelling(v);
+      },
+    });
+  }
+  out.push(
+    {
+      label: 'Ignore',
+      run: () => {
+        a.engine.ignoreMisspelling(false);
+      },
+    },
+    {
+      label: 'Ignore All',
+      run: () => {
+        a.engine.ignoreMisspelling(true);
+      },
+    },
+  );
+  return out;
+}
+
+const spelling: Handler = (a, d) => {
+  const word = a.engine.nextMisspelling();
+  if (word === null) {
+    a.toast('Spelling check complete. No misspellings found.');
+    return;
+  }
+  const show = (): void => {
+    const entries: MenuEntry[] = [
+      ...spellingEntries(a),
+      'sep',
+      {
+        label: 'Next Misspelling',
+        shortcut: 'F7',
+        run: () => {
+          spelling(a, d);
+        },
+      },
+    ];
+    pop(d, menu(entries), 'Spelling');
+  };
+  show();
+  // Suggestions arrive from the spell worker shortly after the word is selected.
+  if (a.engine.state.spell?.variants === null) {
+    const again = (): void => {
+      if (a.engine.state.spell?.word === word && a.engine.state.spell.variants !== null) {
+        a.engine.removeEventListener('state', again);
+        show();
+      }
+    };
+    a.engine.addEventListener('state', again);
+    setTimeout(() => {
+      a.engine.removeEventListener('state', again);
+    }, 3000);
+  }
+};
 
 export const engineHandlers: Record<string, Handler> = {
   // Home › Clipboard
@@ -236,6 +353,172 @@ export const engineHandlers: Record<string, Handler> = {
       api.put_AddPageBreak();
     });
   },
+  'insert.tables.table': (a, d) => {
+    pop(
+      d,
+      tableGrid((rows, cols) => {
+        a.engine.run((api) => {
+          api.put_Table(cols, rows);
+        });
+      }),
+      'Insert Table',
+    );
+  },
+  'insert.illustrations.pictures': (a, d) => {
+    pop(
+      d,
+      menu([
+        {
+          label: 'This Device…',
+          detail: 'PNG, JPEG, GIF, BMP, or WebP',
+          run: () => {
+            a.insertPictures();
+          },
+        },
+      ]),
+      'Insert Picture',
+    );
+  },
+  'insert.header-footer.header': editHeader(false),
+  'insert.header-footer.footer': editHeader(true),
+  'insert.header-footer.page-number': pageNumber,
+
+  // Table Layout (contextual)
+  'table-layout.rows-columns.insert-above': call((api) => {
+    api.addRowAbove(1);
+  }),
+  'table-layout.rows-columns.insert-below': call((api) => {
+    api.addRowBelow(1);
+  }),
+  'table-layout.rows-columns.insert-left': call((api) => {
+    api.addColumnLeft(1);
+  }),
+  'table-layout.rows-columns.insert-right': call((api) => {
+    api.addColumnRight(1);
+  }),
+  'table-layout.rows-columns.delete': (a, d) => {
+    pop(
+      d,
+      menu([
+        {
+          label: 'Delete Rows',
+          run: () => {
+            a.engine.run((api) => {
+              api.remRow();
+            });
+          },
+        },
+        {
+          label: 'Delete Columns',
+          run: () => {
+            a.engine.run((api) => {
+              api.remColumn();
+            });
+          },
+        },
+        {
+          label: 'Delete Table',
+          run: () => {
+            a.engine.run((api) => {
+              api.remTable();
+            });
+          },
+        },
+      ]),
+      'Delete',
+    );
+  },
+  'table-layout.merge.merge-cells': call((api) => {
+    api.MergeCells();
+  }),
+  'table-layout.merge.split-cells': (a, d) => {
+    pop(
+      d,
+      menu([
+        {
+          label: 'Split into 2 Columns',
+          run: () => {
+            a.engine.run((api) => {
+              api.SplitCell(2, 1);
+            });
+          },
+        },
+        {
+          label: 'Split into 3 Columns',
+          run: () => {
+            a.engine.run((api) => {
+              api.SplitCell(3, 1);
+            });
+          },
+        },
+        {
+          label: 'Split into 2 Rows',
+          run: () => {
+            a.engine.run((api) => {
+              api.SplitCell(1, 2);
+            });
+          },
+        },
+      ]),
+      'Split Cells',
+    );
+  },
+  'table-layout.table.select': (a, d) => {
+    pop(
+      d,
+      menu([
+        {
+          label: 'Select Cell',
+          run: () => {
+            a.engine.run((api) => {
+              api.selectCell();
+            });
+          },
+        },
+        {
+          label: 'Select Column',
+          run: () => {
+            a.engine.run((api) => {
+              api.selectColumn();
+            });
+          },
+        },
+        {
+          label: 'Select Row',
+          run: () => {
+            a.engine.run((api) => {
+              api.selectRow();
+            });
+          },
+        },
+        {
+          label: 'Select Table',
+          run: () => {
+            a.engine.run((api) => {
+              api.selectTable();
+            });
+          },
+        },
+      ]),
+      'Select',
+    );
+  },
+
+  // Header & Footer (contextual)
+  'header-footer.header-footer.header': editHeader(false),
+  'header-footer.header-footer.footer': editHeader(true),
+  'header-footer.header-footer.page-number': pageNumber,
+  'header-footer.navigation.go-to-header': editHeader(false),
+  'header-footer.navigation.go-to-footer': editHeader(true),
+  'header-footer.insert.pictures': (a) => {
+    a.insertPictures();
+  },
+  'header-footer.close.close': (a) => {
+    a.engine.closeHeaderFooter();
+  },
+
+  // Review › Proofing
+  'review.proofing.spelling-grammar': spelling,
 
   // View › Zoom
   'view.zoom.zoom-100': (a) => {
@@ -260,6 +543,9 @@ export const engineHandlers: Record<string, Handler> = {
   },
   'file.rail.save-as': (a) => {
     a.saveAs();
+  },
+  'file.rail.print': (a) => {
+    a.print();
   },
 };
 

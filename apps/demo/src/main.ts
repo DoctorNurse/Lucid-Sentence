@@ -48,9 +48,24 @@ import {
 } from './editor/notes.js';
 import { Palette } from './editor/palette.js';
 import { EditorSurface } from './editor/surface.js';
-import { closePopover, el, popoverOpen, tap, toast } from './editor/ui.js';
-import { ENGINE_WIRED, appLevel, engineHandlers, enginePressed } from './engine/commands.js';
-import { DocEngine } from './engine/engine.js';
+import {
+  type MenuEntry,
+  closePopover,
+  el,
+  menu,
+  openPopover,
+  popoverOpen,
+  tap,
+  toast,
+} from './editor/ui.js';
+import {
+  ENGINE_WIRED,
+  appLevel,
+  engineHandlers,
+  enginePressed,
+  spellingEntries,
+} from './engine/commands.js';
+import { DocEngine, type EngineContextMenu } from './engine/engine.js';
 import * as files from './engine/files.js';
 import { initPlatform } from './native.js';
 import { drawRulers, geometry, type PageSetup } from './page.js';
@@ -107,6 +122,15 @@ const engineApp = {
   saveAs: () => {
     void saveDocx(true);
   },
+  insertPictures: () => {
+    void insertPictures();
+  },
+  print: () => {
+    void printDocx();
+  },
+  toast: (msg: string) => {
+    toast(msg);
+  },
 };
 
 function setEngineMode(on: boolean): void {
@@ -141,6 +165,18 @@ function refreshEngine(): void {
   ($('#zoom-range') as HTMLInputElement).value = String(s.zoom);
   $('#saved').textContent = s.modified ? 'Edited' : 'Saved';
   $('#saved').classList.toggle('saved--dirty', s.modified);
+  const ctx: TabId[] = [];
+  if (s.inTable) ctx.push('table-design', 'table-layout');
+  if (s.image) ctx.push('picture-format');
+  if (s.inHeader) ctx.push('header-footer');
+  const next = ctx.join(' ');
+  const had = (ribbon.getAttribute('contextual') ?? '').split(' ').filter(Boolean);
+  if (had.join(' ') !== next) {
+    ribbon.setAttribute('contextual', next);
+    // Word brings Header & Footer (and Picture Format) forward when they appear.
+    if (s.inHeader && !had.includes('header-footer')) ribbon.activeTab = 'header-footer';
+    else if (s.image && !had.includes('picture-format')) ribbon.activeTab = 'picture-format';
+  }
   refreshQat();
 }
 
@@ -247,6 +283,51 @@ async function saveDocx(as: boolean): Promise<void> {
   } finally {
     saving = false;
   }
+}
+
+async function insertPictures(): Promise<void> {
+  try {
+    const pics = await files.pickPictures();
+    if (pics.length) engine.insertPictures(pics);
+  } catch (e) {
+    console.error(e);
+    toast("Couldn't insert that picture.");
+  }
+}
+
+const pdfName = (): string =>
+  `${$('#doc-name').textContent.replace(/\.docx$/i, '') || 'Document'}.pdf`;
+
+/** File > Print: lay the document out as a PDF, then print it (or save it where printing isn't available). */
+async function printDocx(): Promise<void> {
+  if (!engine.active) return;
+  status('Preparing to print…');
+  try {
+    const pdf = await engine.exportPdf();
+    if (files.printPdf(pdf)) {
+      status('Ready');
+      return;
+    }
+    if (await files.savePdf(pdfName(), pdf)) toast('Saved as PDF. Open it to print.');
+  } catch (e) {
+    console.error(e);
+    toast("Couldn't prepare the document for printing.");
+  }
+  status('Ready');
+}
+
+/** File > Export > PDF. */
+async function exportPdf(): Promise<void> {
+  if (!engine.active) return;
+  status('Exporting PDF…');
+  try {
+    const pdf = await engine.exportPdf();
+    if (await files.savePdf(pdfName(), pdf)) toast(`Exported ${pdfName()}`);
+  } catch (e) {
+    console.error(e);
+    toast("Couldn't export the PDF.");
+  }
+  status('Ready');
 }
 
 async function downloadDocx(): Promise<void> {
@@ -695,7 +776,8 @@ const app: App = {
   },
   save,
   print: () => {
-    window.print();
+    if (engine.active) void printDocx();
+    else window.print();
   },
   setZoom,
   refresh,
@@ -822,9 +904,16 @@ function renderBackstage(): void {
       },
       print: () => {
         backToDoc();
+        if (engine.active) {
+          void printDocx();
+          return;
+        }
         setTimeout(() => {
           window.print();
         }, 50);
+      },
+      exportPdf: () => {
+        void exportPdf();
       },
       promosEnabled: promosEnabled(),
       settings,
@@ -1362,9 +1451,10 @@ function engineKey(e: KeyboardEvent, k: string): void {
     go(() => {
       openBackstage('file.rail.open');
     });
-  else if (k === 'ctrl+p')
+  else if (k === 'ctrl+p') go(() => void printDocx());
+  else if (k === 'f7')
     go(() => {
-      toast('Printing .docx files comes later in M1.');
+      run('review.proofing.spelling-grammar');
     });
   else if (k === 'ctrl+z' || k === 'ctrl+y' || k === 'ctrl+shift+z')
     go(() => {
@@ -1389,6 +1479,46 @@ for (const r of allCommands()) {
 }
 engine.addEventListener('state', () => {
   refresh();
+});
+// Right-click in the document: spelling suggestions, then the usual edit commands.
+engine.addEventListener('contextmenu', (ev) => {
+  const { x, y } = (ev as CustomEvent<EngineContextMenu>).detail;
+  const s = engine.state;
+  const entries: MenuEntry[] = [...spellingEntries(engineApp)];
+  if (entries.length) entries.push('sep');
+  const cmd = (label: string, id: string, shortcut?: string): MenuEntry => ({
+    label,
+    shortcut,
+    run: () => {
+      run(id);
+    },
+  });
+  entries.push(
+    cmd('Cut', 'home.clipboard.cut', 'Ctrl+X'),
+    cmd('Copy', 'home.clipboard.copy', 'Ctrl+C'),
+  );
+  if (s.inTable) {
+    entries.push(
+      'sep',
+      cmd('Insert Row Above', 'table-layout.rows-columns.insert-above'),
+      cmd('Insert Row Below', 'table-layout.rows-columns.insert-below'),
+      cmd('Insert Column Left', 'table-layout.rows-columns.insert-left'),
+      cmd('Insert Column Right', 'table-layout.rows-columns.insert-right'),
+      {
+        label: 'Delete Row',
+        run: () => {
+          engine.run((api) => {
+            api.remRow();
+          });
+        },
+      },
+    );
+  }
+  if (s.inHeader) entries.push('sep', cmd('Close Header and Footer', 'header-footer.close.close'));
+  openPopover({ x, y, width: 0, height: 0 }, menu(entries), {
+    label: 'Context menu',
+    role: 'menu',
+  });
 });
 engine.addEventListener('key', (ev) => {
   const e = (ev as CustomEvent<KeyboardEvent>).detail;

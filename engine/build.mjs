@@ -8,6 +8,7 @@
  *   dist/sdkjs/common/      the runtime files sdkjs loads (font engine, images, ...)
  *   dist/sdkjs/vendor/      XRegExp and jQuery, which sdkjs expects as globals
  *   dist/fonts/             the bundled fonts, in sdkjs's web font format
+ *   dist/dictionaries/      Hunspell dictionaries for the spell checker
  *   dist/x2t/               x2t.wasm (ONLYOFFICE core via CryptPad) + our worker
  *   dist/lucid/apps/word/main/  the host page the app loads in an iframe
  *   dist/SOURCES.json       what went in, for the Legal Notices and Corresponding Source
@@ -135,6 +136,9 @@ function stageSdkjs({ src, out }) {
     'Charts/ChartStyles.js',
     'Drawings/Format/path-boolean-min.js',
     'Images',
+    // Hunspell worker for the spell checker (dictionaries: stageDictionaries).
+    'spell/spell/spell.js',
+    'spell/spell/spell.wasm',
   ]) {
     cpSync(join(common, p), join(dst, 'common', p), { recursive: true });
   }
@@ -206,6 +210,40 @@ async function stageFonts() {
   }
 }
 
+// ── Spell-check dictionaries: pinned Hunspell files, one folder per language
+async function stageDictionaries() {
+  const { repo, commit, languages } = manifest.dictionaries;
+  const raw = (p) => `${repo.replace('github.com', 'raw.githubusercontent.com')}/${commit}/${p}`;
+  const cacheDir = join(CACHE, `dictionaries-${commit.slice(0, 12)}`);
+  mkdirSync(cacheDir, { recursive: true });
+  const lcids = {};
+  for (const [lang, info] of Object.entries(languages)) {
+    const dir = join(DIST, 'dictionaries', lang);
+    mkdirSync(dir, { recursive: true });
+    for (const [file, want] of Object.entries(info.files)) {
+      const cached = join(cacheDir, `${lang}__${file}`);
+      let data = existsSync(cached) ? readFileSync(cached) : null;
+      if (!data || sha('sha256', data) !== want) {
+        log(`fetching dictionary ${lang}/${file}`);
+        data = await download(raw(`${lang}/${file}`));
+        if (sha('sha256', data) !== want) throw new Error(`sha256 mismatch: ${lang}/${file}`);
+        writeFileSync(cached, data);
+      }
+      if (info.notices.includes(file)) {
+        writeFileSync(join(DIST, 'licenses', `dictionary-${lang}-${file}`), data);
+      } else {
+        writeFileSync(join(dir, file), data);
+      }
+    }
+    lcids[info.lcid] = lang;
+  }
+  // The host page reads this to offer only the languages that ship.
+  writeFileSync(
+    join(DIST, 'dictionaries', 'languages.js'),
+    `window.LucidDictionaries = ${JSON.stringify(lcids)};\n`,
+  );
+}
+
 // ── x2t: CryptPad's WebAssembly build of ONLYOFFICE core
 async function stageX2t() {
   const { url, sha512 } = manifest.x2t;
@@ -252,6 +290,7 @@ async function main() {
   mkdirSync(join(DIST, 'licenses'), { recursive: true });
   stageSdkjs(sdk);
   await stageFonts();
+  await stageDictionaries();
   await stageX2t();
   stageHost();
   writeFileSync(

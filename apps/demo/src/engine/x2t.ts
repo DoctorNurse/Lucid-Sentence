@@ -1,8 +1,8 @@
 /**
  * Client for the x2t worker (engine/x2t/worker.js): converts .docx to the
- * editor's binary format and back, off the main thread.
+ * editor's binary format and back, and renders PDFs, off the main thread.
  */
-export type Format = 'docx' | 'bin';
+export type Format = 'docx' | 'bin' | 'pdf';
 
 export interface Converted {
   data: Uint8Array;
@@ -59,13 +59,15 @@ export class X2t {
     from: Format,
     to: Format,
     media: Record<string, Uint8Array> = {},
+    /** For bin → pdf: sdkjs's page renderer output (bridge.pdfData). */
+    pdf?: Uint8Array,
   ): Promise<Converted> {
     const w = this.start();
     const id = ++this.seq;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
       // Copies, so the caller keeps its buffers (we keep the original media for saving).
-      w.postMessage({ id, data: data.slice(), from, to, media });
+      w.postMessage({ id, data: data.slice(), from, to, media, pdf });
     });
   }
 }

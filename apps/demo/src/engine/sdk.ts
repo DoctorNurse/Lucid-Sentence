@@ -36,7 +36,59 @@ export interface SdkApi {
   isDocumentModified(): boolean;
   asc_enableKeyEvents(on: boolean): void;
   Resize(): void;
+  // Tables
+  put_Table(cols: number, rows: number, styleId?: string): void;
+  addRowAbove(count?: number): void;
+  addRowBelow(count?: number): void;
+  addColumnLeft(count?: number): void;
+  addColumnRight(count?: number): void;
+  remRow(): void;
+  remColumn(): void;
+  remTable(): void;
+  MergeCells(): void;
+  SplitCell(cols: number, rows: number): void;
+  selectRow(): void;
+  selectColumn(): void;
+  selectCell(): void;
+  selectTable(): void;
+  // Headers and footers
+  GoToHeader(page: number): void;
+  GoToFooter(page: number): void;
+  /** where: 1 header, 2 footer, -1 at the cursor; align: 0 right, 1 left, 2 center */
+  put_PageNum(where: number, align: number): void;
+  HeadersAndFooters_DifferentFirstPage(on: boolean): void;
+  HeadersAndFooters_DifferentOddandEvenPage(on: boolean): void;
+  // Spelling
+  asc_setSpellCheck(on: boolean): void;
+  asc_replaceMisspelledWord(word: string, prop: SdkSpellCheck): void;
+  asc_ignoreMisspelledWord(prop: SdkSpellCheck, all: boolean): void;
+  getSelectedElements(): SdkSelectedObject[];
 }
+
+/** asc_CSelectedObject: what the cursor is in (paragraph, table, picture, misspelled word, ...). */
+export interface SdkSelectedObject {
+  get_ObjectType(): number;
+  get_ObjectValue(): unknown;
+}
+
+export interface SdkSpellCheck {
+  get_Word(): string;
+  get_Checked(): boolean;
+  get_Variants(): string[] | null;
+}
+
+/** Asc.c_oAscTypeSelectElement */
+export const SelectElement = {
+  Paragraph: 0,
+  Table: 1,
+  Image: 2,
+  Header: 3,
+  Hyperlink: 4,
+  SpellCheck: 5,
+  Shape: 6,
+  Chart: 8,
+  Math: 9,
+} as const;
 
 export interface SdkBridge {
   version: number;
@@ -46,6 +98,11 @@ export interface SdkBridge {
   markSaved(api: SdkApi): void;
   paragraphs(api: SdkApi): { text: string; style: string; table?: boolean }[];
   styleNames(api: SdkApi): string[];
+  nextMisspelling(api: SdkApi): string | null;
+  misspellingCount(api: SdkApi): number;
+  insertImages(api: SdkApi, images: { name: string; url: string }[]): void;
+  pdfData(api: SdkApi): Uint8Array;
+  closeHeaderFooter(api: SdkApi): void;
 }
 
 export interface HostWindow extends Window {
@@ -56,6 +113,7 @@ export interface HostWindow extends Window {
       title: string;
       author?: string;
       locale?: string;
+      spellCheck?: boolean;
       register?: (api: SdkApi) => void;
     }): Promise<SdkApi>;
   };

@@ -71,6 +71,21 @@ Document fonts (shipped in engine/dist/fonts, used only to lay out documents):
 
 Each font's license file is copied to engine/dist/licenses/.
 
+Spell-check dictionaries (Hunspell; shipped in engine/dist/dictionaries, taken
+from https://github.com/ONLYOFFICE/dictionaries at the commit pinned in
+engine/manifest.json; each one's license and readme are copied to
+engine/dist/licenses/dictionary-*):
+
+  English (US)          SCOWL / Kevin Atkinson et al., BSD-style permissive
+  English (UK)          Marco Pinto et al., LGPL-3.0
+  Spanish (Spain)       RLA-ES project, tri-licensed; used under LGPL-3.0+
+  French (France)       Dicollecte (Olivier R.), MPL-2.0
+  German (Germany)      Franz Michael Baumann, Bjoern Jacke et al.;
+                        used under GPL-3.0 (one of its license options)
+
+The spell checker itself is ONLYOFFICE's Hunspell build (sdkjs common/spell,
+AGPL-3.0; Hunspell is MPL-1.1/GPL/LGPL).
+
 -------------------------------------------------------------------------------
 Lucid Sentence name and logos
 -------------------------------------------------------------------------------

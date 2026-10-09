@@ -24,6 +24,8 @@ export interface BackstageContext {
   downloadHtml: () => void;
   downloadText: () => void;
   print: () => void;
+  /** Engine documents: lay out and save as PDF. */
+  exportPdf: () => void;
   promosEnabled: boolean;
   settings: { autoSwitch: boolean; drawWithTouch: boolean; floatingToolbar: boolean };
   onSetting: (key: 'autoSwitch' | 'drawWithTouch' | 'floatingToolbar', value: boolean) => void;
@@ -157,8 +159,13 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
             ),
             action('Save As…', 'F12 · choose a name and place', ctx.saveAs, id.endsWith('save-as')),
             action('Download a copy', 'Word document (.docx)', ctx.downloadDocx),
+            action(
+              'PDF',
+              'Export a PDF, laid out like the pages',
+              ctx.exportPdf,
+              id.endsWith('export'),
+            ),
           ),
-          el('p', { class: 'bs__sub' }, 'PDF export and other formats come later in M1.'),
         );
         break;
       }
@@ -180,7 +187,12 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
     }
     case 'file.rail.print': {
       page.append(
-        h('Print', 'Prints the page only, with white paper and no interface.'),
+        h(
+          'Print',
+          ctx.engine
+            ? 'Prints the document as laid out on the pages. Where there is no print dialog, it is saved as a PDF to print from.'
+            : 'Prints the page only, with white paper and no interface.',
+        ),
         el(
           'div',
           { class: 'bs__grid' },

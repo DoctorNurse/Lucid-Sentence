@@ -108,9 +108,105 @@
     return out;
   }
 
+  /** Wrong words (sdkjs spell-check elements) in a paragraph, in order. */
+  function wrongWords(para) {
+    var els = (para.SpellChecker && para.SpellChecker.Elements) || [],
+      out = [];
+    for (var i = 0; i < els.length; i++) if (els[i].IsWrong()) out.push(els[i]);
+    return out;
+  }
+
+  /**
+   * Selects the next misspelled word after the cursor (wrapping around once)
+   * and returns it, or null when the document has none. sdkjs then reports
+   * the word and its suggestions through asc_onFocusObject.
+   */
+  function nextMisspelling(api) {
+    var doc = api.WordControl.m_oLogicDocument;
+    var paras = doc.GetAllParagraphs({ All: true });
+    if (!paras.length) return null;
+    var cur = doc.GetCurrentParagraph();
+    var start = Math.max(0, paras.indexOf(cur));
+    var after = cur ? cur.Get_ParaContentPos(cur.IsSelectionUse(), false, false) : null;
+    for (var k = 0; k <= paras.length; k++) {
+      var para = paras[(start + k) % paras.length];
+      var words = wrongWords(para);
+      for (var i = 0; i < words.length; i++) {
+        var w = words[i];
+        if (k === 0 && after && w.GetStartPos().Compare(after) < 0) continue;
+        if (k === paras.length && after && w.GetStartPos().Compare(after) >= 0) continue;
+        doc.RemoveSelection();
+        para.Selection.Use = true;
+        para.Selection.Start = false;
+        para.Set_ParaContentPos(w.GetStartPos(), true, -1, -1);
+        para.Set_SelectionContentPos(w.GetStartPos(), w.GetEndPos(), false);
+        para.Document_SetThisElementCurrent(true);
+        doc.UpdateSelection();
+        return w.GetWord();
+      }
+    }
+    return null;
+  }
+
+  /** Number of misspelled words the checker has found so far. */
+  function misspellingCount(api) {
+    var paras = api.WordControl.m_oLogicDocument.GetAllParagraphs({ All: true }),
+      n = 0;
+    for (var i = 0; i < paras.length; i++) n += wrongWords(paras[i]).length;
+    return n;
+  }
+
+  /**
+   * Inserts pictures at the cursor. images: [{ name: "lucid-1.png", url: "blob:..." }].
+   * The name becomes the picture's media/ entry, so saving writes it to word/media.
+   */
+  function insertImages(api, images) {
+    var urls = {},
+      list = [];
+    for (var i = 0; i < images.length; i++) {
+      urls['media/' + images[i].name] = images[i].url;
+      list.push(images[i].url);
+    }
+    AscCommon.g_oDocumentUrls.addUrls(urls);
+    api._addImageUrl(list);
+  }
+
+  /** Leaves header/footer editing and puts the cursor back in the body. */
+  function closeHeaderFooter(api) {
+    var doc = api.WordControl.m_oLogicDocument;
+    doc.EndHdrFtrEditing(true);
+    api.WordControl.m_oDrawingDocument.ClearCachePages();
+    api.WordControl.m_oDrawingDocument.FirePaint();
+  }
+
+  /**
+   * sdkjs's page renderer output for x2t's PDF writer (what printing uses).
+   * Pictures are drawn as texture fills, and that path writes blob: URLs as they are
+   * (it expects g_oDocumentBlobUrls to hold base64 copies). Our pictures are blob: URLs
+   * of files that x2t gets in /working/media, so point the renderer at "media/<name>".
+   */
+  function pdfData(api) {
+    var blobs = AscCommon.g_oDocumentBlobUrls;
+    var original = blobs.getImageBase64;
+    blobs.getImageBase64 = function (url) {
+      var local = AscCommon.g_oDocumentUrls.getLocal(url);
+      return local ? local : original.call(blobs, url);
+    };
+    try {
+      return api.WordControl.m_oDrawingDocument.ToRendererPart(true, true);
+    } finally {
+      blobs.getImageBase64 = original;
+    }
+  }
+
   window['LucidBridge'] = {
     listType: listType,
-    version: 1,
+    version: 2,
+    nextMisspelling: nextMisspelling,
+    misspellingCount: misspellingCount,
+    insertImages: insertImages,
+    pdfData: pdfData,
+    closeHeaderFooter: closeHeaderFooter,
     getBinary: getBinary,
     mediaNames: mediaNames,
     markSaved: markSaved,

@@ -146,12 +146,118 @@ export async function saveAs(
   return { target: { kind: 'none' }, name: suggested };
 }
 
-export function download(name: string, bytes: Uint8Array): void {
+export function download(name: string, bytes: Uint8Array, type = DOCX_MIME): void {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([bytes as BlobPart], { type: DOCX_MIME }));
+  a.href = URL.createObjectURL(new Blob([bytes as BlobPart], { type }));
   a.download = name;
   a.click();
   setTimeout(() => {
     URL.revokeObjectURL(a.href);
   }, 1000);
+}
+
+const PICTURE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'];
+
+/** Ask for pictures to insert. Empty when the user cancels. */
+export async function pickPictures(): Promise<{ name: string; bytes: Uint8Array }[]> {
+  if (isTauri()) {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    const picked = await open({
+      multiple: true,
+      directory: false,
+      filters: [{ name: 'Pictures', extensions: PICTURE_EXTS }],
+    });
+    const paths = picked ?? [];
+    const { readFile } = await import('@tauri-apps/plugin-fs');
+    return Promise.all(
+      paths.map(async (p) => ({
+        name: p.split(/[\\/]/).pop() ?? 'picture.png',
+        bytes: await readFile(p),
+      })),
+    );
+  }
+  // <input type=file> works everywhere and allows several pictures at once.
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = PICTURE_EXTS.map((e) => `.${e}`).join(',');
+  input.multiple = true;
+  input.hidden = true;
+  document.body.append(input);
+  try {
+    const list = await new Promise<File[]>((resolve) => {
+      input.addEventListener('change', () => {
+        resolve([...(input.files ?? [])]);
+      });
+      input.addEventListener('cancel', () => {
+        resolve([]);
+      });
+      input.click();
+    });
+    return await Promise.all(
+      list.map(async (f) => ({ name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) })),
+    );
+  } finally {
+    input.remove();
+  }
+}
+
+/** Save a PDF where the user chooses (or download it). False when they cancel. */
+export async function savePdf(suggested: string, bytes: Uint8Array): Promise<boolean> {
+  if (isTauri()) {
+    const { save } = await import('@tauri-apps/plugin-dialog');
+    const path = await save({
+      defaultPath: suggested,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+    if (!path) return false;
+    await writeTo({ kind: 'path', path }, bytes);
+    return true;
+  }
+  const w = fsa();
+  if (hasFsa() && w.showSaveFilePicker) {
+    try {
+      const handle = await w.showSaveFilePicker({
+        suggestedName: suggested,
+        types: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }],
+      });
+      await writeTo({ kind: 'handle', handle }, bytes);
+      return true;
+    } catch (e) {
+      if (isAbort(e)) return false;
+      throw e;
+    }
+  }
+  download(suggested, bytes, 'application/pdf');
+  return true;
+}
+
+/**
+ * Print a PDF through the browser's PDF viewer (a hidden frame). False where
+ * there is none (some WebViews); the caller saves the PDF instead.
+ */
+export function printPdf(bytes: Uint8Array): boolean {
+  if (isTauri() || !(navigator as Navigator & { pdfViewerEnabled?: boolean }).pdfViewerEnabled) {
+    return false;
+  }
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
+  const frame = document.createElement('iframe');
+  frame.className = 'print-frame';
+  frame.title = 'Print preview';
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';
+  frame.src = url;
+  frame.addEventListener('load', () => {
+    setTimeout(() => {
+      try {
+        frame.contentWindow?.focus();
+        frame.contentWindow?.print();
+      } finally {
+        setTimeout(() => {
+          frame.remove();
+          URL.revokeObjectURL(url);
+        }, 60_000);
+      }
+    }, 300);
+  });
+  document.body.append(frame);
+  return true;
 }
