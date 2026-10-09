@@ -1,0 +1,24 @@
+<!doctype html>
+<!--
+  Lucid Sentence document engine host. Loaded in an iframe by the app (see
+  apps/demo/src/engine/). Runs ONLYOFFICE sdkjs (AGPL-3.0, based on the original
+  ONLYOFFICE software developed by Ascensio System SIA, modified by Lucid
+  Systems) entirely offline. sdkjs expects to live four folders below the
+  engine root (it loads ../../../../sdkjs and ../../../../fonts), hence the path.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lucid Sentence engine</title>
+    <link rel="stylesheet" href="host.css" />
+  </head>
+  <body>
+    <div id="editor_sdk"></div>
+    <script src="../../../../sdkjs/vendor/xregexp-all-min.js"></script>
+    <script src="../../../../sdkjs/vendor/jquery.min.js"></script>
+    <script src="../../../../sdkjs/common/AllFonts.js"></script>
+    <script src="../../../../sdkjs/word/sdk-all-min.js"></script>
+    <script src="host.js"></script>
+  </body>
+</html>

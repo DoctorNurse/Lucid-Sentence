@@ -14,6 +14,8 @@ export default tseslint.config(
       'playwright-report/**',
       'apps/shell/src-tauri/target/**',
       'apps/shell/src-tauri/gen/**',
+      'engine/.cache/**',
+      'engine/fonts/AllFonts.js',
     ],
   },
   js.configs.recommended,

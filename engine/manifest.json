@@ -1,0 +1,30 @@
+{
+  "$comment": "Pinned upstream inputs for the document engine. engine/build.mjs fetches exactly these, verifies them, and writes engine/dist/. Bump versions here (and re-run the fidelity eval) to upgrade.",
+  "sdkjs": {
+    "repo": "https://github.com/ONLYOFFICE/sdkjs.git",
+    "ref": "release/v9.4.0",
+    "commit": "d8e412430b8cb856edd46e15b18ad44814e307fb",
+    "version": "9.4.0",
+    "build": "97",
+    "note": "v9.4.0.97 plus the release-branch commits that restructure the AGPL additional terms (LICENSE and file headers), so no pre-9.4 logo clause enters the build."
+  },
+  "x2t": {
+    "url": "https://github.com/cryptpad/onlyoffice-x2t-wasm/releases/download/v9.3.2%2B3/x2t.zip",
+    "sha512": "ed0579097a0269877d6622b28b1e2718e1f9f4e8ac99301f5f13f5f052b3db24db789deab8c654044db588be103c139be74f83a0ca066dee1789522241c1af6e",
+    "source": "https://github.com/cryptpad/onlyoffice-x2t-wasm/tree/v9.3.2+3",
+    "coreVersion": "9.3.2",
+    "note": "ONLYOFFICE core (x2t) compiled to WebAssembly by CryptPad. AGPL-3.0, Corresponding Source at the tag above. A 9.4 core build is a follow-up (see engine/README.md)."
+  },
+  "fonts": {
+    "repo": "https://github.com/ONLYOFFICE/core-fonts",
+    "commit": "7030c6681fb5bbed560675cb42422f91df15d5c9",
+    "list": "fonts/fonts.json",
+    "allFonts": "fonts/AllFonts.js",
+    "licenses": {
+      "crosextra/LICENSE.txt": "Carlito (SIL OFL 1.1)",
+      "caladea/LICENSE.txt": "Caladea (SIL OFL 1.1)",
+      "opensans/LICENSE.txt": "Open Sans (Apache-2.0)",
+      "dejavu/LICENSE.txt": "DejaVu Sans (Bitstream Vera license; DejaVu changes public domain)"
+    }
+  }
+}

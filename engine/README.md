@@ -1,55 +1,69 @@
-# Engine integration (planned): ONLYOFFICE 9.4+
+# Document engine: ONLYOFFICE 9.4 (sdkjs + x2t)
 
-**Status: placeholder.** No ONLYOFFICE source is vendored yet. This directory
-documents how the document engine will be integrated and the attribution
-obligations that come with it.
+Lucid Sentence opens and saves `.docx` files with the ONLYOFFICE document
+engine, running entirely on the device, with no document server:
 
-## What we will use
+| Piece  | What it does                                             | Where it comes from                                                                                    |
+| ------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| sdkjs  | Document model, layout, editing, canvas rendering        | Built from source: `ONLYOFFICE/sdkjs` branch `release/v9.4.0` at the commit pinned in `manifest.json`  |
+| x2t    | Converts `.docx` ⇄ the editor's binary format            | ONLYOFFICE `core`, compiled to WebAssembly by CryptPad (`cryptpad/onlyoffice-x2t-wasm`), sha512-pinned |
+| fonts  | Metric-compatible fonts for layout (Carlito, Caladea, …) | `ONLYOFFICE/core-fonts` at a pinned commit, each file sha256-pinned in `fonts/fonts.json`              |
+| bridge | Small addon compiled into sdkjs (`sdkjs-addon/`)         | Ours: offline open, binary export, saved-state reset                                                   |
+| host   | The page sdkjs runs in, plus the x2t worker (`host/`)    | Ours                                                                                                   |
 
-| Upstream repo  | Role                                                       |
-| -------------- | ---------------------------------------------------------- |
-| `sdkjs`        | Document model, OOXML-native editing, client-side layout   |
-| `web-apps`     | Editor controllers and dialogs (desktop mode) under our UI |
-| `core` (x2t)   | Format conversion (.docx ⇄ internal, PDF export)           |
-| `desktop-sdk`  | CEF embedding + native bridge (desktop)                    |
-| `desktop-apps` | Native desktop shell (forked in `apps/desktop`)            |
+We do not use ONLYOFFICE `web-apps` (their editor UI). Our own ribbon drives
+sdkjs through its public `asc_docs_api` methods.
 
-**Minimum version: 9.4** (May 2026). Earlier releases carried an AGPL §7(b)
-"retain the original Product logo" term; 9.4 replaced it. Do **not** import code
-from pre-9.4 trees or from Euro-Office without a counsel review (plan §5.2).
+## Building
 
-**Fallback:** Collabora Online / LibreOfficeKit (MPL-2.0), selected only if the
-M0 mobile gate fails or the fidelity bake-off shows no meaningful .docx
-advantage for ONLYOFFICE, with engine-gap cost factored in (plan §2.2).
+```sh
+pnpm engine:build          # fetch, verify, build, stage into engine/dist
+pnpm engine:build --check  # exit 1 if engine/dist is missing or stale
+```
 
-## Integration approach
+Needs git, python3, unzip and network access the first time; the downloads
+are cached in `engine/.cache`, and each one is checked against the hashes in
+`manifest.json` / `fonts/fonts.json`. `engine/dist` is about 85 MB and is not
+committed. `apps/demo` serves and bundles it under `engine/`, and
+`engine/dist/SOURCES.json` records exactly which sources went into it.
 
-- Pin upstream as tracked sources (submodules or vendored subtrees with a
-  recorded commit hash per repo) under a top-level `upstream/` directory, added
-  in M0/M1.
-- Keep downstream patches thin and documented; offer engine gaps upstream first
-  (Index, Table of Authorities, labels/envelopes, view modes).
-- Map every registry command (`packages/commands`) to an sdkjs API call; M0
-  turns each "unverified" coverage entry into "verified" or "gap" (plan §4.8).
+Layout of `engine/dist` (sdkjs loads its siblings by relative path):
 
-## Attribution and license obligations (ONLYOFFICE 9.4 additional terms)
+```
+sdkjs/word/sdk-all-min.js, sdk-all.js   the word editor
+sdkjs/common/…                          font engine, zlib, images, chart styles
+sdkjs/vendor/…                          jQuery, XRegExp (MIT)
+fonts/000…024                           fonts in sdkjs's web font format
+lucid/apps/word/main/index.html         the host page the app loads in an iframe
+x2t/x2t.js, x2t.wasm, worker.js         the converter and its worker
+licenses/…                              upstream license texts
+```
 
-1. Keep **all** copyright, license, warranty, and attribution/origin notices in
-   upstream files.
-2. Mark modified versions prominently, with modification dates, stating they are
-   "based on the original ONLYOFFICE software developed by Ascensio System SIA"
-   — kept in [`/NOTICE`](../NOTICE) and a modification log.
-3. Ship a visible **Legal Notices** screen (About) that identifies ONLYOFFICE as
-   the original developer, says this version may be modified, and links to the
-   license. Proposed text: "Lucid Sentence is based on ONLYOFFICE software
-   developed by Ascensio System SIA, modified by Lucid Systems and the Lucid
-   Sentence contributors."
-4. No trademark license: no ONLYOFFICE logo or name in Sentence branding; mention
-   it only nominatively with "ONLYOFFICE is a trademark of Ascensio System SIA".
-5. ONLYOFFICE illustrations, icon sets, and docs are CC BY-SA 4.0 — we plan to
-   replace them with original art.
-6. Every distributed binary ships with its Corresponding Source (AGPL-3.0).
-7. Re-read the upstream `LICENSE` at fork time and get counsel review before the
-   first public build, especially for app-store channels.
+## How a document opens and saves
 
-CI will later check automatically that the legal notices are present.
+1. The app reads the file (native dialog, document picker, File System Access
+   API, or `<input type=file>`).
+2. The x2t worker converts `.docx` → `DOCY` binary and extracts `media/*`.
+3. A fresh iframe loads the host page; `LucidHost.boot()` gives sdkjs the
+   binary and blob URLs for the images, in sdkjs's offline mode.
+4. The ribbon calls `asc_docs_api` methods (`put_TextPrBold`, `put_Style`,
+   `put_ListType`, `Undo`, …), and sdkjs callbacks update ribbon state.
+5. Save: `LucidBridge.getBinary()` serializes the document, the worker
+   converts it back to `.docx` with the original image bytes, and the app
+   writes the file.
+
+## Version and license notes
+
+- **Minimum ONLYOFFICE version: 9.4.** Earlier releases carried an AGPL §7(b)
+  "retain the original Product logo" term in their file headers; the 9.4
+  release branch replaced it with the additional terms reproduced in
+  [`/NOTICE`](../NOTICE). The tag `v9.4.0.97` still has the old per-file
+  headers, which is why we pin the `release/v9.4.0` branch commit instead.
+- **x2t is core 9.3.2.** No 9.4 WebAssembly build exists yet; core's
+  converter is outside the logo-term change, and building our own needs
+  emscripten (tracked as an M1 follow-up).
+- The sdkjs build stamps every output file with a notice saying it is a
+  modified version based on the original ONLYOFFICE software developed by
+  Ascensio System SIA. See [`/legal/MODIFICATIONS.md`](../legal/MODIFICATIONS.md).
+- ONLYOFFICE is a trademark of Ascensio System SIA. We use no ONLYOFFICE logo
+  or name in Lucid Sentence branding.
