@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Lucid Sentence — ribbon demo</title>
+    <link rel="stylesheet" href="./src/demo.css" />
+  </head>
+  <body>
+    <header class="titlebar">
+      <span class="brand"><span class="mark" aria-hidden="true"></span>Lucid Sentence</span>
+      <span class="doc">Document1.docx</span>
+      <span class="spacer"></span>
+      <form class="controls" aria-label="Demo controls">
+        <label
+          >Layout
+          <select id="layout">
+            <option value="auto">Auto (by width)</option>
+            <option value="desktop">Desktop</option>
+            <option value="tablet">Tablet</option>
+            <option value="phone">Phone</option>
+          </select>
+        </label>
+        <label
+          >Theme
+          <select id="theme">
+            <option value="auto">Follow OS</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+            <option value="high-contrast">High contrast</option>
+          </select>
+        </label>
+        <label
+          >Context
+          <select id="context">
+            <option value="">Body text</option>
+            <option value="table-design table-layout">In a table</option>
+            <option value="picture-format">Picture selected</option>
+            <option value="shape-format">Shape selected</option>
+            <option value="header-footer">Header &amp; footer</option>
+            <option value="equation">In an equation</option>
+          </select>
+        </label>
+      </form>
+    </header>
+    <main id="stage" class="stage">
+      <ls-ribbon id="ribbon"></ls-ribbon>
+      <div class="canvas">
+        <article class="page" aria-label="Page 1">
+          <h1>Lucid Sentence</h1>
+          <p>
+            This page is a placeholder canvas. The ribbon above is rendered entirely from the
+            command registry in <code>packages/commands</code>; switch layouts to see the desktop
+            ribbon, the collapsing tablet ribbon, and the phone tab picker with its bottom sheet.
+          </p>
+          <p>The document engine (ONLYOFFICE 9.4+) is wired in during M1.</p>
+        </article>
+      </div>
+      <footer class="status">
+        <span id="stats"></span><span class="spacer"></span><span id="last">Ready</span>
+      </footer>
+    </main>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
