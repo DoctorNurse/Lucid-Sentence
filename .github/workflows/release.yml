@@ -221,9 +221,13 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@v3
+        with:
+          # The action's default list includes the retired "tools" package, which now fails.
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
       - name: Install the Android SDK packages
         run: |
-          sdkmanager --install "platforms;android-35" "build-tools;$BUILD_TOOLS" "ndk;$NDK_VERSION" > /dev/null
+          sdkmanager --install "platforms;android-37.0" "build-tools;$BUILD_TOOLS" "ndk;$NDK_VERSION" > /dev/null
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
         with:
