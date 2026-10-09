@@ -1,0 +1,108 @@
+{
+  "device": {
+    "arch": "x86_64",
+    "availableRamBytes": 11256332288,
+    "cpuThreads": 8,
+    "nativeRuntime": true,
+    "os": "linux",
+    "totalRamBytes": 16791158784
+  },
+  "loadMs": 1187.9,
+  "model": "Qwen3.5-2B-Q4_K_M.gguf",
+  "modelFileMB": 1221.5,
+  "nCtx": 4096,
+  "peakRssMB": 1939.2,
+  "results": [
+    {
+      "completionTokens": 140,
+      "decodeTokPerSec": 13.7,
+      "output": "Lucid Sentence is a free, open-source word processor designed for .docx files. It preserves Word's familiar ribbon interface to ensure familiarity for existing users while introducing a refined aesthetic through meticulous typography. The application is available for desktop use, Android devices, and as a home-screen web app on iOS and iPadOS. Optional on-device AI features allow users to rewrite selected text, correct grammar, summarize content, and convert plain-language requests into ribbon commands; however, all processing occurs locally, ensuring no documents are transmitted to external servers. Every AI-generated edit is presented as a suggestion, allowing the user to accept or reject it, thereby guaranteeing that the document remains unchanged without any backdoor modifications.",
+      "promptTokPerSec": 87.5,
+      "promptTokens": 157,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "rewrite-formal",
+      "ttftMs": 1793.5
+    },
+    {
+      "completionTokens": 22,
+      "decodeTokPerSec": 14.2,
+      "output": "The team went to the meeting yesterday and they were very happy with their results; it was a good outcome.",
+      "promptTokPerSec": 76.4,
+      "promptTokens": 57,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "fix-grammar",
+      "ttftMs": 746.3
+    },
+    {
+      "completionTokens": 41,
+      "decodeTokPerSec": 13.6,
+      "output": "Lucid Sentence is a free, open-source word processor that preserves Word's familiar interface while offering a fresh design and on-device AI features for editing, summarizing, and rewriting documents without sending them anywhere.",
+      "promptTokPerSec": 82.6,
+      "promptTokens": 157,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "summarize",
+      "ttftMs": 1899.8
+    },
+    {
+      "completionTokens": 12,
+      "decodeTokPerSec": 9.2,
+      "output": "{\"command\":\"review.tracking.track-changes\"}",
+      "promptTokPerSec": 72.2,
+      "promptTokens": 62,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "tell-lucid (grammar)",
+      "ttftMs": 858.4
+    },
+    {
+      "completionTokens": 140,
+      "decodeTokPerSec": 12.7,
+      "output": "Lucid Sentence is a free, open-source word processor designed for .docx files. It preserves Word's familiar ribbon interface to ensure familiarity for existing users while introducing a refined aesthetic through meticulous typography. The application is available for desktop use, Android devices, and as a home-screen web app on iOS and iPadOS. Optional on-device AI features allow users to rewrite selected text, correct grammar, summarize content, and convert plain-language requests into ribbon commands; however, all processing occurs locally, ensuring no documents are transmitted to external servers. Every AI-generated edit is presented as a suggestion, allowing the user to accept or reject it, thereby guaranteeing that the document remains unchanged without any backdoor modifications.",
+      "promptTokPerSec": 76.4,
+      "promptTokens": 157,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "rewrite-formal",
+      "ttftMs": 2054.6
+    },
+    {
+      "completionTokens": 22,
+      "decodeTokPerSec": 13.4,
+      "output": "The team went to the meeting yesterday and they were very happy with their results; it was a good outcome.",
+      "promptTokPerSec": 72.4,
+      "promptTokens": 57,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "fix-grammar",
+      "ttftMs": 787.0
+    },
+    {
+      "completionTokens": 41,
+      "decodeTokPerSec": 14.3,
+      "output": "Lucid Sentence is a free, open-source word processor that preserves Word's familiar interface while offering a fresh design and on-device AI features for editing, summarizing, and rewriting documents without sending them anywhere.",
+      "promptTokPerSec": 86.5,
+      "promptTokens": 157,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "summarize",
+      "ttftMs": 1815.0
+    },
+    {
+      "completionTokens": 12,
+      "decodeTokPerSec": 10.2,
+      "output": "{\"command\":\"review.tracking.track-changes\"}",
+      "promptTokPerSec": 80.9,
+      "promptTokens": 62,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "tell-lucid (grammar)",
+      "ttftMs": 766.4
+    }
+  ],
+  "rssAfterLoadMB": 1789.1,
+  "rssBeforeLoadMB": 5.0,
+  "threads": 4
+}

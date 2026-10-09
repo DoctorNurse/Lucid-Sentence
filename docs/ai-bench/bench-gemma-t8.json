@@ -1,0 +1,108 @@
+{
+  "device": {
+    "arch": "x86_64",
+    "availableRamBytes": 10193502208,
+    "cpuThreads": 8,
+    "nativeRuntime": true,
+    "os": "linux",
+    "totalRamBytes": 16791158784
+  },
+  "loadMs": 3689.2,
+  "model": "gemma-4-E2B-it-Q4_K_M.gguf",
+  "modelFileMB": 2962.8,
+  "nCtx": 4096,
+  "peakRssMB": 4312.9,
+  "results": [
+    {
+      "completionTokens": 135,
+      "decodeTokPerSec": 7.4,
+      "output": "Lucid Sentence is a complimentary, open-source word processor designed for .docx files. It retains the familiar ribbon interface of Microsoft Word, enabling users already proficient with Word to locate all commands, while introducing a contemporary aesthetic through meticulous typography. The editor is accessible on desktop, Android, and as a web application on iPhone and iPad. Optional on-device artificial intelligence can rewrite selections, correct grammar, summarize content, and translate plain-language requests into ribbon commands; however, the document remains entirely within the user's environment. Every AI modification is presented as a suggestion, allowing the writer to accept or reject it, ensuring the document is never altered without their explicit consent.",
+      "promptTokPerSec": 75.1,
+      "promptTokens": 155,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "rewrite-formal",
+      "ttftMs": 2063.4
+    },
+    {
+      "completionTokens": 23,
+      "decodeTokPerSec": 20.1,
+      "output": "The team went to the meeting yesterday, and they were very happy with their results. It was a good outcome.",
+      "promptTokPerSec": 116.1,
+      "promptTokens": 53,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "fix-grammar",
+      "ttftMs": 456.5
+    },
+    {
+      "completionTokens": 55,
+      "decodeTokPerSec": 3.1,
+      "output": "Lucid Sentence is a free, open-source word processor for .docx files that keeps Word's familiar ribbon while adding a fresher look with careful typography. It also offers optional on-device AI to rewrite selections, fix grammar, and summarize without sending the document anywhere.",
+      "promptTokPerSec": 125.5,
+      "promptTokens": 155,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "summarize",
+      "ttftMs": 1235.2
+    },
+    {
+      "completionTokens": 13,
+      "decodeTokPerSec": 2.0,
+      "output": "{\"command\":\"review.tracking.track-changes\"}",
+      "promptTokPerSec": 36.0,
+      "promptTokens": 65,
+      "run": 0,
+      "stoppedBy": "eos",
+      "task": "tell-lucid (grammar)",
+      "ttftMs": 1804.5
+    },
+    {
+      "completionTokens": 135,
+      "decodeTokPerSec": 8.1,
+      "output": "Lucid Sentence is a complimentary, open-source word processor designed for .docx files. It retains the familiar ribbon interface of Microsoft Word, enabling users already proficient with Word to locate all commands, while introducing a contemporary aesthetic through meticulous typography. The editor is accessible on desktop, Android, and as a web application on iPhone and iPad. Optional on-device artificial intelligence can rewrite selections, correct grammar, summarize content, and translate plain-language requests into ribbon commands; however, the document remains entirely within the user's environment. Every AI modification is presented as a suggestion, allowing the writer to accept or reject it, ensuring the document is never altered without their explicit consent.",
+      "promptTokPerSec": 67.1,
+      "promptTokens": 155,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "rewrite-formal",
+      "ttftMs": 2310.0
+    },
+    {
+      "completionTokens": 23,
+      "decodeTokPerSec": 23.0,
+      "output": "The team went to the meeting yesterday, and they were very happy with their results. It was a good outcome.",
+      "promptTokPerSec": 118.4,
+      "promptTokens": 53,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "fix-grammar",
+      "ttftMs": 447.7
+    },
+    {
+      "completionTokens": 55,
+      "decodeTokPerSec": 20.1,
+      "output": "Lucid Sentence is a free, open-source word processor for .docx files that keeps Word's familiar ribbon while adding a fresher look with careful typography. It also offers optional on-device AI to rewrite selections, fix grammar, and summarize without sending the document anywhere.",
+      "promptTokPerSec": 122.1,
+      "promptTokens": 155,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "summarize",
+      "ttftMs": 1269.6
+    },
+    {
+      "completionTokens": 13,
+      "decodeTokPerSec": 11.2,
+      "output": "{\"command\":\"review.tracking.track-changes\"}",
+      "promptTokPerSec": 112.3,
+      "promptTokens": 65,
+      "run": 1,
+      "stoppedBy": "eos",
+      "task": "tell-lucid (grammar)",
+      "ttftMs": 578.8
+    }
+  ],
+  "rssAfterLoadMB": 4121.4,
+  "rssBeforeLoadMB": 5.0,
+  "threads": 8
+}

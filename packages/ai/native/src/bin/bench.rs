@@ -2,9 +2,12 @@
 //! tokens/sec, and peak RAM (RSS) on this machine's CPU.
 //!
 //! Usage: lucid-ai-bench <model.gguf> [--threads N] [--ctx N] [--runs N] [--json]
+//!        [--template chatml|gemma4|builtin]
 //!
 //! The prompts mirror the app's tasks (rewrite, grammar, summarize, Tell Lucid) and use
 //! the same ChatML layout as packages/ai/src/prompt.ts, with thinking turned off.
+//! `--template gemma4` formats turns for Gemma 4 (the comparison in docs/AI.md);
+//! `--template builtin` asks llama.cpp to apply the GGUF's own template.
 
 use lucid_ai::device::{info, peak_rss_bytes, rss_bytes};
 use lucid_ai::engine::{default_threads, Engine, GenerateRequest, LoadOptions};
@@ -33,6 +36,7 @@ fn main() {
     let n_ctx: u32 = flag("--ctx").and_then(|v| v.parse().ok()).unwrap_or(4096);
     let runs: usize = flag("--runs").and_then(|v| v.parse().ok()).unwrap_or(1);
     let as_json = args.iter().any(|a| a == "--json");
+    let template = flag("--template").unwrap_or_else(|| "chatml".into());
 
     let dev = info();
     let rss0 = rss_bytes();
@@ -49,19 +53,31 @@ fn main() {
         std::process::exit(1);
     });
     let rss_loaded = rss_bytes();
+    let chatml = |system: &str, user: &str| -> String {
+        match template.as_str() {
+            "builtin" => engine.chat_prompt(system, user).unwrap_or_else(|e| {
+                eprintln!("chat template: {e}");
+                std::process::exit(1);
+            }),
+            "gemma4" => format!(
+                "<|turn>system\n{system}<turn|>\n<|turn>user\n{user}<turn|>\n<|turn>model\n"
+            ),
+            _ => chatml(system, user),
+        }
+    };
 
     let grammar = r#"root ::= "{\"command\":\"" id "\"}"
 id ::= "review.tracking.track-changes" | "home.font.bold" | "view.zoom.zoom" | "insert.tables.table" | "none""#;
     let tasks: Vec<(&str, GenerateRequest)> = vec![
         ("rewrite-formal", GenerateRequest {
             prompt: chatml("You rewrite text. Reply with only the rewritten text.", &format!("Rewrite this to sound more formal:\n\n{PASSAGE}")),
-            max_tokens: 160, temperature: 0.0, grammar: None, stop: vec!["<|im_end|>".into()], seed: None }),
+            max_tokens: 160, temperature: 0.0, grammar: None, stop: vec!["<|im_end|>".into(), "<turn|>".into()], seed: None }),
         ("fix-grammar", GenerateRequest {
             prompt: chatml("You fix spelling and grammar. Reply with only the corrected text.", "Fix the grammar:\n\nthe team have went to the meeting yesterday and they was very happy with there results, its a good outcome."),
-            max_tokens: 64, temperature: 0.0, grammar: None, stop: vec!["<|im_end|>".into()], seed: None }),
+            max_tokens: 64, temperature: 0.0, grammar: None, stop: vec!["<|im_end|>".into(), "<turn|>".into()], seed: None }),
         ("summarize", GenerateRequest {
             prompt: chatml("You summarize text in one or two sentences. Reply with only the summary.", &format!("Summarize:\n\n{PASSAGE}")),
-            max_tokens: 80, temperature: 0.0, grammar: None, stop: vec!["<|im_end|>".into()], seed: None }),
+            max_tokens: 80, temperature: 0.0, grammar: None, stop: vec!["<|im_end|>".into(), "<turn|>".into()], seed: None }),
         ("tell-lucid (grammar)", GenerateRequest {
             prompt: chatml("Map the request to one command id. Commands: review.tracking.track-changes (Track Changes), home.font.bold (Bold), view.zoom.zoom (Zoom), insert.tables.table (Table), none.", "turn on track changes please"),
             max_tokens: 32, temperature: 0.0, grammar: Some(grammar.into()), stop: vec![], seed: None }),

@@ -388,6 +388,15 @@ export class AssistantUI {
   }
 
   async #download(env: AiEnv, m: ModelEntry): Promise<void> {
+    // Plan §9.4: Wi-Fi only by default. Ask first when the browser reports a metered link.
+    const conn = (navigator as Navigator & { connection?: { type?: string; saveData?: boolean } })
+      .connection;
+    if (
+      !env.mock &&
+      (conn?.type === 'cellular' || conn?.saveData) &&
+      !confirm(`You seem to be on mobile data. Download ${formatBytes(m.sizeBytes)} anyway?`)
+    )
+      return;
     // Ask the browser to keep the model when storage runs low (best effort).
     if (!env.bridge && !env.mock) void navigator.storage.persist().catch(() => false);
     const r = await env.assistant.download(m.id);

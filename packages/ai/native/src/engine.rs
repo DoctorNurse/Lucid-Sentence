@@ -198,6 +198,20 @@ mod imp {
             self.model.size()
         }
 
+        /// Formats one system + user turn with the chat template stored in the GGUF
+        /// (used by the benchmark to compare other model families fairly).
+        pub fn chat_prompt(&self, system: &str, user: &str) -> Result<String, EngineError> {
+            use llama_cpp_2::model::LlamaChatMessage;
+            let tmpl = self.model.chat_template(None).map_err(err)?;
+            let msgs = [
+                LlamaChatMessage::new("system".into(), system.into()).map_err(err)?,
+                LlamaChatMessage::new("user".into(), user.into()).map_err(err)?,
+            ];
+            self.model
+                .apply_chat_template(&tmpl, &msgs, true)
+                .map_err(err)
+        }
+
         /// Runs one completion. `on_piece` gets each decoded text piece; return `false` to stop.
         pub fn generate(
             &self,
@@ -334,6 +348,9 @@ mod imp {
         }
         pub fn model_size_bytes(&self) -> u64 {
             0
+        }
+        pub fn chat_prompt(&self, _system: &str, _user: &str) -> Result<String, EngineError> {
+            Err(EngineError("No native runtime".into()))
         }
         pub fn generate(
             &self,
