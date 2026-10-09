@@ -2,7 +2,7 @@
 
 A free, open-source word processor for **.docx** with Word’s familiar ribbon and layout, and a fresher look — for Windows, macOS, Android, and iOS/iPadOS.
 
-**Status:** Planning stage — no code yet.
+**Status:** M0 foundations — command registry and ribbon UI scaffold; no engine code yet.
 
 ## Goals
 
@@ -34,16 +34,16 @@ Native format: **.docx** (plus `.dotx` / `.docm`). PDF is export-only.
 
 ## Roadmap (scope only)
 
-| Milestone | Focus |
-|-----------|--------|
-| **M0** | Foundations, fidelity bake-off, mobile go/no-go, counsel/name clearance |
-| **M1** | Platform alpha — command registry, three-layout ribbon, local open/save on all platforms |
-| **Alpha A** | Authoring tabs (Home, Insert, Layout, Design, View) + contextual tabs |
-| **Alpha B** | Review and Draw |
-| **Alpha C** | References and Mailings |
-| **Beta 1** | Feature-complete (100% non-stub command list) |
-| **Beta 2** | Release candidate — performance, a11y, localization, channels |
-| **v1.0** | Four-platform release |
+| Milestone   | Focus                                                                                    |
+| ----------- | ---------------------------------------------------------------------------------------- |
+| **M0**      | Foundations, fidelity bake-off, mobile go/no-go, counsel/name clearance                  |
+| **M1**      | Platform alpha — command registry, three-layout ribbon, local open/save on all platforms |
+| **Alpha A** | Authoring tabs (Home, Insert, Layout, Design, View) + contextual tabs                    |
+| **Alpha B** | Review and Draw                                                                          |
+| **Alpha C** | References and Mailings                                                                  |
+| **Beta 1**  | Feature-complete (100% non-stub command list)                                            |
+| **Beta 2**  | Release candidate — performance, a11y, localization, channels                            |
+| **v1.0**    | Four-platform release                                                                    |
 
 After v1: polish, optional Linux packaging, optional `.doc` import, optional collaboration, on-device extras.
 
@@ -55,9 +55,31 @@ After v1: polish, optional Linux packaging, optional `.doc` import, optional col
 
 Lucid Sentence is **not affiliated with Microsoft**. Word is a trademark of Microsoft Corporation.
 
+## Repository
+
+| Path                 | What it is                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------ |
+| `packages/commands`  | Single command registry: every tab → group → command, with desktop/tablet/phone placements |
+| `packages/ribbon-ui` | `<ls-ribbon>` web component rendering the registry in three layouts, with themes           |
+| `apps/demo`          | Vite dev page showing the ribbon                                                           |
+| `apps/desktop`       | Planned ONLYOFFICE DesktopEditors fork (placeholder)                                       |
+| `apps/mobile`        | Planned Capacitor shell for Android and iOS (placeholder)                                  |
+| `engine/`            | Planned ONLYOFFICE 9.4+ integration and attribution obligations                            |
+| `eval/`              | M0 fidelity bake-off and mobile go/no-go gate                                              |
+
+## Development
+
+Requires Node.js 20.19+ and pnpm 10 (`corepack enable`).
+
+```sh
+pnpm install
+pnpm dev        # ribbon demo at http://localhost:5173
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
+```
+
 ## Contributing
 
-Issues and Discussions are welcome. See the planning doc for open questions and the contribution model (DCO, upstream-first).
+Issues and Discussions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md): **signed commits are required**, plus DCO sign-off (`git commit -s`). Please also read the [Code of Conduct](CODE_OF_CONDUCT.md) and [Security Policy](SECURITY.md).
 
 ## Planning document
 
