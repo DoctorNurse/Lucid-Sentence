@@ -1,4 +1,14 @@
 {
   "files": [],
-  "references": [{ "path": "packages/commands" }, { "path": "packages/ribbon-ui" }]
+  "references": [
+    {
+      "path": "packages/commands"
+    },
+    {
+      "path": "packages/ribbon-ui"
+    },
+    {
+      "path": "packages/splash"
+    }
+  ]
 }

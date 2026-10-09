@@ -44,6 +44,17 @@ their own name and icon. Accurate nominative references (e.g. "based on Lucid
 Sentence") are fine. See assets/brand/README.md.
 
 -------------------------------------------------------------------------------
+Splash promos
+-------------------------------------------------------------------------------
+
+Official builds show at most one promo card per launch on the splash screen.
+These promos are only for other apps from Lucid Systems LLC (currently
+Chapternal). They make no tracking or network calls; the card is a plain link.
+Promo images in assets/promos/ belong to those apps and are not licensed under
+the AGPL or for use as marks. Forks and redistributions can turn promos off at
+build time or at runtime (see packages/splash/README.md).
+
+-------------------------------------------------------------------------------
 Other notices
 -------------------------------------------------------------------------------
 

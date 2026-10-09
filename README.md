@@ -26,6 +26,10 @@ A free, open-source word processor for **.docx** with Word’s familiar ribbon a
 - Microsoft 365–only features (Copilot, cloud Editor, etc.) — ribbon slots kept as stubs
 - Copying Microsoft icons or artwork
 
+## Splash promo
+
+On launch, official builds may show **one** small card for another Lucid Systems app (currently [Chapternal](https://chapternal.com)). The card is clearly labeled, closes with ✕ or Esc, and makes no tracking or network calls. Promos are only for Lucid Systems apps. Forks and distributions can turn them off; see [`packages/splash`](packages/splash/README.md).
+
 ## Platforms
 
 Windows · macOS · Android · iOS/iPadOS
@@ -65,6 +69,7 @@ Lucid Sentence is **not affiliated with Microsoft**. Word is a trademark of Micr
 | -------------------- | ------------------------------------------------------------------------------------------ |
 | `packages/commands`  | Single command registry: every tab → group → command, with desktop/tablet/phone placements |
 | `packages/ribbon-ui` | `<ls-ribbon>` web component rendering the registry in three layouts, with themes           |
+| `packages/splash`    | Splash/loading screen with one optional promo per launch for Lucid Systems apps            |
 | `apps/demo`          | Vite dev page showing the ribbon                                                           |
 | `apps/desktop`       | Planned ONLYOFFICE DesktopEditors fork (placeholder)                                       |
 | `apps/mobile`        | Planned Capacitor shell for Android and iOS (placeholder)                                  |

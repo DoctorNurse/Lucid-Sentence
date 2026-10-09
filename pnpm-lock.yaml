@@ -44,6 +44,9 @@ importers:
       '@lucid-sentence/ribbon-ui':
         specifier: workspace:*
         version: link:../../packages/ribbon-ui
+      '@lucid-sentence/splash':
+        specifier: workspace:*
+        version: link:../../packages/splash
     devDependencies:
       vite:
         specifier: ^8.3.4
@@ -56,6 +59,12 @@ importers:
       '@lucid-sentence/commands':
         specifier: workspace:*
         version: link:../commands
+
+  packages/splash:
+    dependencies:
+      '@lucid-sentence/ribbon-ui':
+        specifier: workspace:*
+        version: link:../ribbon-ui
 
 packages:
 

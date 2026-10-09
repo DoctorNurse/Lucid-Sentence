@@ -10,6 +10,7 @@ export default defineConfig({
     alias: {
       '@lucid-sentence/commands': src('commands'),
       '@lucid-sentence/ribbon-ui': src('ribbon-ui'),
+      '@lucid-sentence/splash': src('splash'),
     },
   },
   test: {
