@@ -2,12 +2,19 @@
 title: "Lucid Sentence — Planning Document"
 subtitle: "A free, open-source word processor with Word-equivalent function and layout"
 author: "Prepared for R H"
-date: "October 8, 2026 (draft v0.5)"
+date: "October 8, 2026 (draft v0.6)"
 ---
 
 # Lucid Sentence — Planning Document
 
-*Draft v0.5, October 8, 2026. Prepared for R H. External facts link to their sources. This document is not legal advice.*
+*Draft v0.6, October 8, 2026. Prepared for R H. External facts link to their sources. This document is not legal advice.*
+
+**What changed in v0.6.** Adds §9, **AI features**:
+
+- **Part A, optional offline on-device AI.** The minimum device is the Galaxy S24. Covers models, runtimes, capability tiers, and an AI go/no-go gate.
+- **Part B, MCP readiness.** Lucid Sentence acts as a local MCP server, gated by per-document "Share with AI" keys. One tool layer serves both the on-device model and external agents.
+
+The roadmap, risks, and open questions are updated to match.
 
 **What changed in v0.5.** The product is renamed **Lucid Sentence** (from Lucid Systems). The planned GitHub repository is `lucid-sentence`, licensed AGPL-3.0. "Sentence" is used as a short form where it reads naturally.
 
@@ -53,6 +60,7 @@ date: "October 8, 2026 (draft v0.5)"
 - Other formats as edit targets (ODT, RTF), and spreadsheet or presentation apps.
 - Real-time co-authoring and any cloud service.
 - Running VBA macros. Macros inside .docm files are preserved but not run.
+- Cloud AI of any kind. Optional AI runs on the device (§9); external agents connect only by explicit user action through MCP.
 - Features that depend on Microsoft 365 services, such as Copilot, cloud Editor, Researcher, and Loop. Their ribbon slots are kept as stubs or replaced with open alternatives.
 - Copying Word's icons or other visual artwork.
 
@@ -398,6 +406,10 @@ lucid-sentence/      # GitHub: lucid-sentence (AGPL-3.0)
 ├─ shells/
 │  ├─ desktop/        # fork of DesktopEditors (Win/macOS), stripped to the word processor
 │  └─ mobile/         # Capacitor app: local editor-server shim, x2t (WASM → native plugin)
+├─ packages/
+│  ├─ commands/       # the 351-command ribbon registry (exists)
+│  ├─ mcp-tools/      # proposed: one tool layer for MCP and the on-device model (§9.10)
+│  └─ ai-runtime/     # proposed: llama.cpp / LiteRT-LM / OS-model backends (§9.3)
 ├─ assets/            # original icons, OFL fonts, templates
 ├─ fidelity/          # .docx corpus + Word-vs-Sentence PDF diff harness
 ├─ legal/             # NOTICE, modification log, third-party licenses, TRADEMARKS.md
@@ -424,11 +436,11 @@ lucid-sentence/      # GitHub: lucid-sentence (AGPL-3.0)
 | Milestone | Scope (all platforms unless noted) | Exit criteria |
 |---|---|---|
 | **M0: Foundations and go/no-go** (Phase 0) | .docx fidelity bake-off. **Mobile gate (§3.4).** DesktopEditors fork stripped to the word processor. Full command list with the §4.8 coverage confirmed against sdkjs (turning unverified items into verified or gap). Rough sizing of engine gaps for both engines. Name clearance and counsel review. | Engine decision made: ONLYOFFICE, or a switch to Collabora (§3.4), with the gap cost factored in. |
-| **M1: Platform alpha** (internal) | Command registry and three-layout ribbon renderer with CI parity checks. Touch input layer. Dialogs adapted to sheets. Local editor-server shim and x2t on all platforms. Backstage (File) and Help. Theming, branding, legal notices. | The same UI-layer build opens, edits, and saves .docx on all four platforms. |
+| **M1: Platform alpha** (internal) | Command registry and three-layout ribbon renderer with CI parity checks. Touch input layer. Dialogs adapted to sheets. Local editor-server shim and x2t on all platforms. Backstage (File) and Help. Theming, branding, legal notices. **MCP tool layer** (`mcp-tools`) generated from the registry, which doubles as the test harness (§9.10). | The same UI-layer build opens, edits, and saves .docx on all four platforms. |
 | **Alpha A: Authoring** (internal) | **Home, Insert, Layout, Design, View** with the "UI only" and verified items, plus contextual tabs (Table, Picture, Shape, Header & Footer, Equation, Chart). Design gaps (Style Sets, page borders, themes). Insert gaps (Cover Page, Quick Parts). | Every verified command in these tabs works on all platforms, and the fidelity gate passes. |
 | **Alpha B: Review and Draw** (internal) | **Review** (track changes, comments, compare/combine, restrict editing, OS-based Read Aloud, accessibility checker) and **Draw** (pen tools with stylus on tablets, finger draw mode on phones; Ink to Shape and Ink to Math). | Tracked changes, comments, and ink round-trip with Word. |
 | **Alpha C: References and Mailings** (internal) | **References** (native citations and bibliography, Index, Table of Authorities on top of the existing TOC, notes, and captions) and **Mailings** (local merge host, Rules, Envelopes, Labels, mobile share-sheet output). | Reference-heavy and merge documents from Word behave the same on all platforms. |
-| **Beta 1: Feature-complete** (closed beta) | Remaining View modes (Read Mode, Web Layout, Outline, Draft, Focus) and window commands (with the phone adaptations in §4.6). Every non-stub command in §4.2 is present. | The parity CI check reports 100% of the command list on desktop, tablet, and phone. |
+| **Beta 1: Feature-complete** (closed beta) | Remaining View modes (Read Mode, Web Layout, Outline, Draft, Focus) and window commands (with the phone adaptations in §4.6). Every non-stub command in §4.2 is present. **Desktop MCP server** (opt-in, off by default; §9.7–9.9). | The parity CI check reports 100% of the command list on desktop, tablet, and phone. |
 | **Beta 2: Release candidate** (public beta) | Performance hardening (re-run the §3.4 targets on the full feature set), accessibility, localization, crash-free sessions, store submissions or alternative channels, documentation. | Release criteria below are met. |
 | **v1.0** | Single release on four platforms | Fidelity gate, §3.4 performance targets, zero known data-loss bugs, legal sign-off |
 
@@ -440,7 +452,8 @@ lucid-sentence/      # GitHub: lucid-sentence (AGPL-3.0)
 | **Linux** (if not in v1) | Mostly free with DesktopEditors; packaging and QA |
 | **.doc import** (if kept) | One-way .doc to .docx import through x2t |
 | **Collaboration** | Optional co-editing server. It is covered by AGPL §13, so it must offer its source to users. |
-| **On-device extras** | Dictation, translation, grammar (local models), replacing the current stubs |
+| **AI Pack (1.x)** | Optional on-device model download and use cases 1–4 (§9.1). Then alt text, translation, and dictation models. Gated by §9.5. The Tier 0 keyword palette is already in v1. |
+| **MCP extensions** | OAuth-conformant local authorization; mobile MCP (app-to-app or LAN pairing), to evaluate (§9.7) |
 
 ### 7.3 Scope, team, and effort considerations (relative, no dates)
 
@@ -482,6 +495,7 @@ lucid-sentence/      # GitHub: lucid-sentence (AGPL-3.0)
 | QA matrix (4 OS × phone and tablet × 11 tabs) and app-store review | Slow betas | Automated UI tests per layout, device farm, TestFlight and Play testing tracks from Alpha A |
 | Large DesktopEditors fork and sdkjs patches to rebase | Maintenance burden | Upstream-first, thin patches, `ui/` isolation |
 | Licensing friction with ONLYOFFICE, and AGPL vs. App Store terms | Legal cost; no iOS store distribution | Comply fully with 9.4 terms, counsel review in M0, alternative channels |
+| AI and MCP risks (model performance on the S24, prompt injection, local endpoint security, model licensing) | See §9.12 | See §9.12 |
 | .docx layout drift from Word, and Microsoft IP or trade-dress claims | The core promise fails; takedown | Fidelity CI gate, open fonts, §5.1 guardrails |
 
 ### Open questions for R H
@@ -492,6 +506,264 @@ lucid-sentence/      # GitHub: lucid-sentence (AGPL-3.0)
 4. Is Linux wanted in v1 or after v1? It costs little with DesktopEditors.
 5. Which Word should be the compatibility reference: Microsoft 365 current, or a fixed version?
 6. Is a future one-way .doc import worth keeping on the roadmap, or should it be dropped entirely?
+7. AI and MCP questions: see §9.13.
+
+## 9. AI features: on-device AI and MCP (optional)
+
+**Status legend for this section:**
+
+- **✔ verified:** checked against the linked source on Oct 8, 2026.
+- **? unverified:** an estimate, an assumption, or a design proposal.
+- **Proposed** targets are proposals for R H, not measured figures.
+
+**Principles:**
+
+- AI is **optional and off by default**.
+- **Nothing leaves the device** unless the user explicitly connects an external agent.
+- **Every AI edit goes in as a tracked change** by default.
+- The **on-device model and external agents share one tool layer**, built on the command registry (§9.9).
+
+### Part A: On-device AI
+
+#### 9.1 Use cases (prioritized)
+
+| # | Use case | Model needed | Notes |
+|---|---|---|---|
+| 1 | **Rewrite selection**: shorter, clearer, more formal, friendlier | Small text LLM | Shown as a diff and inserted as a tracked change. Selection-sized, so it fits small models. |
+| 2 | **Grammar and style with explanations** | Small text LLM, on top of the existing spell checker | Each suggestion comes with a one-line explanation. The deterministic checker (Hunspell or LanguageTool) still runs without a model. |
+| 3 | **Summarize** a selection or short document; **summarize tracked changes** | Small text LLM | "Short" is a proposal: up to about 4k tokens, roughly 3,000 words. Change summaries read the revision list, not the whole document. |
+| 4 | **Natural-language command palette**: maps phrases to the **351-command registry** in `packages/commands` | Small text LLM (constrained output), with `searchCommands` keyword search as the fallback | Output is constrained to a valid command id plus arguments, then confirmed by the user. This works on Tier 0 too, through keyword search only. |
+| 5 | **Accessibility help**: alt-text drafts, fixing heading order | Small vision-language model for alt text; text LLM or rules for headings | Feasible: SmolVLM-256M/500M (Apache-2.0, under about 1–1.3 GB RAM) ✔ ([256M](https://huggingface.co/HuggingFaceTB/SmolVLM-256M-Instruct), [500M](https://huggingface.co/HuggingFaceTB/SmolVLM-500M-Instruct)). Gemma 4 and Qwen3.5 small models also accept images ✔. Drafts must always be reviewed by a human. |
+| 6 | **Smart templates and outlines** | Small text LLM | Produces structure (headings, sections), not long prose |
+| 7 | **Offline translation** | Dedicated small translation models | Mozilla's Firefox Translations models (MPL-2.0) ✔ ([mozilla/translations](https://github.com/mozilla/translations)). OPUS-MT is CC-BY-4.0 ✔ ([Opus-MT](https://github.com/helsinki-nlp/opus-mt)). Downloaded per language pair. |
+| 8 | **On-device dictation** | Small speech model | whisper.cpp (MIT, with Android and iOS examples) running Whisper weights (MIT) ✔ ([whisper.cpp](https://github.com/ggerganov/whisper.cpp/)). Moonshine's English models are MIT, but its non-English models are under a community license ✔ ([Moonshine](https://github.com/moonshine-ai/moonshine-v2/)). Prefer Whisper for all languages. |
+
+**Non-goals:**
+
+- Long-form generation ("write me a 10-page report").
+- Chat over very large documents. RAG or chat across 300-page files is out of scope on device.
+- Cloud fallback. Lucid Sentence ships no cloud AI; users who want cloud models connect them as external MCP agents (Part B).
+- Training on user documents.
+
+#### 9.2 Candidate models (about 0.5–4B, open weights)
+
+The models are **separate optional downloads**, not bundled and not linked into AGPL code. Their licenses therefore don't need to be AGPL-compatible in the copyleft sense, but they shouldn't add use restrictions we can't pass on cleanly. **Proposed policy:** default models are **Apache-2.0 or MIT only**. Apache-2.0 is GPLv3-compatible per the FSF ([FSF license list](https://www.gnu.org/licenses/license-list.html#apache2)).
+
+| Family / size | License (✔ verified) | Fit | Notes |
+|---|---|---|---|
+| **Gemma 4 E2B / E4B** (2.3B / 4.5B effective; 5.1B / 8B with embeddings) | **Apache-2.0** (Gemma 4 only) ✔ ([Google](https://blog.google/innovation-and-ai/technology/developers-tools/gemma-4/); [model card](https://ai.google.dev/gemma/docs/core/model_card_4)) | **Strong candidate.** Text, image, and audio input, built for on-device use. | Google cites under 1.5 GB of memory for E2B "on some devices" with LiteRT-LM ✔ ([Google Dev blog](https://developers.googleblog.com/bring-state-of-the-art-agentic-skills-to-the-edge-with-gemma-4/)). Its footprint in GGUF runtimes is ? unverified. |
+| **Qwen3.5 0.8B / 2B / 4B** | **Apache-2.0** ✔ ([Qwen3.5-4B card](https://huggingface.co/Qwen/Qwen3.5-4B/raw/main/README.md); [Artificial Analysis](https://artificialanalysis.ai/articles/qwen3-5-small-models)) | **Strong candidate.** Native vision. Released 2026-03-02 ✔ ([repo](https://github.com/QwenLM/Qwen3.5/)). | About 3 GB for 4B at 4-bit and under 2 GB for 2B, according to a third-party estimate ✔ ([Artificial Analysis](https://artificialanalysis.ai/articles/qwen3-5-small-models)). Use non-thinking mode for latency. |
+| Qwen3 0.6B / 1.7B / 4B | Apache-2.0 ✔ ([Qwen3](https://github.com/qwenLM/qwen3)) | Fallback | Superseded by Qwen3.5 |
+| **Phi-4-mini-instruct** (3.8B) | **MIT** ✔ ([card](https://huggingface.co/microsoft/Phi-4-mini-instruct)) | Tier 2, text only | 128K context |
+| **SmolLM3-3B** | Apache-2.0 ✔ (third-party summary ([dev.co](https://dev.co/ai/llms/smollm3-3b)); confirm on the Hugging Face card) | Tier 2 alternative | Fully open training recipe |
+| Gemma 1–3n, TranslateGemma | **Gemma Terms of Use** (custom): the Prohibited Use Policy must be passed downstream as an enforceable term, and a Notice file is required ✔ ([terms](https://ai.google.dev/gemma/terms)) | **Not a default** | Allowed only as an opt-in "custom model" |
+| Llama 3.2 1B / 3B | **Llama 3.2 Community License**: "Built with Llama" attribution, an acceptable use policy, and a 700M-MAU clause ✔ ([license](https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE)) | **Not a default** | Custom license with use restrictions |
+
+**Recommendation:**
+
+- **Tier 1 default (S24-class phones, 8 GB):** **Qwen3.5-2B** through llama.cpp (predictable GGUF footprint, vision included). Benchmark **Gemma 4 E2B** through LiteRT-LM against it in the AI gate (§9.5), and pick the winner per platform.
+- **Tier 2 (12 GB+ phones, 16 GB+ desktops):** **Gemma 4 E4B** or **Qwen3.5-4B**.
+- **Specialized models:** Firefox Translations models for translation, Whisper (base or small, through whisper.cpp) for dictation, SmolVLM-500M for alt text only where the main model has no vision.
+
+#### 9.3 Runtimes and platform coverage
+
+| Runtime | License | Windows | macOS | Android | iOS | Notes |
+|---|---|---|---|---|---|---|
+| **llama.cpp / GGUF** (recommended primary) | MIT ✔ | ✔ | ✔ (Metal, "first-class") | ✔ ([Android build doc](https://github.com/ggml-org/llama.cpp/blob/master/docs/android.md)) | ✔ (XCFramework) | ✔ [README](https://github.com/ggml-org/llama.cpp). Vulkan, Metal, and CPU backends. Widest model coverage. Qwen3.5 support is noted in Qwen's README; Gemma 4 support is ? unverified. |
+| **LiteRT-LM** (recommended secondary on Android) | Apache-2.0 ✔ | ✔ | ✔ | ✔ (GPU, **NPU**) | ✔ (Swift API **Early Preview**) | ✔ [overview](https://developers.google.com/edge/litert-lm/overview), [repo](https://github.com/google-ai-edge/LiteRT-LM). The path to Gemma 4's low-memory claims. |
+| MediaPipe LLM Inference | Apache-2.0 | n/a | n/a | maintenance-only | maintenance-only | ✔ Superseded by LiteRT-LM ([guide](https://developers.google.com/edge/mediapipe/solutions/genai/llm_inference/android)). **Avoid.** |
+| MLC LLM | Apache-2.0 ✔ | ✔ (Vulkan) | ✔ (Metal) | ✔ (OpenCL) | ✔ (Metal) | ✔ [repo](https://github.com/mlc-ai/mlc-llm). Needs ahead-of-time compilation per model. Good fallback. |
+| ONNX Runtime GenAI | MIT | ✔ | ✔ | ✔ | **in development** | ✔ [repo](https://github.com/microsoft/onnxruntime-genai). Not usable on iOS yet. |
+| ExecuTorch 1.0 | BSD | experimental (x86 Windows) | ? | ✔ | ✔ | ✔ [1.0 release](https://pytorch.org/blog/introducing-executorch-1-0/) |
+| Apple Foundation Models | OS API | n/a | ✔ M1+ (macOS 26) | n/a | ✔ iPhone 15 Pro / 16+ | ✔ About a 3B on-device model at 2-bit, for summarization, extraction, and short text ([Apple newsroom](https://www.apple.com/newsroom/2025/09/apples-foundation-models-framework-unlocks-new-intelligent-app-experiences/); [Apple ML](https://machinelearning.apple.com/research/apple-foundation-models-2025-updates)). **Optional backend** when present: no download needed. |
+| Android AICore / Gemini Nano (ML Kit GenAI) | OS API | n/a | n/a | selected devices | n/a | ✔ The current list includes the Galaxy **S25/S26** and Pixel 9–11, **not the S24** ([ML Kit GenAI](https://developers.google.com/ml-kit/genai)). Optional backend on R H's S26, but it **can't be the baseline**. |
+
+**Recommendation:**
+
+- Use **one abstraction** (`packages/ai-runtime`, ? proposed) with these backends:
+  1. **llama.cpp**, the default on all four platforms.
+  2. **LiteRT-LM** on Android, where it wins the gate.
+  3. **OS models** (Apple Foundation Models, AICore) as zero-download optional backends.
+- On mobile, the runtime runs natively (a Capacitor plugin). On desktop, it runs in the shell process. It never runs inside the WebView.
+
+#### 9.4 Minimum device, RAM sizing, and capability tiers
+
+**Minimum bar: Samsung Galaxy S24** ✔
+
+- 8 GB LPDDR5X RAM on the base model; 12 GB on S24+/Ultra and some S24 configurations ([Wikipedia](https://en.wikipedia.org/wiki/Samsung_Galaxy_S24); [GSMArena](https://www.gsmarena.com/compare.php3?idPhone1=12773)).
+- The chip differs by region ([Android Authority](https://www.androidauthority.com/samsung-galaxy-s24-snapdragon-vs-exynos-countries-3402659/)):
+  - **Snapdragon 8 Gen 3 for Galaxy** in the US, Canada, China, Hong Kong, and Taiwan.
+  - **Exynos 2400** in most other markets.
+- **Both variants must be tested.** Their GPUs (Adreno 750 vs. Xclipse 940) differ for GPU and NPU backends.
+
+**Sizing rule of thumb (? estimates):**
+
+- 4-bit weights take about 0.55–0.65 GB per billion parameters.
+- KV cache and runtime overhead add about 0.3–1 GB, depending on context length (4k proposed).
+- So: 0.8B ≈ 0.6–1 GB, 2B ≈ 1.5–2.2 GB, 4B ≈ 3–3.5 GB of extra RAM while running.
+- This must fit **alongside** the editor's own budget (§3.4: ≤ 800 MB for an M-size document).
+
+| Tier (proposed) | Device RAM | Text model | Other models | Typical devices (?) |
+|---|---|---|---|---|
+| **Tier 0: no model** | any, or user opt-out | none: keyword command palette (`searchCommands`), deterministic spell and grammar checks, OS features where present | none | Older and low-RAM phones |
+| **Tier 1: baseline** | **≥ 8 GB** | 2B class, 4-bit (Qwen3.5-2B or Gemma 4 E2B) | Translation per language pair; Whisper base; vision through the main model or SmolVLM | **Galaxy S24 (8 GB)**, recent mid- and high-end phones |
+| **Tier 2: enhanced** | **≥ 12 GB** (phones), **≥ 16 GB** (desktop) | 4B class, 4-bit (Gemma 4 E4B, Qwen3.5-4B, Phi-4-mini) | Whisper small | S24+/Ultra, S26, most 2024+ laptops |
+| 6 GB "lite" (optional) | 6 GB | 0.8B class (Qwen3.5-0.8B), palette and short rewrites only | none | Budget phones |
+
+**What "most phones" can run (? unverified):** typical mid-range Android phones currently ship with 6–8 GB of RAM. Tier 1 therefore covers many current mid-range and all flagship devices, and the 0.8B "lite" tier extends to 6 GB phones. Market data must be confirmed before the tiers are final.
+
+**Behavior:**
+
+- **Optional download** (not bundled): about 1–3 GB per model, Wi-Fi only by default, resumable, checksum-verified, stored in app storage.
+- The device tier is detected automatically from total RAM, free storage, and a 10-second micro-benchmark. The user can override it.
+- **Graceful fallback:** with no model, every AI entry point either degrades (keyword palette, deterministic checks) or shows "Download the on-device model to use this." **Nothing silently calls the network.**
+- **Privacy:** inference is local; prompts and documents never leave the device; there is no telemetry. A model-integrity manifest (hashes) is published in the repo.
+
+#### 9.5 AI go/no-go gate (proposed targets)
+
+The gate runs on the **S24 (8 GB, both Snapdragon and Exynos)**, the S26, an iPhone 15 Pro, and a 16 GB laptop, with an M-size document open.
+
+| Metric | Tier 1 target on S24 (proposed) | Tier 2 / desktop (proposed) |
+|---|---|---|
+| Time to first token (500-token prompt) | ≤ 1.5 s | ≤ 1.0 s |
+| Decode speed | ≥ 10 tok/s | ≥ 20 tok/s |
+| Peak extra RAM (model + KV) | ≤ 2.2 GB; no out-of-memory kill of the app or the WebView | ≤ 3.5 GB |
+| Model load (warm or cold) | ≤ 2 s / ≤ 6 s | ≤ 1 s / ≤ 4 s |
+| Battery drain, 10 min of continuous mixed use | ≤ 4% | n/a (laptop: ≤ 3%) |
+| Thermal, 10 min sustained | Throughput drop ≤ 30%; no OS thermal warning | No fan-noise complaint in tests |
+| Quality: rewrite acceptance (blind review, 200 samples) | ≥ 60% "accept as is or with a minor edit" | ≥ 70% |
+| Quality: command-palette top-1 accuracy (300-phrase set) | ≥ 85% (the keyword-only baseline is measured too) | ≥ 90% |
+| Dictation word error rate (English test set) | ≤ 12% | ≤ 8% |
+
+- **Pass:** ship the AI Pack on that tier.
+- **Fail on Tier 1:** move to the 0.8B "lite" model, or limit Tier 1 to the palette and rewrites. Tier 0 always ships.
+
+### Part B: MCP (Model Context Protocol)
+
+#### 9.6 Spec facts (current revision 2026-07-28)
+
+- **Transports** ✔ ([transports](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio)):
+  - **stdio**: newline-delimited JSON-RPC over a client-launched subprocess.
+  - **Streamable HTTP**: each message is a POST to one endpoint; the reply is JSON or a request-scoped SSE stream.
+  - Revision 2026-07-28 **removed protocol-level sessions and the GET stream** ([Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)).
+- **Streamable HTTP security** ✔: servers **MUST validate `Origin`** (to prevent DNS rebinding) and return **403** if it is present and invalid. Local servers **SHOULD bind to 127.0.0.1**. Servers **SHOULD authenticate** all connections ([Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)).
+- **Authorization** ✔ ([authorization](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)):
+  - It is **OPTIONAL**.
+  - *If* a server supports it over HTTP, it acts as an **OAuth 2.1 resource server**. It **MUST** implement Protected Resource Metadata (RFC 9728), validate the token **audience** (RFC 8707), and return **401** for invalid tokens.
+  - **Token passthrough is forbidden.**
+  - **stdio implementations SHOULD NOT** use this spec and should take credentials **from the environment** instead.
+
+#### 9.7 Architecture
+
+| Surface | Design | Status |
+|---|---|---|
+| **Desktop: Streamable HTTP** | The app hosts the MCP server at `http://127.0.0.1:<random port>/mcp`, **only while the user has shared at least one document**. Binds to loopback only. Port and endpoint are written to a user-only file for clients to find. | ? proposal |
+| **Desktop: stdio launcher** | A small `lucid-sentence-mcp` binary that agents launch as a subprocess. It relays to the running app over a user-only local socket or named pipe. The key comes from the environment (`LUCID_SENTENCE_KEY`), as the spec recommends for stdio. | ? proposal |
+| **Mobile (v1 scope)** | **No external MCP listener in v1.** When the AI Pack ships, the on-device model uses the tool layer in-process (same device only). | ? proposal |
+| Mobile (later, evaluate) | (a) **App-to-app**: Android bound service or intents; iOS has no general local-server path in the background (? to verify). (b) **LAN with pairing**: an opt-in, foreground-only listener paired by QR code, with TLS and certificate pinning. Off by default and time-boxed. | ? to verify; higher risk |
+
+#### 9.8 Tools, resources, prompts (built on the command registry)
+
+| Kind | Name (proposed) | Permission | Behavior |
+|---|---|---|---|
+| Tool | `document.info`, `document.outline` | read | Title, stats, heading tree, sections, and styles in use |
+| Tool | `text.read(range)`, `text.find(query)` | read | Ranges are addressed by stable paragraph anchors plus offsets (? anchor scheme to verify in sdkjs) |
+| Tool | `text.insert(range, text)`, `text.replace(range, text)` | suggest / edit | **Always a tracked change** with author `AI: <client name>`. Rejected if the range changed since it was read (optimistic concurrency). |
+| Tool | `style.apply(range, styleId)` | suggest / edit | Tracked as a formatting change |
+| Tool | `commands.list()`, `commands.run(id, args)` | read / edit | Exposes the **351-command registry**. Each command carries a permission class (read, format, structure, destructive). Destructive and file-level commands require in-app confirmation. |
+| Tool | `comments.list/add/reply/resolve` | read / comment | Comments are authored as the AI client |
+| Tool | `revisions.list`, `revisions.accept/reject` | read / **edit + user confirmation** | Agents can propose but never silently accept their own changes |
+| Tool | `export(format)` | read | Produces a PDF or .docx **copy**. It never overwrites the open file. |
+| Resource | `doc://current/text` (Markdown view), `doc://current/outline`, `doc://current/comments`, `doc://current/revisions` | read | Read-only snapshots |
+| Prompt | `summarize-changes`, `tighten-selection`, `fix-heading-order` | read | Templates that use the tools above |
+
+**Agent-safety rules:**
+
+- Document content is **untrusted input to agents** (prompt-injection risk), and tool descriptions say so.
+- Per-key permission classes are enforced server-side.
+- Bulk operations are limited (proposed: at most 200 changed paragraphs per call).
+
+#### 9.9 Per-document key ("Share with AI")
+
+**Flow:**
+
+1. The user chooses **Review → Share with AI** (also in File → Share).
+2. They pick the permission: **Read** / **Comment** / **Suggest** (tracked changes only, the default) / **Edit**. Edit still records tracked changes; it only adds formatting and structure commands.
+3. They set an optional **expiry** (1 h / 24 h / 7 days / none) and a label (e.g., "Claude Desktop").
+4. The key is **shown once**, with Copy, a ready-made MCP client config snippet, and a QR code (for later mobile pairing).
+
+| Property | Design |
+|---|---|
+| Key format | `lsk_<keyId>_<secret>`: a 256-bit random secret (base64url) from the OS CSPRNG. `keyId` is a public 8-character lookup handle. |
+| Storage | Store **only a hash** of the secret, plus its scope: SHA-256/HMAC is enough because the secret is high-entropy. Store it in the OS keystore or protected app data: Windows DPAPI / Credential Manager, macOS and iOS Keychain, Android Keystore-wrapped storage. The plaintext is never stored. |
+| Scope | One **document ID** and one permission level, with optional expiry. Also bound to **this installation**: a key copied to another machine doesn't work there. |
+| Revocation | Per key, or **"Revoke all AI access"** for the document or the whole app |
+| **What goes in the .docx** | **Recommended: never the secret.** Files get emailed, uploaded, and versioned, and a secret stored in the file would travel with every copy. Store only a random **document ID** (UUID) as a custom property, for example `LucidSentence.DocumentId` in `docProps/custom.xml`, so keys can find the document after it is moved or renamed. |
+| Document-ID trade-offs | If the file is copied, both copies carry the same ID. When two documents with the same ID are open, the app asks which one an agent may access. The ID is minor metadata; File → Inspect Document can remove it, and a setting can turn it off. ? Word should preserve custom properties on round-trip; to verify with the fidelity corpus. |
+| Alternative considered | Storing a key hash or "AI policy" as a **custom XML part** in the .docx. **Rejected**: anyone with the file could see that AI sharing was enabled, and an offline brute-force attack is pointless only while the secret stays high-entropy. It adds risk for no benefit. |
+
+**How the key maps to MCP authorization:**
+
+- **v1 (proposed): static bearer token, local only.**
+  - Streamable HTTP clients send `Authorization: Bearer lsk_…`. stdio clients set `LUCID_SENTENCE_KEY` (the spec-endorsed stdio pattern).
+  - Because authorization is optional in the spec, this is **allowed**. Over HTTP we would document it as "local static bearer, not MCP-Authorization-conformant": it has no Protected Resource Metadata.
+  - Invalid, expired, or revoked keys get **401**.
+- **Later (spec-conformant option): the app embeds a small OAuth 2.1 authorization server on loopback.**
+  - It publishes RFC 9728 metadata, and the "Share with AI" dialog acts as the **consent screen** (authorization code with PKCE).
+  - It issues **short-lived, audience-bound access tokens** (audience = this MCP endpoint, scope = document + permission).
+  - The long-lived per-document key becomes the **grant**, not the access token. This adds compliance and token rotation at the cost of complexity. Do it only if major MCP clients require OAuth for local servers (? to verify against client behavior).
+
+**Transport hardening:**
+
+| Control | Design (proposed) |
+|---|---|
+| Binding | `127.0.0.1` / `::1` only. Never `0.0.0.0`. The listener is off when nothing is shared. |
+| DNS rebinding | Reject any `Origin` header that is present and not on the allowlist (empty by default) with **403**. Require `Host` to be `127.0.0.1:<port>` or `localhost:<port>`. ✔ The spec requires Origin validation. |
+| Rate limits | Per key: 20 requests/s burst, 600/min, 60 writes/min, plus payload limits (1 MB per request). Return 429 with Retry-After. |
+| Audit log | Every call is logged locally: time, key label, tool, range, and outcome. Viewable in **Review → AI Activity** and exportable. Content is not logged by default. |
+| Visibility | Status-bar badge **"AI connected: <label> (Suggest)"**, which pulses while an agent is acting. Tracked changes are attributed to the agent. |
+| Kill switch | One click on the badge or **Review → Stop all AI** revokes active sessions immediately and stops the listener. There is also a global setting "Disable MCP server". |
+
+#### 9.10 One tool layer for the local model and external agents
+
+- `packages/mcp-tools` (? proposed) defines each tool once, generated from the command registry plus the document API. It is exposed through three adapters:
+  1. the **MCP server** (HTTP and stdio) for external agents;
+  2. an **in-process adapter** for the on-device model, which uses the same schemas with constrained JSON output and needs no network or socket;
+  3. the **test harness**, so CI drives the editor through the same tools.
+- The local model gets a built-in key-equivalent scope (default **Suggest**). Its edits show the same tracked-change attribution ("AI: on-device"), audit log entries, and kill switch.
+
+### 9.11 Roadmap placement (recommendation)
+
+| Item | Placement | Why |
+|---|---|---|
+| Tool layer (`mcp-tools`) built on the registry | **M1 (pre-v1)** | Cheap with the registry already in place. It doubles as the automation and test harness. |
+| Desktop MCP server (stdio + localhost HTTP, static bearer, per-document keys, audit log, kill switch) | **v1, opt-in, off by default** (lands in Beta 1) | Large value for low effort on desktop; isolated behind a toggle. ? R H to confirm. |
+| On-device **AI Pack** (Tier 0 palette ships in v1; model download and use cases 1–4) | **Post-v1, 1.x**. The AI gate (§9.5) runs as a spike parallel to M0/M1 | Keeps the full-ribbon v1 scope intact. Tier 0 (keyword palette) is in v1. |
+| Alt text, translation, dictation models | 1.x, after the AI Pack | Each one is a separate model download and evaluation |
+| OAuth-conformant MCP auth; mobile MCP (app-to-app or LAN pairing) | Post-v1, evaluate | Complexity and security risk; depends on how clients behave |
+
+### 9.12 Risks (AI and MCP)
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| Tier 1 models too slow, hot, or memory-hungry on the S24 (especially on Exynos vs. Snapdragon GPU paths) | Poor AI on the minimum device | §9.5 gate on both variants, CPU fallback, 0.8B lite model, LiteRT-LM NPU path |
+| Model plus editor exceeds the memory limit, so Android or iOS kills the app | Data-loss risk | Load the model only on demand, unload it when idle, keep autosave on, enforce a memory budget |
+| Model license drift (custom terms, use restrictions) | Legal and community risk | Apache/MIT-only default policy; license manifest checked in CI |
+| Hallucinated rewrites, summaries, or alt text | User trust | Diff view, tracked changes, "AI draft" labels, human review required for alt text |
+| **Prompt injection** through document content against external agents | An agent performs unintended edits | Suggest-only default, permission classes, confirmation for destructive actions, rate limits, audit log |
+| Local MCP endpoint attacked by other local processes or by browsers (DNS rebinding) | Document leak or tampering | Loopback binding, Origin and Host checks, high-entropy hashed keys, listener off by default, kill switch |
+| Key leaked (pasted into chats or configs) | Unauthorized access | Short default expiry (proposed 24 h), per-installation binding, easy revocation, keys visible in the audit log |
+| MCP spec churn (2026-07-28 removed sessions) | Breakage | Use the official SDK, pin the protocol version, version-negotiation tests |
+| Model download size and hosting costs | Users or project pay for bandwidth | Fetch from upstream hosts (for example Hugging Face) with pinned hashes; optional mirror |
+
+### 9.13 Open questions (AI and MCP)
+
+1. **v1 or post-v1 for MCP?** The recommendation is a desktop MCP server in v1 (opt-in) and the on-device AI Pack in 1.x. Do you agree, or should AI also be a v1 optional pack?
+2. **Model policy.** Is an Apache/MIT-only default acceptable, excluding Gemma 1–3n and Llama from defaults? And may models be downloaded from third-party hosts such as Hugging Face, or must Lucid Systems mirror them?
+3. **Mobile MCP.** Should external agents ever reach the mobile app, through app-to-app or LAN pairing? Or is on-device-only acceptable for good?
+4. Should the per-document ID in the .docx be **on by default**, or created only when "Share with AI" is first used? (The recommendation is to create it only on first use.)
+5. Is a **non-OAuth static bearer** acceptable for local MCP in v1, with OAuth only if clients require it?
+
 
 ---
 *Sources are linked inline. External facts were checked on October 8, 2026. ONLYOFFICE license text was read from GitHub `master` on that date; re-check it at fork time.*
