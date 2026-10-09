@@ -62,7 +62,8 @@ export interface SdkApi {
   asc_setSpellCheck(on: boolean): void;
   asc_replaceMisspelledWord(word: string, prop: SdkSpellCheck): void;
   asc_ignoreMisspelledWord(prop: SdkSpellCheck, all: boolean): void;
-  getSelectedElements(): SdkSelectedObject[];
+  /** true re-reads the selection (Document_UpdateInterfaceState) first. */
+  getSelectedElements(update?: boolean): SdkSelectedObject[];
 }
 
 /** asc_CSelectedObject: what the cursor is in (paragraph, table, picture, misspelled word, ...). */

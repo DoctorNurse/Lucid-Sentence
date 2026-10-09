@@ -236,9 +236,10 @@ export class DocEngine extends EventTarget {
       this.readSelection(s, objs);
       if (this.api === api) this.syncList();
     });
-    // Suggestions for the word at the cursor arrive from the spell worker later.
+    // Suggestions for the word at the cursor arrive from the spell worker later; the
+    // selection stack still holds the empty list until it is re-read.
     on('asc_onSpellCheckVariantsFound', () => {
-      this.readSelection(s, api.getSelectedElements());
+      this.readSelection(s, api.getSelectedElements(true));
     });
     api.asc_registerCallback('asc_onContextMenu', (data: { get_X(): number; get_Y(): number }) => {
       if (this.api !== api || !this.frame) return;
