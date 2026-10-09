@@ -49,6 +49,9 @@ import {
 import { Palette } from './editor/palette.js';
 import { EditorSurface } from './editor/surface.js';
 import { closePopover, el, popoverOpen, tap, toast } from './editor/ui.js';
+import { ENGINE_WIRED, appLevel, engineHandlers, enginePressed } from './engine/commands.js';
+import { DocEngine } from './engine/engine.js';
+import * as files from './engine/files.js';
 import { initPlatform } from './native.js';
 import { drawRulers, geometry, type PageSetup } from './page.js';
 
@@ -90,6 +93,171 @@ const canvas = $('#canvas');
 const pageEl = $('#page');
 const doc = $('#doc');
 const SAMPLE = doc.innerHTML;
+
+// ── Document engine state (functions below, in "Document engine")
+const engineHost = $('#engine-host');
+const engine = new DocEngine(engineHost, './engine/');
+/** Where the open .docx lives, so Save writes back to it. */
+let fileTarget: files.FileTarget = { kind: 'none' };
+const engineApp = {
+  engine,
+  save: () => {
+    void saveDocx(false);
+  },
+  saveAs: () => {
+    void saveDocx(true);
+  },
+};
+
+function setEngineMode(on: boolean): void {
+  document.body.classList.toggle('engine', on);
+  engineHost.hidden = !on;
+  ribbon.wired = on ? new Set([...ENGINE_WIRED, ...[...WIRED].filter(appLevel)]) : WIRED;
+  if (on) {
+    if (document.body.classList.contains('notes')) setNotes(false);
+    if (view.draw) setDraw(false);
+    ribbon.setAttribute('contextual', '');
+    // Web app: keep the whole engine for offline use from now on (see sw.template.js).
+    if (!engineCached && 'serviceWorker' in navigator) {
+      engineCached = true;
+      navigator.serviceWorker.controller?.postMessage('cache-engine');
+    }
+  }
+  refresh();
+}
+let engineCached = false;
+
+function refreshEngine(): void {
+  const s = engine.state;
+  ribbon.pressed = enginePressed(engine);
+  ribbon.values = new Map([
+    ['home.font.font', s.font],
+    ['home.font.size', s.size],
+  ]);
+  $('#pageinfo').textContent = `Page ${s.page} of ${s.pages}`;
+  const words = engine.wordCount();
+  $('#words').textContent = `${words.toLocaleString()} word${words === 1 ? '' : 's'}`;
+  $('#zoom').textContent = `${s.zoom}%`;
+  ($('#zoom-range') as HTMLInputElement).value = String(s.zoom);
+  $('#saved').textContent = s.modified ? 'Edited' : 'Saved';
+  $('#saved').classList.toggle('saved--dirty', s.modified);
+  refreshQat();
+}
+
+/** Ask before discarding unsaved .docx edits. */
+function confirmDiscard(): boolean {
+  return (
+    !engine.active ||
+    !engine.state.modified ||
+    window.confirm(`Discard unsaved changes to ${$('#doc-name').textContent}?`)
+  );
+}
+
+async function withLoading<T>(fn: () => Promise<T>): Promise<T> {
+  engineHost.hidden = false;
+  engineHost.classList.add('engine-loading');
+  document.body.classList.add('engine');
+  try {
+    return await fn();
+  } finally {
+    engineHost.classList.remove('engine-loading');
+    setEngineMode(engine.active);
+  }
+}
+
+async function openDocx(f: files.PickedFile): Promise<void> {
+  if (!confirmDiscard()) return;
+  backToDoc();
+  status(`Opening ${f.name}…`);
+  try {
+    await withLoading(() => engine.open(f.bytes, f.name));
+    fileTarget = f.target;
+    $('#doc-name').textContent = f.name;
+    status(`Opened ${f.name}`);
+  } catch (e) {
+    console.error(e);
+    toast(`Couldn't open ${f.name}. It may be damaged or not a Word document.`, 5200);
+    status('Ready');
+  }
+}
+
+async function newEngineDoc(): Promise<void> {
+  if (!confirmDiscard()) return;
+  backToDoc();
+  try {
+    await withLoading(() => engine.blank('Document1.docx'));
+    fileTarget = { kind: 'none' };
+    $('#doc-name').textContent = 'Document1.docx';
+  } catch (e) {
+    console.error(e);
+    toast("The document engine couldn't start on this device.", 5200);
+  }
+}
+
+/** Close the .docx (after asking about unsaved changes) and go back to the preview canvas. */
+function leaveEngine(): Promise<boolean> {
+  if (!engine.active) return Promise.resolve(true);
+  if (!confirmDiscard()) return Promise.resolve(false);
+  engine.close();
+  fileTarget = { kind: 'none' };
+  setEngineMode(false);
+  return Promise.resolve(true);
+}
+
+async function pickAndOpen(fallback: () => void): Promise<void> {
+  try {
+    const f = await files.pickOpen(fallback);
+    if (!f) return;
+    if (/\.docx$/i.test(f.name)) await openDocx(f);
+    else toast('Pick a Word document (.docx).');
+  } catch (e) {
+    console.error(e);
+    toast("Couldn't open that file.");
+  }
+}
+
+let saving = false;
+async function saveDocx(as: boolean): Promise<void> {
+  if (!engine.active || saving) return;
+  saving = true;
+  const name = $('#doc-name').textContent || 'Document1.docx';
+  status('Saving…');
+  try {
+    const bytes = await engine.exportDocx();
+    let savedTo = name;
+    if (as || !(await files.writeTo(fileTarget, bytes))) {
+      const r = await files.saveAs(name, bytes);
+      if (!r) {
+        status('Ready');
+        return;
+      }
+      fileTarget = r.target;
+      savedTo = r.name;
+      $('#doc-name').textContent = r.name;
+    }
+    engine.markSaved();
+    const where = fileTarget.kind === 'none' ? 'Downloaded' : 'Saved';
+    status(`${where} ${savedTo}`);
+    toast(`${where} ${savedTo}`);
+    if (stage.classList.contains('backstage')) backToDoc();
+  } catch (e) {
+    console.error(e);
+    toast(`Couldn't save ${name}. Try Save As to pick another place.`, 5200);
+    status('Ready');
+  } finally {
+    saving = false;
+  }
+}
+
+async function downloadDocx(): Promise<void> {
+  if (!engine.active) return;
+  try {
+    files.download($('#doc-name').textContent || 'Document1.docx', await engine.exportDocx());
+  } catch (e) {
+    console.error(e);
+    toast("Couldn't prepare the download.");
+  }
+}
 
 // ── Core
 const surface = new EditorSurface(doc);
@@ -321,6 +489,14 @@ function layout(): void {
 }
 
 function setZoom(z: number | 'fit' | 'page'): void {
+  if (engine.active) {
+    engine.run((api) => {
+      if (z === 'fit') api.zoomFitToWidth();
+      else if (z === 'page') api.zoomFitToPage();
+      else api.zoom(Math.max(50, Math.min(500, z)));
+    });
+    return;
+  }
   const g = geometry(pageSetup);
   const availW = canvas.clientWidth - 32;
   const sheetW = g.width + 22 + (comments.shown && ribbon.layout !== 'phone' ? 276 : 0);
@@ -416,6 +592,10 @@ function renderNav(): void {
 
 // ── Selection → ribbon state, contextual tabs
 function refresh(): void {
+  if (engine.active) {
+    refreshEngine();
+    return;
+  }
   const st = surface.state();
   const p = new Set<string>();
   const on = (id: string, v: boolean): void => {
@@ -534,6 +714,21 @@ const app: App = {
 ribbon.wired = WIRED;
 ribbon.addEventListener('ls-command', (e) => {
   const d = (e as CustomEvent<CommandEventDetail>).detail;
+  if (engine.active && !appLevel(d.id)) {
+    const eh = engineHandlers[d.id];
+    if (eh) {
+      eh(engineApp, d);
+      status(allCommands().find((r) => r.command.id === d.id)?.command.label ?? d.id);
+      refresh();
+    } else {
+      toast(unavailable(d.id));
+    }
+    return;
+  }
+  if (engine.active && engineHandlers[d.id]) {
+    engineHandlers[d.id]!(engineApp, d);
+    return;
+  }
   const h = handlers[d.id];
   if (!h) return;
   h(app, d);
@@ -545,9 +740,10 @@ ribbon.addEventListener('ls-command', (e) => {
 function unavailable(id: string): string {
   const ref = allCommands().find((r) => r.command.id === id);
   const label = ref?.command.label ?? id;
-  return ref?.command.stub
-    ? `${label} isn't available in Lucid Sentence.`
-    : `${label} arrives with the document engine. It isn't in this preview yet.`;
+  if (ref?.command.stub) return `${label} isn't available in Lucid Sentence.`;
+  return engine.active
+    ? `${label} isn't connected to the document engine yet.`
+    : `${label} arrives with the document engine. Open a .docx file or start a Blank document to use it.`;
 }
 ribbon.addEventListener('ls-command-pending', (e) => {
   const { id } = (e as CustomEvent<{ id: string }>).detail;
@@ -562,6 +758,14 @@ ribbon.addEventListener('ls-tab-change', (e) => {
 });
 
 function run(id: string): void {
+  if (engine.active && (engineHandlers[id] || !appLevel(id))) {
+    if (engineHandlers[id] && ribbon.invoke(id)) return;
+    const eh = engineHandlers[id];
+    if (eh) eh(engineApp, { id, kind: 'button', layout: ribbon.layout });
+    else toast(unavailable(id));
+    refresh();
+    return;
+  }
   if (handlers[id] && ribbon.invoke(id)) return;
   if (!WIRED.has(id)) {
     toast(unavailable(id));
@@ -577,6 +781,16 @@ function renderBackstage(): void {
   $('#backstage').replaceChildren(
     backstagePage(id, {
       docName: $('#doc-name').textContent,
+      engine: engine.active,
+      pickFile: (fallback) => {
+        void pickAndOpen(fallback);
+      },
+      saveAs: () => {
+        void saveDocx(true);
+      },
+      downloadDocx: () => {
+        void downloadDocx();
+      },
       stats: () => ({
         words: (surface.text().match(/\S+/g) ?? []).length,
         chars: surface.text().replace(/\n/g, '').length,
@@ -586,11 +800,13 @@ function renderBackstage(): void {
         strokes: ink.strokes.length,
       }),
       newDoc: (kind) => {
-        doc.innerHTML = kind === 'blank' ? '<p><br></p>' : SAMPLE;
-        ink.strokes = [];
-        ink.render();
-        $('#doc-name').textContent = kind === 'blank' ? 'Document1.docx' : 'Quarterly-Notes.docx';
-        backToDoc();
+        if (kind === 'blank') {
+          void newEngineDoc();
+          return;
+        }
+        void leaveEngine().then((left) => {
+          if (left) newPreviewDoc(kind);
+        });
       },
       openFile,
       save,
@@ -638,7 +854,8 @@ function openBackstage(id: string): void {
 function backToDoc(): void {
   ribbon.activeTab = 'home';
   stage.classList.remove('backstage');
-  surface.focus();
+  if (engine.active) engine.focus();
+  else surface.focus();
 }
 
 const baseName = (): string => $('#doc-name').textContent.replace(/\.docx$/i, '') || 'Document';
@@ -668,11 +885,25 @@ function sanitize(html: string): string {
   return d.body.innerHTML;
 }
 
+function newPreviewDoc(kind: 'notes' | 'sample'): void {
+  doc.innerHTML = kind === 'notes' ? '<p><br></p>' : SAMPLE;
+  ink.strokes = [];
+  ink.render();
+  $('#doc-name').textContent = kind === 'notes' ? 'Notes1.docx' : 'Quarterly-Notes.docx';
+  backToDoc();
+  scheduleLayout();
+}
+
 function openFile(f: File): void {
   if (/\.docx$/i.test(f.name)) {
-    toast('Opening .docx arrives with the engine (M1). Try a .txt or .html file for now.');
+    void files.fromFile(f).then(openDocx);
     return;
   }
+  void leaveEngine().then((left) => {
+    if (left) openPreviewFile(f);
+  });
+}
+function openPreviewFile(f: File): void {
   void f.text().then((t) => {
     doc.innerHTML = /\.html?$/i.test(f.name)
       ? sanitize(t)
@@ -699,6 +930,10 @@ function markDirty(): void {
   $('#saved').classList.add('saved--dirty');
 }
 function save(): void {
+  if (engine.active) {
+    void saveDocx(false);
+    return;
+  }
   try {
     localStorage.setItem(
       DRAFT,
@@ -712,7 +947,9 @@ function save(): void {
     dirty = false;
     $('#saved').textContent = 'Saved';
     $('#saved').classList.remove('saved--dirty');
-    toast('Draft saved on this device. .docx save arrives with the engine.');
+    toast(
+      'Draft saved on this device. To write a .docx, start a Blank document or open a .docx file.',
+    );
   } catch {
     toast('Could not save (storage full or blocked)');
   }
@@ -747,14 +984,24 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('[data-qat]')) {
   tap(b, () => {
     const q = b.dataset['qat'];
     if (q === 'qat.save') save();
+    else if (engine.active)
+      engine.run((api) => {
+        if (q === 'qat.undo') api.Undo();
+        else api.Redo();
+      });
     else if (q === 'qat.undo') history.undo();
     else history.redo();
     refresh();
   });
 }
 function refreshQat(): void {
-  document.querySelector<HTMLButtonElement>('[data-qat="qat.undo"]')!.disabled = !history.canUndo;
-  document.querySelector<HTMLButtonElement>('[data-qat="qat.redo"]')!.disabled = !history.canRedo;
+  const e = engine.active ? engine.state : null;
+  document.querySelector<HTMLButtonElement>('[data-qat="qat.undo"]')!.disabled = e
+    ? !e.canUndo
+    : !history.canUndo;
+  document.querySelector<HTMLButtonElement>('[data-qat="qat.redo"]')!.disabled = e
+    ? !e.canRedo
+    : !history.canRedo;
 }
 $('.search-pill__icon').append(svgIcon(document, Search, 16));
 $('.notes-pill__icon').append(svgIcon(document, NotebookPen, 16));
@@ -999,6 +1246,13 @@ function setNotes(on: boolean): void {
   scheduleLayout();
 }
 tap($('#notes-toggle'), () => {
+  if (engine.active) {
+    toast(
+      'Notes mode and ink work on notes pages for now (File > New > Blank notes page). Ink in .docx files comes later in M1.',
+      5200,
+    );
+    return;
+  }
   setNotes(!document.body.classList.contains('notes'));
 });
 
@@ -1058,6 +1312,10 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (inField) return;
+  if (engine.active) {
+    engineKey(e, k);
+    return;
+  }
   if (k === 'ctrl+z' || k === 'ctrl+y' || k === 'ctrl+shift+z') {
     e.preventDefault();
     if (k === 'ctrl+z') history.undo();
@@ -1083,6 +1341,70 @@ document.addEventListener('keydown', (e) => {
     run(id);
   }
 });
+
+// ── Document engine (ONLYOFFICE sdkjs + x2t): real .docx files, see engine/README.md
+function engineKey(e: KeyboardEvent, k: string): void {
+  const go = (fn: () => void): void => {
+    e.preventDefault();
+    closePopover();
+    fn();
+  };
+  if (k === 'ctrl+s') go(save);
+  else if (k === 'f12') go(() => void saveDocx(true));
+  else if (k === 'ctrl+o')
+    go(() => {
+      openBackstage('file.rail.open');
+    });
+  else if (k === 'ctrl+p')
+    go(() => {
+      toast('Printing .docx files comes later in M1.');
+    });
+  else if (k === 'ctrl+z' || k === 'ctrl+y' || k === 'ctrl+shift+z')
+    go(() => {
+      engine.run((api) => {
+        if (k === 'ctrl+z') api.Undo();
+        else api.Redo();
+      });
+    });
+  else {
+    const id = SHORTCUTS.get(k) ?? ENGINE_SHORTCUTS.get(k);
+    if (id && engineHandlers[id])
+      go(() => {
+        run(id);
+      });
+  }
+}
+const ENGINE_SHORTCUTS = new Map<string, string>();
+for (const r of allCommands()) {
+  const sc = r.command.shortcut;
+  if (sc && ENGINE_WIRED.has(r.command.id))
+    ENGINE_SHORTCUTS.set(sc.toLowerCase().replace(/\s/g, ''), r.command.id);
+}
+engine.addEventListener('state', () => {
+  refresh();
+});
+engine.addEventListener('key', (ev) => {
+  const e = (ev as CustomEvent<KeyboardEvent>).detail;
+  const k = keyOf(e);
+  if (k === 'alt+q' || k === 'ctrl+k') {
+    palette.open();
+    return;
+  }
+  if (k === 'ctrl+f1') {
+    ribbon.toggleCollapsed();
+    return;
+  }
+  engineKey(e, k);
+});
+
+// OS "Open With" / file association (desktop app): open the files for real.
+async function openPath(path: string): Promise<void> {
+  try {
+    await openDocx(await files.readPath(path));
+  } catch {
+    toast(`Couldn't read ${files.nameFromPath(path)}.`);
+  }
+}
 
 // ── Demo controls (theme, page color, layout)
 function radios(name: string, apply: (value: string) => void): void {
@@ -1129,7 +1451,13 @@ applyView();
 comments.render();
 refresh();
 if (params.get('notes') === '1') setNotes(true);
-initPlatform(toast);
+initPlatform(toast, (paths) => {
+  // One window holds one document for now: open the first, mention the rest.
+  const [first, ...rest] = paths;
+  if (first) void openPath(first);
+  if (rest.length)
+    toast(`Opened ${files.nameFromPath(first!)}. Open the others one at a time for now.`);
+});
 if (params.get('tab')) ribbon.activeTab = params.get('tab') as TabId;
 void document.fonts.ready.then(() => {
   layout();
@@ -1177,5 +1505,6 @@ Object.assign(window, {
     strip,
     pen,
     handwriting,
+    engine,
   },
 });

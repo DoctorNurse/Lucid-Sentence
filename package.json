@@ -21,7 +21,8 @@
     "icons": "node scripts/icons.js",
     "check:words": "bash scripts/check-banned-words.sh",
     "e2e": "playwright test",
-    "engine:build": "node engine/build.mjs"
+    "engine:build": "node engine/build.mjs",
+    "fidelity": "node engine/fidelity/fidelity.mjs --check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
