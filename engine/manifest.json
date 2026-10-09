@@ -51,9 +51,7 @@
           "en_US.dic": "f0b1a234bd178bdd01875b2a392a9647f888b8fe879f79c52aae62c2759b3647",
           "README_en_US.txt": "168b4c01cb841f766a72f310b065c04d09cff46376c37a81d799593ce751c371"
         },
-        "notices": [
-          "README_en_US.txt"
-        ]
+        "notices": ["README_en_US.txt"]
       },
       "en_GB": {
         "lcid": 2057,
@@ -63,9 +61,7 @@
           "en_GB.dic": "e070c64007d0f6a3423d028a53da099934b5f967dc0ef6d01b631ec2119659d4",
           "README_en_GB.txt": "8a736381614885b601c20168d0fbb2df7564fa43a239dca3723cb0a4cce60eef"
         },
-        "notices": [
-          "README_en_GB.txt"
-        ]
+        "notices": ["README_en_GB.txt"]
       },
       "es_ES": {
         "lcid": 3082,
@@ -77,11 +73,7 @@
           "es_ES_LGPLv3.txt": "f5676b3afd114a933b2f72b8256cd9b719aef4c3df5cca7a89ede64aa7ee3883",
           "GPLv3.txt": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
         },
-        "notices": [
-          "LICENSE.md",
-          "es_ES_LGPLv3.txt",
-          "GPLv3.txt"
-        ]
+        "notices": ["LICENSE.md", "es_ES_LGPLv3.txt", "GPLv3.txt"]
       },
       "fr_FR": {
         "lcid": 1036,
@@ -91,9 +83,7 @@
           "fr_FR.dic": "b99447ab2e655c1e4b64509cfd2e6c24821242bff1f971b49eac723e388a2d19",
           "fr_FR_README.txt": "515d5a548283616fa8b2e30f4345cda8fbce008b783ae1a769a95af22dc3ed4e"
         },
-        "notices": [
-          "fr_FR_README.txt"
-        ]
+        "notices": ["fr_FR_README.txt"]
       },
       "de_DE": {
         "lcid": 1031,
@@ -103,9 +93,7 @@
           "de_DE.dic": "d053e46aab7d36784ed0911ddd8fe1df9836d9d78e3a9c2093145eb5c3c611dd",
           "COPYING_GPLv3": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
         },
-        "notices": [
-          "COPYING_GPLv3"
-        ]
+        "notices": ["COPYING_GPLv3"]
       }
     }
   }

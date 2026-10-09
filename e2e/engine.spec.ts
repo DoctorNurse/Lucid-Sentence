@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { inflateRawSync } from 'node:zlib';
 import { expect, test, type Page } from '@playwright/test';
 // @ts-expect-error: plain ESM helper shared with the fidelity eval
 import { model } from '../engine/fidelity/docx-model.mjs';
@@ -59,6 +60,40 @@ async function openDocx(page: Page, file: string): Promise<void> {
   await expect(page.locator('body')).toHaveClass(/\bengine\b/);
   await expect(page.locator('.engine-frame')).toBeVisible();
 }
+
+/** One file out of a .zip (.docx), read through the central directory. */
+function zipEntry(zip: Buffer, name: string): Buffer | null {
+  let eocd = zip.length - 22;
+  while (eocd >= 0 && zip.readUInt32LE(eocd) !== 0x06054b50) eocd--;
+  let at = zip.readUInt32LE(eocd + 16);
+  const count = zip.readUInt16LE(eocd + 10);
+  for (let i = 0; i < count; i++) {
+    const method = zip.readUInt16LE(at + 10);
+    const size = zip.readUInt32LE(at + 20);
+    const nameLen = zip.readUInt16LE(at + 28);
+    const extra = zip.readUInt16LE(at + 30);
+    const comment = zip.readUInt16LE(at + 32);
+    const local = zip.readUInt32LE(at + 42);
+    const entry = zip.toString('utf8', at + 46, at + 46 + nameLen);
+    if (entry === name) {
+      const start = local + 30 + zip.readUInt16LE(local + 26) + zip.readUInt16LE(local + 28);
+      const data = zip.subarray(start, start + size);
+      return method === 8 ? inflateRawSync(data) : data;
+    }
+    at += 46 + nameLen + extra + comment;
+  }
+  return null;
+}
+const zipNames = (zip: Buffer): string[] => {
+  const names: string[] = [];
+  for (
+    let i = zip.indexOf('PK\x01\x02', 0, 'latin1');
+    i >= 0;
+    i = zip.indexOf('PK\x01\x02', i + 4, 'latin1')
+  )
+    names.push(zip.toString('utf8', i + 46, i + 46 + zip.readUInt16LE(i + 28)));
+  return names;
+};
 
 /** Put the caret at the end of paragraph `n` (0-based) and give the editor the keyboard. */
 async function caretAtEndOf(page: Page, n: number): Promise<void> {
@@ -125,7 +160,7 @@ test('the ribbon drives bold, styles, lists, and undo; Save writes a .docx', asy
 test('commands the engine does not run yet say so', async ({ page }) => {
   await openDocx(page, '01-basic.docx');
   await page.locator('ls-ribbon [data-tab="insert"]').first().click();
-  await ribbonButton(page, 'insert.tables.table').click();
+  await ribbonButton(page, 'insert.illustrations.chart').click();
   await expect(page.locator('#toast')).toContainText("isn't connected to the document engine yet");
 });
 
@@ -151,4 +186,106 @@ test('a blank document starts in the engine', async ({ page }) => {
   await page.getByRole('button', { name: /^Blank document/ }).click();
   await expect.poll(async () => (await engineState(page)).active, { timeout: 20_000 }).toBe(true);
   await expect(page.locator('#doc-name')).toHaveText('Document1.docx');
+});
+
+const engineFlags = (page: Page) =>
+  page.evaluate(() => {
+    const s = (
+      window as unknown as {
+        __ls: { engine: { state: { inTable: boolean; image: boolean; inHeader: boolean } } };
+      }
+    ).__ls.engine.state;
+    return { inTable: s.inTable, image: s.image, inHeader: s.inHeader };
+  });
+
+test('Insert Table and Pictures from the ribbon; Save keeps both', async ({ page }) => {
+  await openDocx(page, '01-basic.docx');
+  await caretAtEndOf(page, 1);
+  await page.keyboard.press('Enter');
+  await page.locator('ls-ribbon [data-tab="insert"]').first().click();
+  await ribbonButton(page, 'insert.tables.table').click();
+  await page.getByRole('button', { name: '3 by 2 table' }).click();
+  await expect.poll(async () => (await engineFlags(page)).inTable).toBe(true);
+  // Table Design and Table Layout appear while the caret is in a table.
+  await expect(page.locator('ls-ribbon [data-tab="table-layout"]').first()).toBeVisible();
+  await page.locator('ls-ribbon [data-tab="table-layout"]').first().click();
+  await ribbonButton(page, 'table-layout.rows-columns.insert-below').click();
+
+  await caretAtEndOf(page, 0);
+  await page.locator('ls-ribbon [data-tab="insert"]').first().click();
+  await ribbonButton(page, 'insert.illustrations.pictures').click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('menuitem', { name: /This Device/ }).click();
+  await (
+    await chooser
+  ).setFiles(new URL('../apps/demo/public/icon-192.png', import.meta.url).pathname);
+  await expect.poll(async () => (await engineFlags(page)).image).toBe(true);
+  await expect(page.locator('ls-ribbon [data-tab="picture-format"]').first()).toBeVisible();
+
+  const download = page.waitForEvent('download');
+  await page.locator('[data-qat="qat.save"]').click();
+  const zip = readFileSync(await (await download).path());
+  expect(zipNames(zip).some((n) => /^word\/media\/.+\.png$/.test(n))).toBe(true);
+  const xml = zipEntry(zip, 'word/document.xml')!.toString('utf8');
+  expect(xml).toMatch(/<w:tbl>/);
+  expect(xml).toMatch(/r:embed="/);
+  // The original 2x2 table plus the new one, which has 3 rows after Insert Below.
+  expect((xml.match(/<w:tbl>/g) ?? []).length).toBe(2);
+});
+
+test('File > Export > PDF lays the document out with its fonts', async ({ page }) => {
+  await openDocx(page, '03-lists.docx');
+  await page.evaluate(() => {
+    const w = window as unknown as { __ls: { app: { openBackstage(id: string): void } } };
+    w.__ls.app.openBackstage('file.rail.export');
+  });
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: /^PDF/ }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe('03-lists.pdf');
+  const pdf = readFileSync(await file.path());
+  expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  // Fonts are embedded (subset), so the PDF reads the same everywhere.
+  expect(pdf.toString('latin1')).toMatch(/FontFile2/);
+});
+
+test('Header & Footer: edit the header, then close it', async ({ page }) => {
+  await openDocx(page, '01-basic.docx');
+  await page.locator('ls-ribbon [data-tab="insert"]').first().click();
+  await ribbonButton(page, 'insert.header-footer.header').click();
+  await expect.poll(async () => (await engineFlags(page)).inHeader).toBe(true);
+  await expect(page.locator('ls-ribbon [data-tab="header-footer"]').first()).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await page.keyboard.type('Running head');
+  await ribbonButton(page, 'header-footer.close.close').click();
+  await expect.poll(async () => (await engineFlags(page)).inHeader).toBe(false);
+
+  const download = page.waitForEvent('download');
+  await page.locator('[data-qat="qat.save"]').click();
+  const zip = readFileSync(await (await download).path());
+  const header = zipNames(zip).find((n) => /^word\/header\d*\.xml$/.test(n));
+  expect(header).toBeTruthy();
+  expect(zipEntry(zip, header!)!.toString('utf8')).toContain('Running head');
+});
+
+test('Spelling finds misspelled words and replaces them with a suggestion', async ({ page }) => {
+  await openDocx(page, '01-basic.docx');
+  await caretAtEndOf(page, 1);
+  await page.keyboard.type(' Thsi sentnce');
+  // sdkjs leaves the word being typed alone until the caret moves off it.
+  await page.keyboard.press('Home');
+  const count = () =>
+    page.evaluate(() =>
+      (
+        window as unknown as { __ls: { engine: { misspellingCount(): number } } }
+      ).__ls.engine.misspellingCount(),
+    );
+  await expect.poll(count, { timeout: 15_000 }).toBe(2);
+  await page.locator('ls-ribbon [data-tab="review"]').first().click();
+  await ribbonButton(page, 'review.proofing.spelling-grammar').click();
+  await page.getByRole('menuitem', { name: 'This', exact: true }).click();
+  await expect.poll(count).toBe(1);
+  expect((await paragraphs(page))[1]?.text).toContain('This sentnce');
 });

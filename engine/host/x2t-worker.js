@@ -152,7 +152,11 @@
         run(msg);
       },
       function (e) {
-        self.postMessage({ id: msg.id, ok: false, error: 'fonts: ' + String((e && e.message) || e) });
+        self.postMessage({
+          id: msg.id,
+          ok: false,
+          error: 'fonts: ' + String((e && e.message) || e),
+        });
       },
     );
   }
