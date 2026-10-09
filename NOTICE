@@ -86,6 +86,13 @@ Bundled third-party code
                                  from Feather: MIT License, Copyright (c)
                                  2013-present Cole Bemis.
   perfect-freehand 1.2.3         MIT License, Copyright (c) 2021 Stephen Ruiz Ltd.
+  tesseract.js 7.0.0, tesseract.js-core 6.1.2
+                                 Apache-2.0. On-device handwriting recognition
+                                 (Convert to text, Search ink), WebAssembly
+                                 build of Tesseract OCR (Apache-2.0, Google LLC
+                                 and contributors). Shipped under ocr/.
+  @tesseract.js-data/eng 1.0.0   MIT (package); the English model is from
+                                 tessdata_best, Apache-2.0, Google LLC.
   @tauri-apps/api, @tauri-apps/plugin-opener, @tauri-apps/plugin-updater,
   @tauri-apps/plugin-process
                                  Apache-2.0 OR MIT, Copyright (c) the Tauri
