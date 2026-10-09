@@ -330,7 +330,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: scripts
+          sparse-checkout: |
+            scripts
+            docs/releases
       - uses: actions/download-artifact@v4
         with:
           pattern: installers-*
@@ -354,8 +356,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          cat > notes.md <<'NOTES'
-          **Preview build for testing.** Lucid Sentence runs the editor UI on a sample page. Opening and saving your own `.docx` files arrive when the document engine is wired in.
+          # What's new: docs/releases/<tag>.md when the release has one.
+          if [ -f "docs/releases/$TAG.md" ]; then cp "docs/releases/$TAG.md" notes.md; else : > notes.md; fi
+          cat >> notes.md <<'NOTES'
+          **Preview build for testing.** Lucid Sentence opens, edits, and saves `.docx` files with the ONLYOFFICE engine on your device. Not every ribbon command works with Word documents yet.
 
           These installers are **not code-signed yet**, so your system will warn the first time you open them:
 
@@ -365,7 +369,7 @@ jobs:
           - **Linux**: make `Lucid-Sentence-Linux.AppImage` executable and run it, or install the `.deb`.
           - **iPhone and iPad**: open the web app in Safari and choose **Add to Home Screen** (see the README).
 
-          **Updates.** From v0.1.1-preview on, the desktop apps check for updates on launch and offer **Restart to update** (updates are signed and verified before they install). The Android app checks GitHub Releases on launch and offers to download the new APK; Android APKs are now signed with a permanent release key, so later versions install over this one. If you have v0.1.0-preview installed (Android or desktop), install this version by hand once: on Android, uninstall v0.1.0-preview first, because it was signed with a temporary key. The home-screen web app offers **Reload for new version** when one is ready.
+          **Updates.** From v0.1.1-preview on, the desktop apps check for updates on launch and offer **Restart to update** (updates are signed and verified before they install). The Android app checks GitHub Releases on launch and offers to download the new APK; Android APKs are now signed with a permanent release key, so later versions install over this one. If you have v0.1.0-preview installed (Android or desktop), install this version by hand once: on Android, uninstall v0.1.0-preview first, because it was signed with a temporary key. On older 32-bit Android phones, download `Lucid-Sentence-Android-armv7.apk` by hand once. The home-screen web app offers **Reload for new version** when one is ready.
 
           Checksums are in `SHA256SUMS.txt`. Full install steps: [README → Download](https://github.com/DoctorNurse/Lucid-Sentence#download).
           NOTES
