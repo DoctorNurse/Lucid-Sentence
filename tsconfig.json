@@ -1,0 +1,4 @@
+{
+  "files": [],
+  "references": [{ "path": "packages/commands" }, { "path": "packages/ribbon-ui" }]
+}

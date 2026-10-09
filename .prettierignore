@@ -1,0 +1,6 @@
+dist
+coverage
+pnpm-lock.yaml
+docs/PLAN.md
+LICENSE
+*.tsbuildinfo
