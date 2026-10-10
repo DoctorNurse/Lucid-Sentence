@@ -16,7 +16,12 @@ interface Reply {
   data?: Uint8Array;
   media?: Record<string, Uint8Array>;
   error?: string;
+  /** The worker itself failed (id 0): every pending conversion fails. */
+  fatal?: boolean;
 }
+
+/** How long one conversion may take before we give up (the first one also loads ~39 MB). */
+export const CONVERT_TIMEOUT_MS = 120_000;
 
 export class X2t {
   private worker: Worker | null = null;
@@ -26,13 +31,20 @@ export class X2t {
     { resolve: (c: Converted) => void; reject: (e: Error) => void }
   >();
 
-  constructor(private readonly url: string) {}
+  constructor(
+    private readonly url: string,
+    private readonly timeoutMs = CONVERT_TIMEOUT_MS,
+  ) {}
 
   private start(): Worker {
     if (this.worker) return this.worker;
     const w = new Worker(this.url);
     w.onmessage = (e: MessageEvent<Reply>) => {
       const r = e.data;
+      if (r.fatal) {
+        this.fail(new Error(r.error ?? 'converter failed to load'));
+        return;
+      }
       const p = this.pending.get(r.id);
       if (!p) return;
       this.pending.delete(r.id);
@@ -40,13 +52,18 @@ export class X2t {
       else p.reject(new Error(r.error ?? 'conversion failed'));
     };
     w.onerror = (e) => {
-      const err = new Error(`converter failed to load: ${e.message}`);
-      for (const p of this.pending.values()) p.reject(err);
-      this.pending.clear();
-      this.worker = null;
+      this.fail(new Error(`converter failed to load: ${e.message}`));
     };
     this.worker = w;
     return w;
+  }
+
+  /** Reject everything pending and drop the worker, so the next call starts a fresh one. */
+  private fail(err: Error): void {
+    for (const p of this.pending.values()) p.reject(err);
+    this.pending.clear();
+    this.worker?.terminate();
+    this.worker = null;
   }
 
   /** Load the converter ahead of the first open (it is ~39 MB of WebAssembly). */
@@ -65,7 +82,19 @@ export class X2t {
     const w = this.start();
     const id = ++this.seq;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        if (this.pending.has(id)) this.fail(new Error('the converter took too long'));
+      }, this.timeoutMs);
+      this.pending.set(id, {
+        resolve: (c) => {
+          clearTimeout(timer);
+          resolve(c);
+        },
+        reject: (e) => {
+          clearTimeout(timer);
+          reject(e);
+        },
+      });
       // Copies, so the caller keeps its buffers (we keep the original media for saving).
       w.postMessage({ id, data: data.slice(), from, to, media, pdf });
     });
