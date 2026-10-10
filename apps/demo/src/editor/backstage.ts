@@ -27,8 +27,16 @@ export interface BackstageContext {
   /** Engine documents: lay out and save as PDF. */
   exportPdf: () => void;
   promosEnabled: boolean;
-  settings: { autoSwitch: boolean; drawWithTouch: boolean; floatingToolbar: boolean };
-  onSetting: (key: 'autoSwitch' | 'drawWithTouch' | 'floatingToolbar', value: boolean) => void;
+  settings: {
+    autoSwitch: boolean;
+    drawWithTouch: boolean;
+    floatingToolbar: boolean;
+    exportBanner: boolean;
+  };
+  onSetting: (
+    key: 'autoSwitch' | 'drawWithTouch' | 'floatingToolbar' | 'exportBanner',
+    value: boolean,
+  ) => void;
   version: string;
 }
 
@@ -294,6 +302,19 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
             ctx.settings.floatingToolbar,
             (v) => {
               ctx.onSetting('floatingToolbar', v);
+            },
+          ),
+        ),
+        el('h3', { class: 'bs__h3' }, 'Saving and exporting'),
+        el(
+          'div',
+          { class: 'bs__list' },
+          toggleRow(
+            '"Made with Lucid Sentence" banner',
+            'A slim line with a link at the top of page 1 in saved .docx files and exported PDFs. In a PDF it never prints. Your text is never covered.',
+            ctx.settings.exportBanner,
+            (v) => {
+              ctx.onSetting('exportBanner', v);
             },
           ),
         ),

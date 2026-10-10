@@ -1,3 +1,4 @@
+import { addDocxBanner, addPdfBanner } from './engine/banner';
 import { allCommands, type TabId } from '@lucid-sentence/commands';
 import {
   defineRibbon,
@@ -356,6 +357,23 @@ async function pickAndOpen(fallback: () => void): Promise<void> {
   }
 }
 
+/** The "Made with Lucid Sentence" banner on saved and exported files (Options turns it off). */
+async function withBanner(
+  bytes: Uint8Array,
+  add: (b: Uint8Array) => Uint8Array | Promise<Uint8Array>,
+): Promise<Uint8Array> {
+  if (!settings.exportBanner) return bytes;
+  try {
+    return await add(bytes);
+  } catch (e) {
+    // Never lose a save over the banner.
+    console.warn('export banner skipped', e);
+    return bytes;
+  }
+}
+const docxOut = async (): Promise<Uint8Array> =>
+  withBanner(await engine.exportDocx(), addDocxBanner);
+
 let saving = false;
 async function saveDocx(as: boolean): Promise<void> {
   if (!engine.active || saving) return;
@@ -363,7 +381,7 @@ async function saveDocx(as: boolean): Promise<void> {
   const name = $('#doc-name').textContent || 'Document1.docx';
   status('Saving…');
   try {
-    const bytes = await engine.exportDocx();
+    const bytes = await docxOut();
     let savedTo = name;
     if (as || !(await files.writeTo(fileTarget, bytes))) {
       const r = await files.saveAs(name, bytes);
@@ -425,7 +443,7 @@ async function exportPdf(): Promise<void> {
   if (!engine.active) return;
   status('Exporting PDF…');
   try {
-    const pdf = await engine.exportPdf();
+    const pdf = await withBanner(await engine.exportPdf(), addPdfBanner);
     if (await files.savePdf(pdfName(), pdf)) toast(`Exported ${pdfName()}`);
   } catch (e) {
     console.error(e);
@@ -437,7 +455,7 @@ async function exportPdf(): Promise<void> {
 async function downloadDocx(): Promise<void> {
   if (!engine.active) return;
   try {
-    files.download($('#doc-name').textContent || 'Document1.docx', await engine.exportDocx());
+    files.download($('#doc-name').textContent || 'Document1.docx', await docxOut());
   } catch (e) {
     console.error(e);
     toast("Couldn't prepare the download.");
@@ -457,6 +475,7 @@ const settings = {
   autoSwitch: localStorage.getItem('lucid-sentence:auto-switch') !== 'off',
   drawWithTouch: touchChoice === null ? phoneLike : touchChoice === 'on',
   floatingToolbar: true,
+  exportBanner: localStorage.getItem('lucid-sentence:export-banner') !== 'off',
 };
 const view: ViewState = {
   ruler: true,
@@ -1030,6 +1049,7 @@ function renderBackstage(): void {
           localStorage.setItem(TOUCH_KEY, v ? 'on' : 'off');
         }
         localStorage.setItem('lucid-sentence:auto-switch', settings.autoSwitch ? 'on' : 'off');
+        localStorage.setItem('lucid-sentence:export-banner', settings.exportBanner ? 'on' : 'off');
         refresh();
       },
       version: '0.1 preview',

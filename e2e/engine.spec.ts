@@ -317,3 +317,78 @@ test('opens a document saved by Microsoft Word, with its pages and fonts', async
   expect(ps.map((p) => p.text)).toContain('I am a test document');
   await expect(page.locator('#pageinfo')).toHaveText(/of 2/);
 });
+
+const SHOTS = process.env['LS_SHOTS'];
+const backstage = (page: Page, id: string): Promise<void> =>
+  page.evaluate((i) => {
+    (
+      window as unknown as { __ls: { app: { openBackstage(id: string): void } } }
+    ).__ls.app.openBackstage(i);
+  }, id);
+
+async function exportPdfBytes(page: Page): Promise<Buffer> {
+  await backstage(page, 'file.rail.export');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: /^PDF/ }).click();
+  return readFileSync(await (await download).path());
+}
+
+test('exported PDF: banner on page 1 in a non-printing layer, with link and note', async ({
+  page,
+}) => {
+  await openDocx(page, '01-basic.docx');
+  const pdf = await exportPdfBytes(page);
+  const s = pdf.toString('latin1');
+  expect(s).toMatch(/\/OCProperties/);
+  expect(s).toMatch(/\/PrintState \/OFF/);
+  expect(s).toContain('(https://lucidsystemsai.com/sentence/)');
+  expect(s).toMatch(/\/Subtype \/Popup/);
+  expect(s).toMatch(/FontFile2/);
+  if (SHOTS) {
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(`${SHOTS}/banner-export.pdf`, pdf);
+  }
+});
+
+test('saved .docx: banner in the first-page header, body unchanged; Options turns it off', async ({
+  page,
+}) => {
+  await openDocx(page, '06-sections.docx');
+  await backstage(page, 'file.rail.export');
+  let download = page.waitForEvent('download');
+  await page.getByRole('button', { name: /^Download a copy/ }).click();
+  const docx = readFileSync(await (await download).path());
+  const doc = zipEntry(docx, 'word/document.xml')!.toString();
+  const orig = zipEntry(
+    readFileSync(new URL('06-sections.docx', CORPUS).pathname),
+    'word/document.xml',
+  )!.toString();
+  const text = (x: string): string =>
+    [...x.matchAll(/<w:t(?: [^>]*)?>([^<]*)</g)].map((m) => m[1]).join('');
+  expect(text(doc)).toBe(text(orig));
+  const first = /<w:headerReference w:type="first" r:id="([^"]+)"/.exec(doc)![1]!;
+  const rels = zipEntry(docx, 'word/_rels/document.xml.rels')!.toString();
+  const target = new RegExp(
+    `Id="${first}"[^>]*Target="([^"]+)"|Target="([^"]+)"[^>]*Id="${first}"`,
+  ).exec(rels)!;
+  const hdr = zipEntry(docx, `word/${target[1] ?? target[2]}`)!.toString();
+  expect(hdr).toContain('lucid-sentence-banner');
+  expect(hdr).toContain('Lucid Sentence');
+  if (SHOTS) {
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(`${SHOTS}/banner-saved.docx`, docx);
+  }
+
+  // Off in Options: plain files again.
+  await backstage(page, 'file.settings.options');
+  const toggle = page.getByRole('switch', { name: /Made with Lucid Sentence/ });
+  await expect(toggle).toBeChecked();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/banner-options.png` });
+  await toggle.click();
+  await backstage(page, 'file.rail.export');
+  download = page.waitForEvent('download');
+  await page.getByRole('button', { name: /^Download a copy/ }).click();
+  const plain = readFileSync(await (await download).path());
+  expect(zipEntry(plain, 'word/document.xml')!.toString()).not.toContain('lucid_');
+  expect((await exportPdfBytes(page)).toString('latin1')).not.toMatch(/\/OCProperties/);
+});
