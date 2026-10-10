@@ -12,12 +12,12 @@ A free, open-source word processor for **.docx** with Word’s familiar ribbon a
 
 > **Preview for testing.** Open, edit, and save your own `.docx` files, entirely on your device. Not every ribbon command works with Word documents yet, and the apps have had little testing on real devices. It works offline and collects nothing.
 
-[![Download for macOS](https://img.shields.io/badge/macOS-Download_.dmg-0a6a7c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.6-preview/Lucid-Sentence-macOS.dmg)
-[![Download for Windows](https://img.shields.io/badge/Windows-Download_installer-0a6a7c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.6-preview/Lucid-Sentence-Windows-Setup.exe)
-[![Download for Android](https://img.shields.io/badge/Android-Download_.apk-0a6a7c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.6-preview/Lucid-Sentence-Android.apk)
-[![Download for Linux](https://img.shields.io/badge/Linux-Download_AppImage-0a6a7c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.6-preview/Lucid-Sentence-Linux.AppImage)
+[![Download for macOS](https://img.shields.io/badge/macOS-Download_.dmg-0a6a7c?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.7-preview/Lucid-Sentence-macOS.dmg)
+[![Download for Windows](https://img.shields.io/badge/Windows-Download_installer-0a6a7c?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.7-preview/Lucid-Sentence-Windows-Setup.exe)
+[![Download for Android](https://img.shields.io/badge/Android-Download_.apk-0a6a7c?style=for-the-badge&logo=android&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.7-preview/Lucid-Sentence-Android.apk)
+[![Download for Linux](https://img.shields.io/badge/Linux-Download_AppImage-0a6a7c?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/DoctorNurse/Lucid-Sentence/releases/download/v0.1.7-preview/Lucid-Sentence-Linux.AppImage)
 
-These are **unsigned testing builds** (version 0.1.6-preview). All files, including the Windows `.msi`, the Linux `.deb`, and checksums, are on the [Releases](https://github.com/DoctorNurse/Lucid-Sentence/releases) page.
+These are **unsigned testing builds** (version 0.1.7-preview). All files, including the Windows `.msi`, the Linux `.deb`, and checksums, are on the [Releases](https://github.com/DoctorNurse/Lucid-Sentence/releases) page.
 
 <details>
 <summary><b>Mac</b> (Apple silicon and Intel)</summary>

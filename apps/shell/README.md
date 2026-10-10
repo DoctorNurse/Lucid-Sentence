@@ -62,7 +62,7 @@ Cut a release (after review; bump the version in `tauri.conf.json`, `Cargo.toml`
 `package.json`, the numeric `bundleVersion`/`wix.version`, and Android's `versionCode`):
 
 ```sh
-git tag -s v0.1.6-preview -m "Lucid Sentence 0.1.6 preview" && git push origin v0.1.6-preview
+git tag -s v0.1.7-preview -m "Lucid Sentence 0.1.7 preview" && git push origin v0.1.7-preview
 ```
 
 Release tags must be on a commit that contains this workflow. Tags with a
