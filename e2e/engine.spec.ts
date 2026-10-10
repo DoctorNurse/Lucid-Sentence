@@ -119,6 +119,26 @@ test('opens a .docx in the engine and shows its content', async ({ page }) => {
   await page.screenshot({ path: test.info().outputPath('engine-open.png') });
 });
 
+test('pictures in an opened .docx load from the file', async ({ page }) => {
+  await openDocx(page, '05-images.docx');
+  // Every picture must point at the bytes from the file (a blob: URL), not at a
+  // server path the offline editor can't reach.
+  const urls = await page.evaluate(() => {
+    const w = (document.querySelector('.engine-frame') as HTMLIFrameElement)
+      .contentWindow as unknown as {
+      AscCommon: { g_oDocumentUrls: { urls: Record<string, string> } };
+    };
+    return Object.entries(w.AscCommon.g_oDocumentUrls.urls).filter(([k]) => k.startsWith('media/'));
+  });
+  expect(urls.length).toBeGreaterThan(0);
+  for (const [, url] of urls) expect(url).toMatch(/^blob:/);
+  const loaded = await page.evaluate(
+    (list) => Promise.all(list.map(([, u]) => fetch(u).then((r) => r.ok))),
+    urls,
+  );
+  expect(loaded.every(Boolean)).toBe(true);
+});
+
 test('the ribbon drives bold, styles, lists, and undo; Save writes a .docx', async ({ page }) => {
   await openDocx(page, '01-basic.docx');
   // Second paragraph ("Hello bold and italic…", Normal style).

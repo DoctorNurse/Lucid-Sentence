@@ -3074,14 +3074,73 @@ body.engine .pentool,
 body.engine .timeline {
   display: none;
 }
-.engine-loading::after {
-  content: 'Opening…';
+.engine-status {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: grid;
-  place-items: center;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  background: var(--ls-page-canvas);
   color: var(--ls-text-muted, #666);
   font: 500 14px/1.4 var(--ls-font-ui, system-ui);
+}
+.engine-status[hidden],
+.engine-status__actions[hidden] {
+  display: none;
+}
+.engine-status__text {
+  margin: 0;
+  color: var(--ls-text, inherit);
+}
+.engine-status__hint {
+  margin: 0;
+  max-width: 44ch;
+  font-weight: 400;
+  font-size: 13px;
+}
+.engine-status__spin {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2.5px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: var(--ls-accent, #0a6a7c);
+  animation: engine-spin 0.9s linear infinite;
+}
+.engine-status--error .engine-status__spin {
+  display: none;
+}
+.engine-status__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.engine-status__actions button {
+  font: inherit;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--ls-border, #ccc);
+  background: transparent;
+  color: var(--ls-text, inherit);
+  cursor: pointer;
+}
+.engine-status__actions .engine-status__retry {
+  background: var(--ls-accent, #0a6a7c);
+  border-color: transparent;
+  color: #fff;
+}
+@keyframes engine-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .engine-status__spin {
+    animation: none;
+  }
 }
 .engine-style {
   padding: 6px 4px;

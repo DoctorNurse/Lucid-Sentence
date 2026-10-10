@@ -191,16 +191,115 @@ function confirmDiscard(): boolean {
   );
 }
 
-async function withLoading<T>(fn: () => Promise<T>): Promise<T> {
+/**
+ * The engine's loading screen: what it is doing, a hint when it is slow, and
+ * when it fails, what went wrong with Retry and Close (never an endless "Opening…").
+ */
+const engineStatus = (() => {
+  const box = document.createElement('div');
+  box.className = 'engine-status';
+  box.setAttribute('role', 'status');
+  box.setAttribute('aria-live', 'polite');
+  box.hidden = true;
+  const spin = document.createElement('div');
+  spin.className = 'engine-status__spin';
+  spin.setAttribute('aria-hidden', 'true');
+  const text = document.createElement('p');
+  text.className = 'engine-status__text';
+  const hint = document.createElement('p');
+  hint.className = 'engine-status__hint';
+  const actions = document.createElement('div');
+  actions.className = 'engine-status__actions';
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.className = 'engine-status__retry';
+  retry.textContent = 'Retry';
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'engine-status__close';
+  close.textContent = 'Close';
+  actions.append(retry, close);
+  box.append(spin, text, hint, actions);
+  engineHost.append(box);
+  let slow: ReturnType<typeof setTimeout> | undefined;
+  let onRetry: (() => void) | null = null;
+  retry.addEventListener('click', () => {
+    const r = onRetry;
+    hide();
+    r?.();
+  });
+  close.addEventListener('click', () => {
+    hide();
+    setEngineMode(engine.active);
+  });
+  function hide(): void {
+    clearTimeout(slow);
+    box.hidden = true;
+    onRetry = null;
+  }
+  return {
+    busy(stage: string): void {
+      box.hidden = false;
+      box.classList.remove('engine-status--error');
+      text.textContent = stage;
+      hint.textContent = '';
+      actions.hidden = true;
+      clearTimeout(slow);
+      slow = setTimeout(() => {
+        hint.textContent = 'Still working. The first document on a device can take up to a minute.';
+      }, 8000);
+    },
+    stage(stage: string): void {
+      if (!box.hidden && !box.classList.contains('engine-status--error')) text.textContent = stage;
+    },
+    failed(message: string, detail: string, again: () => void): void {
+      clearTimeout(slow);
+      box.hidden = false;
+      box.classList.add('engine-status--error');
+      text.textContent = message;
+      hint.textContent = detail;
+      actions.hidden = false;
+      onRetry = again;
+      retry.focus();
+    },
+    hide,
+  };
+})();
+engine.onStage = (s) => {
+  engineStatus.stage(s);
+};
+
+/** Errors from the engine itself (blocked, missing, or too slow), as opposed to a bad file. */
+const engineBroken = (e: unknown): boolean =>
+  /failed to load|took too long|editor failed|WebAssembly|NetworkError|Failed to fetch/i.test(
+    String(e instanceof Error ? e.message : e),
+  );
+
+async function withLoading<T>(fn: () => Promise<T>, label = 'Opening…'): Promise<T> {
   engineHost.hidden = false;
   engineHost.classList.add('engine-loading');
   document.body.classList.add('engine');
+  engineStatus.busy(label);
   try {
-    return await fn();
+    const r = await fn();
+    engineStatus.hide();
+    return r;
   } finally {
     engineHost.classList.remove('engine-loading');
     setEngineMode(engine.active);
   }
+}
+
+/** Show why the engine didn't start, with Retry; keeps the screen until the user acts. */
+function engineFailed(e: unknown, again: () => void): void {
+  engineHost.hidden = false;
+  document.body.classList.add('engine');
+  engineStatus.failed(
+    "The document engine didn't start.",
+    `${String(e instanceof Error ? e.message : e)}. Check that the app is up to date, then try again.`,
+    again,
+  );
+  status('Ready');
 }
 
 async function openDocx(f: files.PickedFile): Promise<void> {
@@ -208,12 +307,16 @@ async function openDocx(f: files.PickedFile): Promise<void> {
   backToDoc();
   status(`Opening ${f.name}…`);
   try {
-    await withLoading(() => engine.open(f.bytes, f.name));
+    await withLoading(() => engine.open(f.bytes, f.name), `Opening ${f.name}…`);
     fileTarget = f.target;
     $('#doc-name').textContent = f.name;
     status(`Opened ${f.name}`);
   } catch (e) {
     console.error(e);
+    if (engineBroken(e)) {
+      engineFailed(e, () => void openDocx(f));
+      return;
+    }
     toast(`Couldn't open ${f.name}. It may be damaged or not a Word document.`, 5200);
     status('Ready');
   }
@@ -223,12 +326,12 @@ async function newEngineDoc(): Promise<void> {
   if (!confirmDiscard()) return;
   backToDoc();
   try {
-    await withLoading(() => engine.blank('Document1.docx'));
+    await withLoading(() => engine.blank('Document1.docx'), 'Starting a new document…');
     fileTarget = { kind: 'none' };
     $('#doc-name').textContent = 'Document1.docx';
   } catch (e) {
     console.error(e);
-    toast("The document engine couldn't start on this device.", 5200);
+    engineFailed(e, () => void newEngineDoc());
   }
 }
 

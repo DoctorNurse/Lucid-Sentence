@@ -28,6 +28,16 @@
       ready = true;
       queue.splice(0).forEach(handle);
     },
+    // The converter couldn't load (blocked or missing files, no WebAssembly):
+    // tell the page, so it can show an error instead of waiting forever.
+    onAbort: function (what) {
+      self.postMessage({
+        id: 0,
+        ok: false,
+        fatal: true,
+        error: 'converter failed to load: ' + what,
+      });
+    },
   };
   importScripts('x2t.js');
 
