@@ -111,8 +111,14 @@ export class DocEngine extends EventTarget {
     return this.api !== null;
   }
 
+  /** Progress for the loading screen ("Reading the document…", "Starting the editor…"). */
+  onStage: ((stage: string) => void) | null = null;
+  /** How long the editor may take to start before we give up. */
+  bootTimeoutMs = 90_000;
+
   /** Open .docx bytes. Throws when the file can't be read; the old document stays open then. */
   async open(bytes: Uint8Array, title: string): Promise<void> {
+    this.onStage?.('Reading the document…');
     const conv = await this.x2t.convert(bytes, 'docx', 'bin');
     await this.mount(conv.data, conv.media, title);
   }
@@ -146,20 +152,31 @@ export class DocEngine extends EventTarget {
         reject(new Error('the editor failed to load'));
       });
     });
+    this.onStage?.('Starting the editor…');
     this.host.append(frame);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(new Error('the editor took too long to start'));
+      }, this.bootTimeoutMs);
+    });
     try {
-      await loaded;
+      await Promise.race([loaded, timeout]);
       const win: HostWindow | null = frame.contentWindow;
       if (!win?.LucidHost) throw new Error('the editor failed to load');
       const state = initial();
-      const api = await win.LucidHost.boot({
-        bin,
-        images,
-        title,
-        register: (a) => {
-          this.listen(a, state);
-        },
-      });
+      const api = await Promise.race([
+        win.LucidHost.boot({
+          bin,
+          images,
+          title,
+          register: (a) => {
+            this.listen(a, state);
+          },
+        }),
+        timeout,
+      ]);
+      clearTimeout(timer);
       // Success: swap in the new document.
       this.close();
       this.frame = frame;
@@ -174,6 +191,7 @@ export class DocEngine extends EventTarget {
       this.emit();
       this.focus();
     } catch (e) {
+      clearTimeout(timer);
       frame.remove();
       for (const u of urls) URL.revokeObjectURL(u);
       throw e;
