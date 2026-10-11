@@ -25,6 +25,11 @@ export interface SdkApi {
   put_ShowParaMarks(v: boolean): void;
   get_ShowParaMarks(): boolean;
   put_AddPageBreak(): void;
+  asc_AddFootnote(text?: string): void;
+  asc_AddEndnote(text?: string): void;
+  asc_AddParagraphToTOC(level: number): void;
+  asc_showComments(resolved: boolean): void;
+  asc_hideComments(): void;
   Undo(): void;
   Redo(): void;
   Copy(): void;
@@ -104,7 +109,70 @@ export interface SdkBridge {
   insertImages(api: SdkApi, images: { name: string; url: string }[]): void;
   pdfData(api: SdkApi): Uint8Array;
   closeHeaderFooter(api: SdkApi): void;
+  // References
+  insertToc(api: SdkApi, style: number, levels?: number): void;
+  hasToc(api: SdkApi): boolean;
+  updateToc(api: SdkApi, pageNumbersOnly?: boolean): boolean;
+  removeToc(api: SdkApi): boolean;
+  gotoNote(api: SdkApi, endnote: boolean, next: boolean): boolean;
+  noteCounts(api: SdkApi): { footnotes: number; endnotes: number };
+  insertCaption(api: SdkApi, label: string, below: boolean, excludeLabel?: boolean): void;
+  insertTableOfFigures(api: SdkApi, label: string): void;
+  updateTablesOfFigures(api: SdkApi): boolean;
+  crossRefTargets(api: SdkApi, kind: string): string[];
+  insertCrossRef(api: SdkApi, kind: string, index: number, what: string): boolean;
+  // Review
+  commentList(api: SdkApi): EngineComment[];
+  addComment(api: SdkApi, text: string, author: string): string | null;
+  replyComment(api: SdkApi, id: string, text: string, author: string): boolean;
+  resolveComment(api: SdkApi, id: string, solved: boolean): boolean;
+  removeComment(api: SdkApi, id: string): void;
+  removeAllComments(api: SdkApi): void;
+  gotoComment(api: SdkApi, next: boolean, id?: string): string | null;
+  currentComment(api: SdkApi): string | null;
+  setAuthor(api: SdkApi, name: string): void;
+  setTrack(api: SdkApi, on: boolean): void;
+  isTrack(api: SdkApi): boolean;
+  setDisplayMode(api: SdkApi, mode: number): void;
+  displayMode(api: SdkApi): number;
+  revisionCount(api: SdkApi): number;
+  acceptChange(api: SdkApi, which: 'next' | 'this' | 'all'): void;
+  rejectChange(api: SdkApi, which: 'next' | 'this' | 'all'): void;
+  gotoChange(api: SdkApi, next: boolean): boolean;
+  compareWith(api: SdkApi, bin: Uint8Array, images: Record<string, string>): void;
+  selectionForAssistant(api: SdkApi): string;
+  selectedText(api: SdkApi): string;
+  replaceTracked(api: SdkApi, text: string, after: boolean, done?: () => void): void;
+  // Layout
+  setColumns(api: SdkApi, kind: 'one' | 'two' | 'three' | 'left' | 'right'): void;
+  columnCount(api: SdkApi): number;
+  insertBreak(api: SdkApi, kind: 'page' | 'column' | 'next' | 'continuous' | 'even' | 'odd'): void;
+  sectionCount(api: SdkApi): number;
+  setLanguage(api: SdkApi, lcid: number, asDefault: boolean): void;
 }
+
+export interface EngineComment {
+  id: string;
+  author: string;
+  text: string;
+  quote: string;
+  solved: boolean;
+  time: number;
+  replies: { author: string; text: string; time: number }[];
+}
+
+/** Asc.c_oAscDisplayModeInReview */
+export const ReviewMode = { All: 0, NoMarkup: 1, Original: 2, Simple: 3 } as const;
+
+/** Asc.c_oAscTOCStylesType */
+export const TocStyle = {
+  Current: 0,
+  Simple: 1,
+  Standard: 2,
+  Modern: 3,
+  Classic: 4,
+  Web: 5,
+} as const;
 
 export interface HostWindow extends Window {
   LucidHost?: {

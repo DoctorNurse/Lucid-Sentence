@@ -1,6 +1,7 @@
 /**
- * Selection capture and replacement for Assistant suggestions in the stand-in editor.
- * When the engine lands (M1), accepting becomes a tracked change instead (plan §9.5).
+ * Selection capture and replacement for Assistant suggestions. In the stand-in
+ * editor this works on the DOM; with a .docx open in the engine the target comes
+ * from the engine and accepting lands as a tracked change (plan §9.5).
  */
 import type { EditorSurface } from '../editor/surface.js';
 
@@ -9,6 +10,19 @@ export interface Target {
   /** Whole blocks covered (multi-paragraph selections are widened to full paragraphs). */
   blocks: HTMLElement[];
   text: string;
+  /** Engine targets: apply the suggestion (as a tracked change). */
+  apply?: (text: string, after: boolean) => void;
+  /** Engine targets: the selection still holds `text`. */
+  still?: () => boolean;
+}
+
+/** A target held by the document engine rather than the DOM. */
+export function engineTarget(
+  text: string,
+  apply: (text: string, after: boolean) => void,
+  still: () => boolean,
+): Target {
+  return { range: document.createRange(), blocks: [], text, apply, still };
 }
 
 const norm = (s: string): string => s.replace(/\s+/g, ' ').trim();
@@ -43,6 +57,7 @@ export function captureTarget(surface: EditorSurface): Target | null {
 
 /** True when the target still holds the text the suggestion was made from. */
 export function stillMatches(t: Target): boolean {
+  if (t.still) return t.still();
   return t.range.startContainer.isConnected && norm(textOf(t)) === norm(t.text);
 }
 

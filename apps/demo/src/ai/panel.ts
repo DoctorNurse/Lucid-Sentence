@@ -37,6 +37,11 @@ export interface AssistantHost {
   app: App;
   run: (id: string) => void;
   isWired: (id: string) => boolean;
+  /**
+   * With a document open in the engine: its selection as a target (null: nothing
+   * to work on). Undefined when the stand-in editor is in use.
+   */
+  engineTarget?: () => Target | null | undefined;
 }
 
 const EXAMPLES = ['Make the text bold', 'Turn on track changes', 'Insert a table'];
@@ -444,7 +449,9 @@ export class AssistantUI {
 
   async task(kind: TaskKind, tone?: Tone, target?: Target): Promise<void> {
     const label = kind === 'rewrite' ? 'Rewrite' : TASK_LABELS[kind];
-    const t = target ?? captureTarget(this.host.app.surface);
+    const fromEngine = target ? undefined : this.host.engineTarget?.();
+    const t =
+      target ?? (fromEngine === undefined ? captureTarget(this.host.app.surface) : fromEngine);
     if (!t) {
       toast(`Select some text, then choose ${label}.`);
       return;
@@ -619,6 +626,12 @@ export class AssistantUI {
     tap(accept, () => {
       if (!stillMatches(t)) {
         toast('The text changed since this suggestion. Select it and try again.');
+        return;
+      }
+      if (t.apply) {
+        t.apply(s.proposed, s.mode === 'insert-after');
+        this.closeCard();
+        toast('Added as a tracked change. Accept or Reject it on the Review tab.');
         return;
       }
       if (s.mode === 'insert-after') insertAfterTarget(this.host.app.surface, t, s.proposed);

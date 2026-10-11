@@ -38,6 +38,10 @@ export interface EngineState {
   inHeader: boolean;
   /** The misspelled word at the cursor and its suggestions (null: none). */
   spell: { word: string; variants: string[] | null } | null;
+  /** Track Changes is on. */
+  track: boolean;
+  /** Asc.c_oAscDisplayModeInReview */
+  reviewMode: number;
 }
 
 /** A spot in the parent page where the document wants a context menu. */
@@ -74,6 +78,8 @@ const initial = (): EngineState => ({
   image: false,
   inHeader: false,
   spell: null,
+  track: false,
+  reviewMode: 0,
 });
 
 const PICTURE_TYPES: Record<string, string> = {
@@ -93,6 +99,8 @@ export class DocEngine extends EventTarget {
   private frame: HTMLIFrameElement | null = null;
   private api: SdkApi | null = null;
   private bridge: SdkBridge | null = null;
+  /** Name for new comments and tracked changes. */
+  author = 'Me';
   private media: Record<string, Uint8Array> = {};
   private urls: string[] = [];
   private spellProp: SdkSpellCheck | null = null;
@@ -170,6 +178,7 @@ export class DocEngine extends EventTarget {
           bin,
           images,
           title,
+          author: this.author,
           register: (a) => {
             this.listen(a, state);
           },
@@ -188,6 +197,7 @@ export class DocEngine extends EventTarget {
       this.state.modified = false;
       this.forwardKeys(frame);
       this.syncList();
+      this.syncReview();
       this.emit();
       this.focus();
     } catch (e) {
@@ -249,6 +259,7 @@ export class DocEngine extends EventTarget {
     on('asc_onCountPages', (v: number) => (s.pages = v));
     on('asc_onCurrentPage', (v: number) => (s.page = v + 1));
     on('asc_onZoomChange', (v: number) => (s.zoom = v));
+    on('asc_onOnTrackRevisionsChange', (v: boolean) => (s.track = v));
     on('asc_onDocumentModifiedChanged', () => (s.modified = api.isDocumentModified()));
     on('asc_onFocusObject', (objs: SdkSelectedObject[]) => {
       this.readSelection(s, objs);
@@ -322,6 +333,56 @@ export class DocEngine extends EventTarget {
 
   call<T>(fn: (api: SdkApi) => T): T | undefined {
     return this.api ? fn(this.api) : undefined;
+  }
+
+  /** Runs a bridge function (References, Review, Layout) and refreshes the ribbon. */
+  b<T>(fn: (bridge: SdkBridge, api: SdkApi) => T): T | undefined {
+    const bridge = this.bridge;
+    const api = this.api;
+    if (!bridge || !api) return undefined;
+    const out = fn(bridge, api);
+    this.focus();
+    setTimeout(() => {
+      this.syncReview();
+      this.emit();
+    }, 50);
+    return out;
+  }
+
+  /** Reads a value from the bridge without touching focus. */
+  peek<T>(fn: (bridge: SdkBridge, api: SdkApi) => T): T | undefined {
+    return this.bridge && this.api ? fn(this.bridge, this.api) : undefined;
+  }
+
+  /** Track Changes and display mode, for the ribbon's pressed state. */
+  private syncReview(): void {
+    if (!this.bridge || !this.api) return;
+    this.state.track = this.bridge.isTrack(this.api);
+    this.state.reviewMode = this.bridge.displayMode(this.api);
+  }
+
+  /**
+   * Compares the open document with another .docx: the differences land in this
+   * document as tracked changes.
+   */
+  async compareWith(bytes: Uint8Array): Promise<void> {
+    if (!this.api || !this.bridge) return;
+    const conv = await this.x2t.convert(bytes, 'docx', 'bin');
+    const images: Record<string, string> = {};
+    for (const [name, data] of Object.entries(conv.media)) {
+      const url = URL.createObjectURL(new Blob([data as BlobPart]));
+      this.urls.push(url);
+      images[`media/${name}`] = url;
+    }
+    this.bridge.compareWith(this.api, conv.data, images);
+    this.syncReview();
+    this.emit();
+  }
+
+  /** Sets the name used for new comments and tracked changes. */
+  setAuthor(name: string): void {
+    this.author = name;
+    if (this.api && this.bridge) this.bridge.setAuthor(this.api, name);
   }
 
   focus(): void {

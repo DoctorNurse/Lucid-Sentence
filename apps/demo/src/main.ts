@@ -67,7 +67,9 @@ import {
   enginePressed,
   spellingEntries,
 } from './engine/commands.js';
+import { engineTarget } from './ai/text.js';
 import { DocEngine, type EngineContextMenu } from './engine/engine.js';
+import { ENGINE_UNSUPPORTED } from './engine/refs-review.js';
 import * as files from './engine/files.js';
 import { initPlatform } from './native.js';
 import { drawRulers, geometry, type PageSetup } from './page.js';
@@ -130,10 +132,50 @@ const engineApp = {
   print: () => {
     void printDocx();
   },
-  toast: (msg: string) => {
-    toast(msg);
+  toast: (msg: string, ms?: number) => {
+    toast(msg, ms);
+  },
+  author: () => settings.author,
+  pickDocx: () => pickDocxFile(),
+  refresh: () => {
+    refresh();
   },
 };
+
+/** A .docx to read (Compare): dialog, File System Access, or an <input>. */
+function pickDocxFile(): Promise<{ name: string; bytes: Uint8Array } | null> {
+  return new Promise((resolve) => {
+    const fallback = (): void => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept =
+        '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      input.addEventListener('change', () => {
+        const f = input.files?.[0];
+        if (!f) {
+          resolve(null);
+          return;
+        }
+        void files.fromFile(f).then(resolve, () => {
+          resolve(null);
+        });
+      });
+      input.addEventListener('cancel', () => {
+        resolve(null);
+      });
+      input.click();
+    };
+    files.pickOpen(fallback).then(
+      (f) => {
+        if (f) resolve(f);
+      },
+      (e: unknown) => {
+        console.error(e);
+        resolve(null);
+      },
+    );
+  });
+}
 
 function setEngineMode(on: boolean): void {
   document.body.classList.toggle('engine', on);
@@ -476,7 +518,9 @@ const settings = {
   drawWithTouch: touchChoice === null ? phoneLike : touchChoice === 'on',
   floatingToolbar: true,
   exportBanner: localStorage.getItem('lucid-sentence:export-banner') !== 'off',
+  author: localStorage.getItem('lucid-sentence:author') || 'Me',
 };
+engine.author = settings.author;
 const view: ViewState = {
   ruler: true,
   gridlines: false,
@@ -926,7 +970,7 @@ ribbon.addEventListener('ls-command', (e) => {
       status(allCommands().find((r) => r.command.id === d.id)?.command.label ?? d.id);
       refresh();
     } else {
-      toast(unavailable(d.id));
+      toast(unavailable(d.id), 6000);
     }
     return;
   }
@@ -946,6 +990,8 @@ function unavailable(id: string): string {
   const ref = allCommands().find((r) => r.command.id === id);
   const label = ref?.command.label ?? id;
   if (ref?.command.stub) return `${label} isn't available in Lucid Sentence.`;
+  const note = ENGINE_UNSUPPORTED[id];
+  if (note) return note;
   return engine.active
     ? `${label} isn't connected to the document engine yet.`
     : `${label} arrives with the document engine. Open a .docx file or start a Blank document to use it.`;
@@ -954,7 +1000,7 @@ ribbon.addEventListener('ls-command-pending', (e) => {
   const { id } = (e as CustomEvent<{ id: string }>).detail;
   const msg = unavailable(id);
   status(msg);
-  toast(msg);
+  toast(msg, 6000);
 });
 ribbon.addEventListener('ls-tab-change', (e) => {
   const { tab } = (e as CustomEvent<{ tab: TabId }>).detail;
@@ -1051,6 +1097,11 @@ function renderBackstage(): void {
         localStorage.setItem('lucid-sentence:auto-switch', settings.autoSwitch ? 'on' : 'off');
         localStorage.setItem('lucid-sentence:export-banner', settings.exportBanner ? 'on' : 'off');
         refresh();
+      },
+      onAuthor: (name) => {
+        settings.author = name;
+        localStorage.setItem('lucid-sentence:author', name);
+        engine.setAuthor(name);
       },
       version: '0.1 preview',
     }),
@@ -1264,7 +1315,28 @@ tap($('#zoom-in'), () => {
 });
 
 // ── Palette
-const assistant = initAssistant({ app, run, isWired: (id) => WIRED.has(id) });
+const assistant = initAssistant({
+  app,
+  run,
+  isWired: (id) => WIRED.has(id),
+  engineTarget: () => {
+    if (!engine.active) return undefined;
+    const text = engine.peek((b, api) => b.selectionForAssistant(api)) ?? '';
+    if (!text.trim()) return null;
+    const norm = (x: string): string => x.replace(/\s+/g, ' ').trim();
+    return engineTarget(
+      text,
+      (proposed, after) => {
+        engine.b((b, api) => {
+          b.replaceTracked(api, proposed, after, () => {
+            refresh();
+          });
+        });
+      },
+      () => norm(engine.peek((b, api) => b.selectedText(api)) ?? '') === norm(text),
+    );
+  },
+});
 const palette = new Palette({
   isWired: (id) => WIRED.has(id),
   run,
