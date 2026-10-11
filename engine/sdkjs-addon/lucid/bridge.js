@@ -210,7 +210,6 @@
     }
   }
 
-
   // ── References ──────────────────────────────────────────────────────────
 
   function logic(api) {
@@ -241,8 +240,13 @@
 
   function removeToc(api) {
     if (!hasToc(api)) return false;
+    // sdkjs won't remove it with the cursor inside (say a TOC first in a document
+    // just opened), so move the cursor to the end of the document first.
+    var doc = logic(api);
+    doc.RemoveSelection();
+    doc.MoveCursorToEndPos();
     api.asc_RemoveTableOfContents();
-    return true;
+    return !hasToc(api);
   }
 
   /** "Footnote"/"Endnote" navigation. Returns false when there are none. */
@@ -295,7 +299,9 @@
   var refTargets = [];
 
   function paraText(p) {
-    return (p.GetText ? p.GetText({ ParaSeparator: '', TableRowSeparator: '' }) : '').replace(/\s+/g, ' ').trim();
+    return (p.GetText ? p.GetText({ ParaSeparator: '', TableRowSeparator: '' }) : '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   /** kind: heading | footnote | endnote | Figure | Table | Equation */
@@ -324,7 +330,13 @@
       api.asc_AddCrossRefToNote(p, n, true, false);
     } else {
       var c =
-        what === 'page' ? T.PageNum : what === 'aboveBelow' ? T.AboveBelow : what === 'text' ? T.OnlyCaptionText : T.OnlyLabelAndNumber;
+        what === 'page'
+          ? T.PageNum
+          : what === 'aboveBelow'
+            ? T.AboveBelow
+            : what === 'text'
+              ? T.OnlyCaptionText
+              : T.OnlyLabelAndNumber;
       api.asc_AddCrossRefToCaption(kind, p, c, true, false);
     }
     return true;
@@ -342,7 +354,11 @@
       var replies = [];
       for (var i = 0; i < d.GetRepliesCount(); i++) {
         var r = d.GetReply(i);
-        replies.push({ author: r.GetUserName(), text: r.GetText(), time: Number(r.m_sOOTime) || 0 });
+        replies.push({
+          author: r.GetUserName(),
+          text: r.GetText(),
+          time: Number(r.m_sOOTime) || 0,
+        });
       }
       out.push({
         id: c.GetId(),
@@ -374,6 +390,8 @@
   /** Comments the selection (or the word at the cursor). Returns the id. */
   function addComment(api, text, author) {
     var doc = logic(api);
+    // Hidden comments (Show Markup) can't take a new one; show them, as Word does.
+    if (!doc.Comments.Is_Use()) api.asc_showComments(true);
     var d = newCommentData(text, author);
     var quote = api.asc_GetSelectedText(true);
     if (!quote) {
@@ -436,7 +454,10 @@
   /** The id of the comment the cursor is in (for Delete), or null. */
   function currentComment(api) {
     var list = commentList(api);
-    return list.length && commentIndex >= 0 && list[commentIndex] ? list[commentIndex].id : null;
+    if (list.length && commentIndex >= 0 && list[commentIndex]) return list[commentIndex].id;
+    // The comment sdkjs has as current (the cursor is in its text).
+    var id = logic(api).Comments.Get_CurrentId && logic(api).Comments.Get_CurrentId();
+    return id || null;
   }
 
   /** Name used for new comments and tracked changes. */
@@ -448,7 +469,9 @@
 
   // ── Review: tracking ────────────────────────────────────────────────────
 
+  /** Track Changes for this session and in the saved file (as Word keeps it). */
   function setTrack(api, on) {
+    api.asc_SetGlobalTrackRevisions(!!on);
     api.asc_SetLocalTrackRevisions(!!on);
   }
 
@@ -477,13 +500,33 @@
   }
 
   /** which: next (this one, then move on) | this | all */
+  /**
+   * Accept/Reject All. sdkjs finds a just-opened document's changes bit by bit in
+   * the background and only acts on the ones found so far, so finish the search
+   * first, and go again if any are left.
+   */
+  function allChanges(api, fn) {
+    var manager = logic(api).TrackRevisionsManager;
+    for (var i = 0; i < 3; i++) {
+      manager.CompleteTrackChanges();
+      fn();
+      if (!revisionCount(api)) return;
+    }
+  }
+
   function acceptChange(api, which) {
-    if (which === 'all') api.asc_AcceptAllChanges();
+    if (which === 'all')
+      allChanges(api, function () {
+        api.asc_AcceptAllChanges();
+      });
     else api.asc_AcceptChangesBySelection(which === 'next');
   }
 
   function rejectChange(api, which) {
-    if (which === 'all') api.asc_RejectAllChanges();
+    if (which === 'all')
+      allChanges(api, function () {
+        api.asc_RejectAllChanges();
+      });
     else api.asc_RejectChangesBySelection(which === 'next');
   }
 
@@ -495,14 +538,39 @@
   }
 
   /**
-   * Compares the open document with another (an x2t DOCY binary and its pictures):
-   * the differences land in this document as tracked changes.
+   * Compares the open document with another (an x2t DOCY binary): the differences
+   * land in this document as tracked changes. images: the other document's pictures
+   * by "media/<name>" (blob URLs); local: the name each picture gets in this
+   * document, by blob URL (its bytes are saved under that name).
    */
-  function compareWith(api, bin, images) {
+  function compareWith(api, bin, images, local) {
     // Pictures of the other document resolve through insertDocumentUrlsData.imageMap.
     api.insertDocumentUrlsData = { imageMap: images || {}, documents: [], convertCallback: null };
-    var opts = new AscCommonWord.ComparisonOptions();
-    AscCommonWord.CompareBinary(bin, opts);
+    // After comparing, sdkjs uploads those pictures to a document server and waits
+    // for the answer; offline, answer at once with the local names.
+    var upload = AscCommon.sendImgUrls;
+    AscCommon.sendImgUrls = function (_api, urls, callback) {
+      var data = [];
+      var add = {};
+      for (var i = 0; i < urls.length; i++) {
+        var name = (local && local[urls[i]]) || null;
+        if (!name) {
+          data.push({ url: null, path: null });
+          continue;
+        }
+        add['media/' + name] = urls[i];
+        documentImages['media/' + name] = urls[i];
+        data.push({ url: urls[i], path: 'media/' + name });
+      }
+      AscCommon.g_oDocumentUrls.addUrls(add);
+      callback(data);
+    };
+    try {
+      AscCommonWord.CompareBinary(bin, new AscCommonWord.ComparisonOptions());
+    } finally {
+      AscCommon.sendImgUrls = upload;
+      api.insertDocumentUrlsData = null;
+    }
   }
 
   // ── Selection text for the Assistant ────────────────────────────────────
@@ -543,10 +611,17 @@
       }
       text = '\n' + text;
     }
-    api.asc_PasteData(AscCommon.c_oAscClipboardDataFormat.Text, text, undefined, undefined, undefined, function () {
-      doc.SetLocalTrackRevisions(was);
-      if (done) done();
-    });
+    api.asc_PasteData(
+      AscCommon.c_oAscClipboardDataFormat.Text,
+      text,
+      undefined,
+      undefined,
+      undefined,
+      function () {
+        doc.SetLocalTrackRevisions(was);
+        if (done) done();
+      },
+    );
   }
 
   // ── Layout ──────────────────────────────────────────────────────────────
@@ -582,7 +657,16 @@
     var T = Asc.c_oAscSectionBreakType;
     if (kind === 'page') api.put_AddPageBreak();
     else if (kind === 'column') api.put_AddColumnBreak();
-    else api.add_SectionBreak(kind === 'continuous' ? T.Continuous : kind === 'even' ? T.EvenPage : kind === 'odd' ? T.OddPage : T.NextPage);
+    else
+      api.add_SectionBreak(
+        kind === 'continuous'
+          ? T.Continuous
+          : kind === 'even'
+            ? T.EvenPage
+            : kind === 'odd'
+              ? T.OddPage
+              : T.NextPage,
+      );
   }
 
   function sectionCount(api) {

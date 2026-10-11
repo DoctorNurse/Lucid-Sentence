@@ -42,6 +42,7 @@ export const reviewTab = tab('review', 'Review', 'standard', [
   group('tracking', 'Tracking', 'verified', [
     cmd('track-changes', 'Track Changes', 'split', 'L', 1, 'strip+sub', {
       shortcut: 'Ctrl+Shift+E',
+      latches: true,
     }),
     cmd('display-for-review', 'Display for Review', 'menu', 'M', 2, 'sub'),
     cmd('show-markup', 'Show Markup', 'menu', 'M', 2, 'sub'),

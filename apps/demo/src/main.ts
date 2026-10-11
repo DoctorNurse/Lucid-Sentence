@@ -1116,10 +1116,12 @@ function openBackstage(id: string): void {
   renderBackstage();
 }
 
-// Clicks and keys inside the engine's iframe never reach this document, so a
-// ribbon popover can't see them; close it when focus moves into the frame.
-window.addEventListener('blur', () => {
-  if (popoverOpen() && document.activeElement?.classList.contains('engine-frame')) closePopover();
+// Clicks inside the engine's iframe never reach this document, so a ribbon
+// popover can't see them; the engine reports presses in the document instead.
+// (Not on focus: sdkjs moves focus into its own input by itself, which closed
+// popovers the moment they opened.)
+engine.addEventListener('press', () => {
+  if (popoverOpen()) closePopover();
 });
 
 function backToDoc(): void {

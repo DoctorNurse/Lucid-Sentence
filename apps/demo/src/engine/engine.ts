@@ -213,6 +213,15 @@ export class DocEngine extends EventTarget {
    * keyboard: keys inside the iframe never reach the app's own listener.
    */
   private forwardKeys(frame: HTMLIFrameElement): void {
+    // A press inside the document (the app can't see it otherwise), so the app can
+    // close its popovers. Focus alone isn't a signal: sdkjs refocuses its own input.
+    frame.contentWindow?.addEventListener(
+      'pointerdown',
+      () => {
+        this.dispatchEvent(new Event('press'));
+      },
+      true,
+    );
     frame.contentWindow?.addEventListener(
       'keydown',
       (e) => {
@@ -369,12 +378,18 @@ export class DocEngine extends EventTarget {
     if (!this.api || !this.bridge) return;
     const conv = await this.x2t.convert(bytes, 'docx', 'bin');
     const images: Record<string, string> = {};
+    const local: Record<string, string> = {};
+    const tag = Date.now().toString(36);
     for (const [name, data] of Object.entries(conv.media)) {
       const url = URL.createObjectURL(new Blob([data as BlobPart]));
       this.urls.push(url);
       images[`media/${name}`] = url;
+      // Its own name here, so it can't clash with this document's pictures.
+      const mine = `compare-${tag}-${name}`;
+      local[url] = mine;
+      this.media[mine] = data;
     }
-    this.bridge.compareWith(this.api, conv.data, images);
+    this.bridge.compareWith(this.api, conv.data, images, local);
     this.syncReview();
     this.emit();
   }

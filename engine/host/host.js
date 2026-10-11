@@ -47,6 +47,8 @@
         if (settled) return;
         settled = true;
         api.asc_setSpellCheck(opts.spellCheck !== false);
+        // Comments are off until the editor UI turns them on (Word shows them, resolved too).
+        api.asc_showComments(true);
         resolve(api);
       });
       api.asc_registerCallback('asc_onGetEditorPermissions', function () {

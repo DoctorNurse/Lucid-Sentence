@@ -90,8 +90,8 @@ const tableOfContents: Handler = (a, d) => {
         label: 'Remove Table of Contents',
         disabled: !has,
         run: () => {
-          a.engine.b((b, api) => b.removeToc(api));
-          a.toast('Table of contents removed.');
+          const ok = a.engine.b((b, api) => b.removeToc(api));
+          a.toast(ok ? 'Table of contents removed.' : "Couldn't remove the table of contents.");
         },
       },
     ]),
@@ -343,6 +343,9 @@ function when(t: number): string {
   return new Date(t).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+/** Show Markup › Comments. */
+let commentsShown = true;
+
 const newComment: Handler = (a, d) => {
   const f = form(
     [{ name: 'text', label: `Comment as ${a.author()}`, placeholder: 'Write a comment' }],
@@ -350,6 +353,7 @@ const newComment: Handler = (a, d) => {
     (v) => {
       const text = (v.text ?? '').trim();
       if (!text) return;
+      commentsShown = true;
       a.engine.b((b, api) => b.addComment(api, text, a.author()));
     },
   );
@@ -531,7 +535,6 @@ const displayForReview: Handler = (a, d) => {
   );
 };
 
-let commentsShown = true;
 const showMarkup: Handler = (a, d) => {
   pop(
     d,

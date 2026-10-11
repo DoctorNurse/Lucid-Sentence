@@ -42,12 +42,14 @@ export interface CommandDef {
   stub?: boolean;
   coverage?: Coverage;
   shortcut?: string;
+  latches?: boolean;
 }
 
 export interface CommandExtras {
   stub?: boolean;
   coverage?: Coverage;
   shortcut?: string;
+  latches?: boolean;
 }
 
 /**

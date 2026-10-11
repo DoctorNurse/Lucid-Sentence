@@ -93,7 +93,8 @@ function commandButton(
   state: RibbonState,
   size: 'large' | 'medium' | 'small' | 'row',
 ): HTMLButtonElement {
-  const pressed = c.kind === 'toggle' ? String(state.pressed.has(c.id)) : undefined;
+  const pressed =
+    c.kind === 'toggle' || c.latches ? String(state.pressed.has(c.id)) : undefined;
   const hasMenu = c.kind === 'menu' || c.kind === 'gallery' || c.kind === 'split';
   const pending = isPending(c, state);
   const icon = glyph(doc, c, size === 'large' ? 24 : 18);

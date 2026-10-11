@@ -95,6 +95,8 @@ export interface Command {
   coverage?: Coverage;
   /** Default keyboard shortcut (Windows notation; Ctrl maps to Cmd on macOS). */
   shortcut?: string;
+  /** A split button that also stays pressed while on (Track Changes). */
+  latches?: boolean;
 }
 
 export interface Group {

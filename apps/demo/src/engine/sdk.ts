@@ -139,7 +139,12 @@ export interface SdkBridge {
   acceptChange(api: SdkApi, which: 'next' | 'this' | 'all'): void;
   rejectChange(api: SdkApi, which: 'next' | 'this' | 'all'): void;
   gotoChange(api: SdkApi, next: boolean): boolean;
-  compareWith(api: SdkApi, bin: Uint8Array, images: Record<string, string>): void;
+  compareWith(
+    api: SdkApi,
+    bin: Uint8Array,
+    images: Record<string, string>,
+    local: Record<string, string>,
+  ): void;
   selectionForAssistant(api: SdkApi): string;
   selectedText(api: SdkApi): string;
   replaceTracked(api: SdkApi, text: string, after: boolean, done?: () => void): void;
