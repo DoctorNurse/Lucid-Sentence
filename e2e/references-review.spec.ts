@@ -344,3 +344,99 @@ test('Assistant suggestions in an engine document land as tracked changes', asyn
     .poll(async () => (await texts(page))[0])
     .toContain('I think the plan is very good and they were right');
 });
+
+test.describe('Galaxy Tab landscape (1024×640, touch)', () => {
+  test.use({ viewport: { width: 1024, height: 640 }, hasTouch: true, isMobile: true });
+
+  /** Taps a ribbon command, opening its collapsed group first. */
+  async function tapCommand(page: Page, id: string): Promise<void> {
+    const ribbon = page.locator('ls-ribbon');
+    const cmd = ribbon.locator(`[data-command="${id}"]`).first();
+    if (!(await cmd.isVisible())) {
+      const group = id.split('.').slice(0, 2).join('.');
+      await ribbon.locator(`[data-group="${group}"]`).first().tap();
+    }
+    await ribbon.locator(`[data-command="${id}"]:visible`).first().tap();
+  }
+
+  test('Review and References commands work by touch', async ({ page }) => {
+    await openDemo(page);
+    await openDocx(page, '01-basic.docx');
+    const ribbon = page.locator('ls-ribbon');
+    await ribbon.locator('[data-tab="review"]').first().tap();
+    await tapCommand(page, 'review.tracking.track-changes');
+    await expect.poll(async () => (await state(page)).track).toBe(true);
+    await caretAtEnd(page);
+    await page.keyboard.type(' Tablet edit.');
+    await expect.poll(() => bridge<number>(page, 'revisionCount')).toBeGreaterThan(0);
+    await tapCommand(page, 'review.tracking.display-for-review');
+    await expect(page.getByRole('menuitemradio', { name: /Simple Markup/ })).toBeVisible();
+    await shot(page, 'tablet-review');
+    await page.getByRole('menuitemradio', { name: /Simple Markup/ }).tap();
+    await expect.poll(async () => (await state(page)).reviewMode).toBe(3);
+
+    await ribbon.locator('[data-tab="references"]').first().tap();
+    await tapCommand(page, 'references.footnotes.insert-footnote');
+    await page.keyboard.type('A tablet footnote');
+    await expect
+      .poll(async () => (await bridge<{ footnotes: number }>(page, 'noteCounts')).footnotes)
+      .toBe(1);
+    await shot(page, 'tablet-references');
+  });
+});
+
+test.describe('Phone (412×915, touch)', () => {
+  test.use({
+    viewport: { width: 412, height: 915 },
+    deviceScaleFactor: 2.625,
+    hasTouch: true,
+    isMobile: true,
+  });
+
+  /** The phone command sheet for a tab, opened unless it already shows `command`. */
+  async function sheet(page: Page, tab: string, command: string) {
+    const ribbon = page.locator('ls-ribbon');
+    const s = ribbon.locator('.ls-sheet');
+    if (await s.locator(`[data-command="${command}"]`).isVisible()) return s;
+    if (await s.isVisible()) await s.getByRole('button', { name: 'Collapse commands' }).tap();
+    await ribbon.locator('.ls-picker-btn').tap();
+    await ribbon.locator(`[data-tab="${tab}"]`).tap();
+    await expect(s.locator(`[data-command="${command}"]`)).toBeVisible();
+    return s;
+  }
+
+  test('Review and References from the phone sheets; popovers are bottom sheets', async ({
+    page,
+  }) => {
+    await openDemo(page);
+    await openDocx(page, '01-basic.docx');
+    await caretAtEnd(page);
+    let s = await sheet(page, 'review', 'review.comments.new-comment');
+    await s.locator('[data-command="review.comments.new-comment"]').tap();
+    const f = page.getByTestId('comment-form');
+    await f.locator('input').fill('From my phone');
+    await shot(page, 'phone-comment');
+    await f.locator('input').press('Enter');
+    await expect.poll(async () => (await bridge<unknown[]>(page, 'commentList')).length).toBe(1);
+
+    s = await sheet(page, 'review', 'review.comments.show-comments');
+    await s.locator('[data-command="review.comments.show-comments"]').tap();
+    const pane = page.getByTestId('comments-pane');
+    await expect(pane).toContainText('From my phone');
+    const box = (await pane.boundingBox())!;
+    expect(box.width).toBeGreaterThan(300);
+    await shot(page, 'phone-comments');
+    await page.keyboard.press('Escape');
+
+    s = await sheet(page, 'review', 'review.tracking.track-changes');
+    await s.locator('[data-command="review.tracking.track-changes"]').tap();
+    await expect.poll(async () => (await state(page)).track).toBe(true);
+
+    s = await sheet(page, 'references', 'references.toc.table-of-contents');
+    await s.locator('[data-command="references.toc.table-of-contents"]').tap();
+    await expect(page.getByRole('option', { name: 'Automatic Table 1' })).toBeVisible();
+    await shot(page, 'phone-toc');
+    await page.getByRole('option', { name: 'Automatic Table 1' }).tap();
+    await expect.poll(() => bridge<boolean>(page, 'hasToc')).toBe(true);
+  });
+});

@@ -108,7 +108,7 @@ export async function saveBytes(page: Page): Promise<Buffer> {
   const download = page.waitForEvent('download');
   await page.locator('[data-qat="qat.save"]').click();
   const file = await download;
-  const bytes = readFileSync((await file.path())!);
+  const bytes = readFileSync(await file.path());
   const dump = process.env['LS_DUMP'];
   if (dump) {
     const { writeFileSync } = await import('node:fs');

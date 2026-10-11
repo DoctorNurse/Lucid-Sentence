@@ -12,7 +12,7 @@
  * original ONLYOFFICE software developed by Ascensio System SIA.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
-/* global AscCommon, AscCommonWord, styletype_Paragraph */
+/* global Asc, AscCommon, AscCommonWord, styletype_Paragraph */
 (function (window) {
   'use strict';
 
@@ -395,7 +395,7 @@
     var d = newCommentData(text, author);
     var quote = api.asc_GetSelectedText(true);
     if (!quote) {
-      doc.SelectCurrentWord && doc.SelectCurrentWord();
+      if (doc.SelectCurrentWord) doc.SelectCurrentWord();
       quote = api.asc_GetSelectedText(true);
     }
     d.asc_putQuoteText(quote || '');
