@@ -11,6 +11,8 @@ export interface Recording {
   duration: number;
   mime: string;
   blob: Blob;
+  /** The document this was recorded on (absent on recordings made before 0.1.8: the local draft). */
+  doc?: string;
 }
 
 function db(): Promise<IDBDatabase> {
@@ -102,6 +104,13 @@ export class AudioNotes {
   readonly audio = new Audio();
   #url: string | null = null;
   playing: Recording | null = null;
+  /** The current document: new recordings attach to it, and only its recordings are listed. */
+  doc = 'local';
+
+  /** Recordings that belong to the current document. */
+  get docRecordings(): Recording[] {
+    return this.recordings.filter((r) => (r.doc ?? 'local') === this.doc);
+  }
 
   constructor(readonly onChange: () => void) {
     this.audio.addEventListener('timeupdate', onChange);
@@ -182,6 +191,7 @@ export class AudioNotes {
       duration: performance.now() - cur.startedAt,
       mime: rec.mimeType || 'audio/webm',
       blob: new Blob(this.#chunks, { type: rec.mimeType || 'audio/webm' }),
+      doc: this.doc,
     };
     this.#rec = null;
     this.current = null;
