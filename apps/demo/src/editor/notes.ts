@@ -515,7 +515,7 @@ export class Timeline {
   }
 
   #current(): Recording | null {
-    const recs = this.audio.recordings;
+    const recs = this.audio.docRecordings;
     const sel = this.#selected ?? this.audio.playing?.id ?? recs.at(-1)?.id ?? null;
     return recs.find((r) => r.id === sel) ?? null;
   }
@@ -631,7 +631,7 @@ export class Timeline {
       this.#tick = null;
     }
     if (this.root.hidden) return;
-    const recs = a.recordings;
+    const recs = a.docRecordings;
     const rec = this.#current();
     const sel = rec?.id ?? null;
 

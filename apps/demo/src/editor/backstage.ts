@@ -18,6 +18,10 @@ export interface BackstageContext {
   /** Native dialog / File System Access picker; falls back to the <input> on this page. */
   pickFile: (fallback: () => void) => void;
   openFile: (file: File) => void;
+  /** Back to the document that is open now (the Recent row). */
+  resume: () => void;
+  /** Open the File > Open page. */
+  showOpen: () => void;
   save: () => void;
   saveAs: () => void;
   downloadDocx: () => void;
@@ -105,23 +109,36 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
             },
             true,
           ),
-          action('Blank notes page', 'Handwriting, ink and Notes mode (preview canvas)', () => {
+          action('New note', 'A blank page for handwriting, ink, recordings and Notes mode', () => {
             ctx.newDoc('notes');
           }),
-          action('Sample: Quarterly Notes', 'Headings, a list, a table, and a comment', () => {
-            ctx.newDoc('sample');
+          action('Open…', 'A Word document (.docx) on this device', () => {
+            ctx.showOpen();
           }),
+          action(
+            'Tour: Quarterly Notes',
+            'A sample with headings, a list, a table, and a comment',
+            () => {
+              ctx.newDoc('sample');
+            },
+          ),
         ),
         el('h3', { class: 'bs__h3' }, 'Recent'),
         el(
           'div',
           { class: 'bs__list' },
-          el(
-            'div',
-            { class: 'bs__row' },
-            el('strong', {}, ctx.docName),
-            el('span', { class: 'bs__card-detail' }, 'This device · edited just now'),
-          ),
+          ((): HTMLButtonElement => {
+            const row = el(
+              'button',
+              { type: 'button', class: 'bs__row', 'data-recent': '' },
+              el('strong', {}, ctx.docName),
+              el('span', { class: 'bs__card-detail' }, 'This device · open now'),
+            );
+            tap(row, () => {
+              ctx.resume();
+            });
+            return row;
+          })(),
         ),
       );
       break;

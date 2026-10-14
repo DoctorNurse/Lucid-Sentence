@@ -190,7 +190,7 @@ test('ink and Notes mode still work on a notes page after a .docx', async ({ pag
     const w = window as unknown as { __ls: { app: { openBackstage(id: string): void } } };
     w.__ls.app.openBackstage('file.rail.new');
   });
-  await page.getByRole('button', { name: /Blank notes page/ }).click();
+  await page.getByRole('button', { name: /^New note/ }).click();
   await expect(page.locator('body')).not.toHaveClass(/\bengine\b/);
   await expect(page.locator('#doc')).toBeVisible();
   await page.locator('#notes-toggle').click();
