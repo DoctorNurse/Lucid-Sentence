@@ -2241,7 +2241,7 @@ dependencies = [
 
 [[package]]
 name = "lucid-sentence"
-version = "0.1.7-preview"
+version = "0.1.8-preview"
 dependencies = [
  "lucid-ai",
  "serde",
