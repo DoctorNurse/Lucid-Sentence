@@ -352,6 +352,7 @@ async function openDocx(f: files.PickedFile): Promise<void> {
     await withLoading(() => engine.open(f.bytes, f.name), `Opening ${f.name}…`);
     fileTarget = f.target;
     $('#doc-name').textContent = f.name;
+    setDocId('file');
     status(`Opened ${f.name}`);
   } catch (e) {
     console.error(e);
@@ -364,13 +365,28 @@ async function openDocx(f: files.PickedFile): Promise<void> {
   }
 }
 
+// New documents are numbered like Word: Document1, Document2…; Notes1, Notes2…
+const newCount = { doc: 0, notes: 0 };
+let docSerial = 0;
+/** The preview canvas's document id, restored when a .docx closes. */
+let previewDocId = 'local';
+/** A fresh id for the document now open; recordings attach to it. */
+function setDocId(prefix: string): void {
+  audio.doc = `${prefix}-${Date.now().toString(36)}-${++docSerial}`;
+  if (prefix === 'notes' || prefix === 'sample') previewDocId = audio.doc;
+  timeline.render();
+}
+
 async function newEngineDoc(): Promise<void> {
   if (!confirmDiscard()) return;
   backToDoc();
+  const name = `Document${newCount.doc + 1}.docx`;
   try {
-    await withLoading(() => engine.blank('Document1.docx'), 'Starting a new document…');
+    await withLoading(() => engine.blank(name), 'Starting a new document…');
+    newCount.doc++;
     fileTarget = { kind: 'none' };
-    $('#doc-name').textContent = 'Document1.docx';
+    $('#doc-name').textContent = name;
+    setDocId('doc');
   } catch (e) {
     console.error(e);
     engineFailed(e, () => void newEngineDoc());
@@ -384,6 +400,8 @@ function leaveEngine(): Promise<boolean> {
   engine.close();
   fileTarget = { kind: 'none' };
   setEngineMode(false);
+  audio.doc = previewDocId;
+  timeline.render();
   return Promise.resolve(true);
 }
 
@@ -1060,6 +1078,12 @@ function renderBackstage(): void {
         });
       },
       openFile,
+      resume: () => {
+        backToDoc();
+      },
+      showOpen: () => {
+        openBackstage('file.rail.open');
+      },
       save,
       downloadHtml: () => {
         download(
@@ -1162,7 +1186,9 @@ function newPreviewDoc(kind: 'notes' | 'sample'): void {
   doc.innerHTML = kind === 'notes' ? '<p><br></p>' : SAMPLE;
   ink.strokes = [];
   ink.render();
-  $('#doc-name').textContent = kind === 'notes' ? 'Notes1.docx' : 'Quarterly-Notes.docx';
+  $('#doc-name').textContent =
+    kind === 'notes' ? `Notes${++newCount.notes}.docx` : 'Quarterly-Notes.docx';
+  setDocId(kind);
   backToDoc();
   scheduleLayout();
 }
@@ -1214,6 +1240,7 @@ function save(): void {
         html: doc.innerHTML,
         ink: encodeInk(ink.strokes),
         name: $('#doc-name').textContent,
+        doc: audio.doc,
         at: Date.now(),
       }),
     );
@@ -1227,11 +1254,20 @@ function save(): void {
     toast('Could not save (storage full or blocked)');
   }
 }
+let restoredDraft = false;
 if (params.get('draft') !== 'off') {
   try {
     const raw = localStorage.getItem(DRAFT);
     if (raw) {
-      const d = JSON.parse(raw) as { html: string; ink?: unknown; strokes?: unknown; name: string };
+      const d = JSON.parse(raw) as {
+        html: string;
+        ink?: unknown;
+        strokes?: unknown;
+        name: string;
+        doc?: string;
+      };
+      restoredDraft = true;
+      previewDocId = audio.doc = d.doc ?? 'local';
       doc.innerHTML = sanitize(d.html);
       // v1 drafts carry `ink`; older drafts carry a plain `strokes` array (model v0).
       ink.strokes = decodeInk(d.ink ?? d.strokes ?? []);
@@ -1467,6 +1503,9 @@ function buildNotesbar(): void {
       applyPaper();
     }),
     colors,
+    chip('New note', 'new', () => {
+      newNote();
+    }),
     chip('Magnifier', 'magnifier', () => {
       const on = !strip.open;
       if (on && !view.draw) setDraw(true, 'pen');
@@ -1544,12 +1583,19 @@ function setNotes(on: boolean): void {
   $('#mode').textContent = on ? 'Notes mode' : '';
   scheduleLayout();
 }
+/** Start a new notes document (leaving a .docx first) and turn on Notes mode. */
+function newNote(): void {
+  void leaveEngine().then((left) => {
+    if (!left) return;
+    newPreviewDoc('notes');
+    setNotes(true);
+    toast(`New note: ${$('#doc-name').textContent}. Write, type or record.`);
+  });
+}
 tap($('#notes-toggle'), () => {
   if (engine.active) {
-    toast(
-      'Notes mode and ink work on notes pages for now (File > New > Blank notes page). Ink in .docx files comes later in M1.',
-      5200,
-    );
+    // Ink isn't in .docx files yet (M1): Notes starts a new notes document instead of a dead end.
+    newNote();
     return;
   }
   setNotes(!document.body.classList.contains('notes'));
@@ -1860,3 +1906,13 @@ Object.assign(window, {
     engine,
   },
 });
+
+// ── Start screen. Launch opens File > Home (New blank document, New note, Open, Recent;
+// the sample is only the Tour), never straight into the sample. With no draft to resume,
+// the canvas behind it is a blank notes page, so Back never lands on the sample either.
+// `?start=off` skips it; automated tests skip it unless they pass `?start=on`.
+const startParam = params.get('start');
+if (startParam === 'on' || (startParam !== 'off' && !navigator.webdriver)) {
+  if (!restoredDraft) newPreviewDoc('notes');
+  openBackstage('file.rail.home');
+}
