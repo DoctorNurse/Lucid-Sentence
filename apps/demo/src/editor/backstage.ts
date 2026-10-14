@@ -36,12 +36,44 @@ export interface BackstageContext {
     drawWithTouch: boolean;
     floatingToolbar: boolean;
     exportBanner: boolean;
+    author: string;
   };
+  /** Name for comments and tracked changes. */
+  onAuthor: (name: string) => void;
   onSetting: (
     key: 'autoSwitch' | 'drawWithTouch' | 'floatingToolbar' | 'exportBanner',
     value: boolean,
   ) => void;
   version: string;
+}
+
+/** "Your name": the author of new comments and tracked changes. */
+function authorRow(ctx: BackstageContext): HTMLElement {
+  const input = el('input', {
+    type: 'text',
+    class: 'bs__input',
+    value: ctx.settings.author,
+    'aria-label': 'Your name',
+    'data-testid': 'author-name',
+    maxlength: '80',
+  });
+  input.value = ctx.settings.author;
+  input.addEventListener('change', () => {
+    const v = input.value.trim();
+    if (v) ctx.onAuthor(v);
+    else input.value = ctx.settings.author;
+  });
+  return el(
+    'label',
+    { class: 'bs__switch' },
+    el(
+      'span',
+      {},
+      el('strong', {}, 'Your name'),
+      el('span', { class: 'bs__card-detail' }, 'Shown on your comments and tracked changes'),
+    ),
+    input,
+  );
 }
 
 const h = (title: string, sub?: string): HTMLElement =>
@@ -322,6 +354,8 @@ export function backstagePage(id: string, ctx: BackstageContext): HTMLElement {
             },
           ),
         ),
+        el('h3', { class: 'bs__h3' }, 'Review'),
+        el('div', { class: 'bs__list' }, authorRow(ctx)),
         el('h3', { class: 'bs__h3' }, 'Saving and exporting'),
         el(
           'div',

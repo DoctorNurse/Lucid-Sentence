@@ -3167,3 +3167,114 @@ body.engine .timeline {
 .engine-style--intense-quote {
   font-style: italic;
 }
+
+/* References › Table of Contents gallery previews */
+.toc-prev {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 64px;
+  padding: 6px 8px;
+  border-radius: var(--ls-radius-md);
+  background: #fff;
+  color: #222;
+  font-size: 10px;
+  line-height: 1.3;
+  text-align: start;
+}
+.toc-prev__title {
+  font-weight: 600;
+  color: #2f5496;
+}
+.toc-prev__row {
+  display: flex;
+  gap: 4px;
+}
+.toc-prev__row--1 {
+  padding-inline-start: 8px;
+}
+.toc-prev__row--2 {
+  padding-inline-start: 16px;
+}
+.toc-prev__dots {
+  flex: 1;
+  border-bottom: 1px dotted #888;
+  margin-bottom: 3px;
+}
+.toc-prev--3 .toc-prev__row--0,
+.toc-prev--4 .toc-prev__row--0 {
+  font-weight: 600;
+}
+.toc-prev--4 .toc-prev__title {
+  font-family: Georgia, serif;
+  color: #222;
+}
+.toc-prev--5 .toc-prev__row span:first-child {
+  color: #0563c1;
+  text-decoration: underline;
+}
+
+/* Forms: selects and checkboxes in popovers */
+select.pop__input {
+  min-height: 36px;
+}
+.pop__list {
+  min-height: 120px;
+}
+.pop__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Review › Comments pane */
+.cpane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  padding: 4px 8px 8px;
+  min-width: 300px;
+}
+.cpane__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--ls-radius-md);
+  box-shadow: inset 0 0 0 1px var(--ls-hairline);
+}
+.cpane__card--solved {
+  opacity: 0.7;
+}
+.cpane__who {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cpane__who time,
+.cpane__resolved,
+.cpane__empty {
+  color: var(--ls-muted);
+  font-size: var(--ls-type-label);
+}
+.cpane__quote {
+  margin: 0;
+  padding-inline-start: 8px;
+  border-inline-start: 3px solid var(--ls-accent);
+  color: var(--ls-muted);
+}
+.cpane__text,
+.cpane__resolved,
+.cpane__empty {
+  margin: 0;
+}
+.cpane__replyrow {
+  padding-inline-start: 12px;
+}
+.cpane__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

@@ -7,6 +7,7 @@
 import type { CommandEventDetail } from '@lucid-sentence/ribbon-ui';
 import { gallery, el, menu, openPopover, tableGrid, type MenuEntry } from '../editor/ui.js';
 import type { DocEngine } from './engine.js';
+import { isReadingAloud, refsReviewHandlers } from './refs-review.js';
 
 export interface EngineApp {
   engine: DocEngine;
@@ -15,7 +16,13 @@ export interface EngineApp {
   /** Ask for picture files (native picker, File System Access, or <input>). */
   insertPictures: () => void;
   print: () => void;
-  toast: (msg: string) => void;
+  toast: (msg: string, ms?: number) => void;
+  /** Name for new comments and tracked changes (File › Options). */
+  author: () => string;
+  /** Ask for a .docx (Compare). Null when the user cancels. */
+  pickDocx: () => Promise<{ name: string; bytes: Uint8Array } | null>;
+  /** Redraw the ribbon (pressed states). */
+  refresh: () => void;
 }
 
 type Handler = (a: EngineApp, d: CommandEventDetail) => void;
@@ -549,6 +556,11 @@ export const engineHandlers: Record<string, Handler> = {
   },
 };
 
+for (const [id, h] of Object.entries(refsReviewHandlers)) {
+  if (id in engineHandlers) throw new Error(`duplicate engine handler ${id}`);
+  engineHandlers[id] = h;
+}
+
 export const ENGINE_WIRED: ReadonlySet<string> = new Set(Object.keys(engineHandlers));
 
 /**
@@ -556,8 +568,9 @@ export const ENGINE_WIRED: ReadonlySet<string> = new Set(Object.keys(engineHandl
  * touch the document: the File backstage, Help, and the command palette.
  */
 export function appLevel(id: string): boolean {
-  // AI Models manages on-device models and settings; it doesn't touch the document.
-  return id.startsWith('file.') || id.startsWith('help.') || id === 'review.assistant.ai-models';
+  // The Assistant reads the engine's selection itself and applies suggestions as
+  // tracked changes (main.ts gives it an engine target); AI Models doesn't touch the document.
+  return id.startsWith('file.') || id.startsWith('help.') || id.startsWith('review.assistant.');
 }
 
 /** Pressed toggles for the ribbon, from the engine's selection state. */
@@ -580,5 +593,7 @@ export function enginePressed(e: DocEngine): Set<string> {
   on('home.paragraph.align-right', s.align === 'right');
   on('home.paragraph.justify', s.align === 'justify');
   on('home.paragraph.show-marks', s.showMarks);
+  on('review.tracking.track-changes', s.track);
+  on('review.speech.read-aloud', isReadingAloud());
   return p;
 }
